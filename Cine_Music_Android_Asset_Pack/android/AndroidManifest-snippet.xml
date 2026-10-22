@@ -1,0 +1,15 @@
+<!-- Merge these attributes into your EXISTING manifest. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:icon="@mipmap/ic_cine_launcher"
+        android:roundIcon="@mipmap/ic_cine_launcher_round"
+        android:label="@string/cine_app_name" android:theme="@style/Theme.CineMusic">
+        <!-- Apply the starting theme to your existing launcher activity. -->
+        <activity android:name=".MainActivity" android:exported="true"
+            android:theme="@style/Theme.CineMusic.Starting">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

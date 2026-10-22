@@ -1,0 +1,39 @@
+{
+  "result": "PASS",
+  "checks": {
+    "png_files_decode": 218,
+    "fully_vector_svg_files": 78,
+    "android_xml_files_parse": 62,
+    "ui_icons": 32,
+    "resource_references_resolve": true,
+    "play_icon": {
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "bytes": 23625
+    },
+    "feature_graphic": {
+      "size": [
+        1024,
+        500
+      ],
+      "mode": "RGB"
+    },
+    "density_sets": 6,
+    "adaptive_art_max_radius_dp": 29.756,
+    "native_splash_art_max_radius_dp": 87.04,
+    "native_app_build": "Not performed: this is an asset kit without a host application or Android SDK.",
+    "native_animated_splash": {
+      "duration_ms": 840,
+      "canvas_dp": 432,
+      "visible_circle_dp": 288,
+      "targets_resolve": true,
+      "conservative_motion_radius_dp": 133.81,
+      "preview_gif_frames": 22
+    },
+    "device_launch_test": "Not performed; integration checklist is in android/README.md."
+  },
+  "failures": []
+}

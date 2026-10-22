@@ -1,0 +1,160 @@
+import { useTranslation } from "@/languages";
+import { LuMinus, LuSquare, LuX } from "react-icons/lu";
+import { useIsContentTransparent } from "@/features/settings/store/customizationStore";
+import { useWindowState } from "../hooks/useWindowState";
+import { useWindowAnimationStore } from "@/shared/ui";
+
+export interface WindowControlsProps {
+  className?: string;
+  variant?: "default" | "glass" | "island";
+  style?: React.CSSProperties;
+  isFullscreen?: boolean;
+}
+
+// the window goes away right under the cursor (minimize / into the overlay), so
+// chromium never sees the pointer leave and the button keeps its hover look when the
+// window comes back. while this flag is on the control buttons drop their hover
+// highlight; it clears on the first real mouse move after the window is back.
+function suppressStaleHover() {
+  const root = document.documentElement;
+  root.setAttribute("data-hover-reset", "");
+  (document.activeElement as HTMLElement | null)?.blur?.();
+  let wentAway = false;
+  const clear = () => root.removeAttribute("data-hover-reset");
+  const onAway = () => {
+    wentAway = true;
+  };
+  const onBack = () => {
+    if (!wentAway) return;
+    window.removeEventListener("blur", onAway);
+    window.removeEventListener("focus", onBack);
+    document.removeEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pointermove", clear, { once: true });
+  };
+  const onVisibility = () => (document.hidden ? onAway() : onBack());
+  window.addEventListener("blur", onAway);
+  window.addEventListener("focus", onBack);
+  document.addEventListener("visibilitychange", onVisibility);
+}
+
+export default function WindowControls({
+  className = "",
+  variant = "default",
+  style,
+  isFullscreen = false,
+}: WindowControlsProps) {
+  const { t } = useTranslation();
+  const { isFullScreen: isWindowFullScreen, isMaximized: isWindowMaximized } = useWindowState();
+
+  const isHyprland = window.linerElectron?.isHyprland ?? false;
+
+  const handleMinimize = () => {
+    // macos fullscreen spaces and hyprland tiling wm prohibit/ignore minimizing
+    if (isWindowFullScreen || isHyprland) return;
+    suppressStaleHover();
+    useWindowAnimationStore.getState().triggerMinimize();
+  };
+
+  const handleMaximize = () => {
+    window.linerElectron?.toggleMaximize();
+  };
+
+  const handleClose = () => {
+    useWindowAnimationStore.getState().triggerClose();
+  };
+
+  const isDarkMode = isFullscreen;
+  const isMinimizeDisabled = isWindowFullScreen || isHyprland;
+  const hasCustomBg = useIsContentTransparent();
+  const isGlass = hasCustomBg || variant === "glass";
+
+  return (
+    <div
+      style={style}
+      className={`absolute top-[12px] right-[12px] z-[62] flex items-center justify-end pointer-events-none select-none ${className}`.trim()}
+    >
+      <div
+        data-no-window-drag
+        data-no-tooltip="true"
+        data-window-controls
+        className={`flex items-center h-[32px] min-h-[32px] max-h-[32px] box-border px-[3px] gap-[2px] rounded-lg pointer-events-auto transition-colors ${
+          isFullscreen
+            ? "apple-glass-pill-dark text-white"
+            : isGlass
+              ? "apple-glass-pill text-text-primary"
+              : isDarkMode
+                ? "bg-black/50 text-white backdrop-blur-xl"
+                : "bg-bg-panel/90 text-text-primary backdrop-blur-xl"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={isMinimizeDisabled ? undefined : handleMinimize}
+          disabled={isMinimizeDisabled}
+          aria-disabled={isMinimizeDisabled}
+          data-no-tooltip="true"
+          className={`flex items-center justify-center w-[26px] h-[26px] min-w-[26px] min-h-[26px] max-h-[26px] rounded-md border-none bg-transparent transition-colors ${
+            isMinimizeDisabled
+              ? "opacity-30 cursor-not-allowed pointer-events-none"
+              : isFullscreen
+                ? "text-white/80 hover:text-white hover:bg-white/10 active:scale-95 cursor-pointer"
+                : isGlass
+                  ? "text-text-primary hover:bg-black/10 dark:hover:bg-white/10 active:scale-95 cursor-pointer"
+                  : isDarkMode
+                    ? "text-white/70 hover:text-white hover:bg-white/10 active:scale-95 cursor-pointer"
+                    : "text-text-primary hover:bg-border-alpha-14 active:scale-95 cursor-pointer"
+          }`}
+          aria-label="Minimize"
+        >
+          <LuMinus size={13} />
+        </button>
+        <button
+          type="button"
+          onClick={handleMaximize}
+          data-no-tooltip="true"
+          className={`flex items-center justify-center w-[26px] h-[26px] min-w-[26px] min-h-[26px] max-h-[26px] rounded-md cursor-pointer border-none bg-transparent transition-colors active:scale-95 ${
+            isFullscreen
+              ? "text-white/80 hover:text-white hover:bg-white/10"
+              : isGlass
+                ? "text-text-primary hover:bg-black/10 dark:hover:bg-white/10"
+                : isDarkMode
+                  ? "text-white/70 hover:text-white hover:bg-white/10"
+                  : "text-text-primary hover:bg-border-alpha-14"
+          }`}
+          aria-label={
+            isWindowFullScreen
+              ? t("common.exitFullscreen")
+              : isWindowMaximized
+                ? t("common.restore")
+                : t("common.maximize")
+          }
+        >
+          <LuSquare size={11} />
+        </button>
+        <button
+          type="button"
+          onClick={handleClose}
+          data-no-tooltip="true"
+          className={`flex items-center justify-center w-[26px] h-[26px] min-w-[26px] min-h-[26px] max-h-[26px] rounded-md cursor-pointer border-none bg-transparent transition-colors hover:bg-[#E81123] hover:text-white active:scale-95 ${
+            isFullscreen
+              ? "text-white/80 hover:text-white hover:bg-[#E81123]"
+              : isGlass
+                ? "text-text-primary hover:bg-[#E81123]"
+                : isDarkMode
+                  ? "text-white/70 hover:text-white"
+                  : "text-text-primary"
+          }`}
+          aria-label="Close"
+        >
+          <LuX size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
+

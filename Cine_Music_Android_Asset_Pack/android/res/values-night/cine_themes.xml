@@ -1,0 +1,9 @@
+<resources>
+  <style name="Theme.CineMusic" parent="android:style/Theme.Material.NoActionBar">
+    <item name="android:windowBackground">@color/cine_background</item>
+    <item name="android:colorAccent">@color/cine_cyan</item>
+    <item name="android:statusBarColor">@color/cine_background</item>
+    <item name="android:navigationBarColor">@color/cine_background</item>
+    <item name="android:windowLightStatusBar">false</item>
+  </style>
+</resources>

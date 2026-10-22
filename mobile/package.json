@@ -1,0 +1,26 @@
+{
+  "name": "cine-music-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "https://registry.npmjs.org/react/-/react-18.3.1.tgz",
+    "react-dom": "https://registry.npmjs.org/react-dom/-/react-dom-18.3.1.tgz"
+  },
+  "overrides": {
+    "esbuild": "https://registry.npmjs.org/esbuild/-/esbuild-0.21.5.tgz",
+    "rollup": "https://registry.npmjs.org/rollup/-/rollup-4.64.3.tgz"
+  },
+  "devDependencies": {
+    "@types/react": "https://registry.npmjs.org/@types/react/-/react-18.3.31.tgz",
+    "@types/react-dom": "https://registry.npmjs.org/@types/react-dom/-/react-dom-18.3.7.tgz",
+    "typescript": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+    "vite": "https://registry.npmjs.org/vite/-/vite-5.4.21.tgz",
+    "vitest": "https://registry.npmjs.org/vitest/-/vitest-3.2.7.tgz"
+  }
+}

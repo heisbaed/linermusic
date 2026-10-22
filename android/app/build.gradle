@@ -1,0 +1,38 @@
+plugins { id 'com.android.application' }
+
+dependencies {
+    implementation 'androidx.credentials:credentials:1.2.0-rc01'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.2.0-rc01'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.0'
+    // The provider excludes Core/Loader transitively; Fragment needs its full runtime graph.
+    implementation 'androidx.fragment:fragment:1.7.1'
+    constraints {
+        // Use compatible cached patch versions instead of fetching older transitives.
+        implementation 'androidx.annotation:annotation:1.8.1'
+        implementation 'androidx.core:core-ktx:1.13.1'
+        implementation 'androidx.lifecycle:lifecycle-common:2.7.0'
+        implementation 'com.google.android.gms:play-services-auth-api-phone:18.0.2'
+        implementation 'com.google.android.gms:play-services-basement:18.3.0'
+        implementation 'com.google.android.gms:play-services-tasks:18.1.0'
+        implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.2.21'
+    }
+}
+
+android {
+    buildFeatures { buildConfig true }
+    namespace 'com.heisbaed.cinemusic'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.heisbaed.cinemusic'
+        minSdk 26
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0'
+        testInstrumentationRunner 'com.heisbaed.cinemusic.VaultChecks'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    buildTypes { release { minifyEnabled false } }
+}

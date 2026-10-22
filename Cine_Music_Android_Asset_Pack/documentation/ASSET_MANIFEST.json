@@ -1,0 +1,2535 @@
+{
+  "brand": "Cine music",
+  "version": "1.0",
+  "palette": {
+    "midnight_navy": "#061126",
+    "icon_background": "#071127",
+    "cyan": "#00D9F2",
+    "blue": "#2477FF",
+    "violet": "#8143FF",
+    "magenta": "#C42AF7",
+    "ivory": "#F6F7FC",
+    "ink": "#101B33"
+  },
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 2408,
+      "sha256": "a612d2f69d36db7bfb65ef4110d945f70881b67f33681fa2ae3f2af24a57cc46"
+    },
+    {
+      "path": "android/AndroidManifest-snippet.xml",
+      "bytes": 795,
+      "sha256": "d67fcbc4e52b432fb2f4ce8928116ed77bb22e4ff0caddbaab939ca80d642084"
+    },
+    {
+      "path": "android/CineBrandMotion.kt",
+      "bytes": 1207,
+      "sha256": "65bd710898d8112dd139d16d550df021e5819c6b1db36b0a35c3768ee3e2e033"
+    },
+    {
+      "path": "android/InstallSplashScreen.kt",
+      "bytes": 542,
+      "sha256": "3734e78c08bbe6ca4f1a280d06b871a3cce1d86b231b34d63e1b77c9cc426e20"
+    },
+    {
+      "path": "android/README.md",
+      "bytes": 5118,
+      "sha256": "c284f3ba766bc4f1c3936607913111687a99e59d81ec0b8de90cecd14140a348"
+    },
+    {
+      "path": "android/build.gradle.kts.snippet",
+      "bytes": 187,
+      "sha256": "4b315d1ada489984b1aeb0baab7c0e4e1ff5cf4d494ea3010cc6761b25cddc59"
+    },
+    {
+      "path": "android/res/animator-v31/cine_splash_c_reveal.xml",
+      "bytes": 303,
+      "sha256": "da23b4481cac946233e026b49f401d4f681def99a0fea86b43b65113dccb70ab"
+    },
+    {
+      "path": "android/res/animator-v31/cine_splash_motion.xml",
+      "bytes": 1101,
+      "sha256": "09e3153efded26f0efd7d743de9e81f0aa425814b6019d295cc866d8a0da2488"
+    },
+    {
+      "path": "android/res/animator-v31/cine_splash_note_reveal.xml",
+      "bytes": 305,
+      "sha256": "f801a924316d89a29eb23c640f9307b5b9db0f0684b54290941a6cd849d624fc"
+    },
+    {
+      "path": "android/res/drawable/cine_splash_branding_dark.xml",
+      "bytes": 10042,
+      "sha256": "f8e594e70dc968b209f970376a4b0df7d573c70dd87256bc86c2056aea77208d"
+    },
+    {
+      "path": "android/res/drawable/cine_splash_branding_white.xml",
+      "bytes": 10042,
+      "sha256": "045b851ceb050d7e13c4cb0e211ad6e63596828b073f3f115e149e14bcc7834a"
+    },
+    {
+      "path": "android/res/drawable/cine_wordmark.xml",
+      "bytes": 10204,
+      "sha256": "96f9f7e917010ee9041c99c10abfe4aaf7d33e2c7ed0f53c4ea8235fb3161400"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_add.xml",
+      "bytes": 495,
+      "sha256": "cbdc97bf2d0c193aee1bd257be39bea200765332a1d9cafd07e065369bda6897"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_album.xml",
+      "bytes": 557,
+      "sha256": "3907f5353389b3182cc3653a2e185a60f13747d88aad7ce9e4edf3637e2f7184"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_artist.xml",
+      "bytes": 548,
+      "sha256": "f733b3e794b6cd5b4c95ad90a244bf4a8b3272164f752eeeab76c979fa0d6d88"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_back.xml",
+      "bytes": 504,
+      "sha256": "84e1dfd5afa9beda934b7cdd29b1eac89de0702a73b65f0a660fd3d669f818e7"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_chevron_down.xml",
+      "bytes": 493,
+      "sha256": "155eb27bef5803ab9a771a034e965cdd7473ec40c8c7bdf16141c7a439e06a42"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_close.xml",
+      "bytes": 499,
+      "sha256": "12e4706aedb5f94db5cd738ac0f0ae7f3fe5f3b862a4998e0ba1e4370ea43b09"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_download.xml",
+      "bytes": 523,
+      "sha256": "aa7e865ed2ddecc3f2c1caa2a10af22325b34b9ccd9fe8496f1eaa467577a4cb"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_equalizer.xml",
+      "bytes": 523,
+      "sha256": "903869a18952f73ccbfa57a0d7c01930633663cfb8e299ec516ec66ea318b36b"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_headphones.xml",
+      "bytes": 593,
+      "sha256": "3ffa37235e37ef2cda87dbfd2594d6b246404602971fff6ab7b53ddd5a8ead51"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_heart.xml",
+      "bytes": 534,
+      "sha256": "82d1df80dcbc1e1d1a048d64bf72b2fb9d8b11bf66505398ccaa6937ad2757df"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_heart_filled.xml",
+      "bytes": 415,
+      "sha256": "35d96f6dc1e603105d8b9d3233818805a9c8c42bc272d74916c536d128b9b612"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_home.xml",
+      "bytes": 518,
+      "sha256": "ac6bfc97d10674a1c0d1080b639247ee817735cf3da5d1312dfde78fff511d3a"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_launcher_foreground.xml",
+      "bytes": 4023,
+      "sha256": "70587e796f161d7a2b97e37480b747828c1241988890fc42e44360fa574e34d1"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_launcher_monochrome.xml",
+      "bytes": 4029,
+      "sha256": "f98a8c9a062f6904dc980e4b01dd0bc18c88e0866c273b989f9c8db274ee012f"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_library.xml",
+      "bytes": 516,
+      "sha256": "9ce2e3242827fbafee2084bfedbf7acef9a086779866db97dc46a7d729013928"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_moon.xml",
+      "bytes": 526,
+      "sha256": "5ab6eb792089c700983d668c02fbd7a6c971db065fc7b31f8619cca7a77de079"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_more.xml",
+      "bytes": 482,
+      "sha256": "4be1ce475cfd9bb2f11f8c38a31baf7aa56fc902d3ff48b41f9ed370814e3e02"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_music.xml",
+      "bytes": 598,
+      "sha256": "3031378ca70c94ee27cbac11cf76ac92a4c94abec16dc1b3ee238d0fe9e9d3b5"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_mute.xml",
+      "bytes": 530,
+      "sha256": "2dc0f6a23626a9e35614387e7362b9d3907ccb155e2d277d89bae564e62c932d"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_next.xml",
+      "bytes": 561,
+      "sha256": "ba4b8e1c04bd14662586fc7e9ef029a9194aa75c4133073c93c02e74ac9b98f6"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_notification.xml",
+      "bytes": 4021,
+      "sha256": "27f26c3374d2afb9851194bee262ee3b626aa15232fb1d904e996aa41dc80592"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_pause.xml",
+      "bytes": 490,
+      "sha256": "1b989f34e65c9f829e93d8eb99f76ad89720033a0a64cc8e53715dc7b426b8b2"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_play.xml",
+      "bytes": 431,
+      "sha256": "42819a9b43bd2056a0c9d1d0f57df62fac4540eb9b006c90a61ab1cd94da5e04"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_playlist.xml",
+      "bytes": 568,
+      "sha256": "1083fcc1a951f389aa885d8d4b40d845aa2f46a515754119ab9f18664b7d593f"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_previous.xml",
+      "bytes": 561,
+      "sha256": "f1675456bfa6b1ab415b90ddf6a34ea59a37f27c51402049da2a27cb6d9a2a97"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_queue.xml",
+      "bytes": 593,
+      "sha256": "7e384c5748751fbb332d2ea3b5363b1fbb2821d6f6001b8d69b2b807c0116ad0"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_repeat.xml",
+      "bytes": 551,
+      "sha256": "3a09d3fa882525a586fd36fe691801dc1fb475db3fbb239549d35ebfa0c9bf61"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_repeat_one.xml",
+      "bytes": 568,
+      "sha256": "630d0fc3f16e01a44f45a56644064b6e46a7cb9eb25ba6933ccced8625043489"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_search.xml",
+      "bytes": 544,
+      "sha256": "271b3c567a4b1d425ca0de43b820b22abbae3924d3591b50f3e4396607494128"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_settings.xml",
+      "bytes": 533,
+      "sha256": "efc87596f2ff6ace2d056b311d0cd250afe7a3f52e6a5014cb111d66beec772c"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_share.xml",
+      "bytes": 637,
+      "sha256": "04b91238c35ef610155ae46be4c3657c543763a96019744dffee730a9b91f87b"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_shortcut_music.xml",
+      "bytes": 4017,
+      "sha256": "6b1fd07037cfecf0ee735b2ab14322e0c256713d093c12daa1bcb70579285441"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_shuffle.xml",
+      "bytes": 574,
+      "sha256": "85e4eff8ce328b2bd17aaec5db87cfc6668f9341814a099d3a79f75b7dda9b4a"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_splash.xml",
+      "bytes": 4020,
+      "sha256": "9331463178bd21c209f3bffde9fdf494ea5a17be3b11c27379b45f2e7d0e3743"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_stop.xml",
+      "bytes": 421,
+      "sha256": "18e8572b857f2872dc4e2c6ba04765d5583c336efcf6672b2053f4bbbbc05d86"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_symbol.xml",
+      "bytes": 4017,
+      "sha256": "28c59097cf49d61a1184bdd7c0b4a0ef0c89092d3b7912532e7ec8f4cd33fdda"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_timer.xml",
+      "bytes": 564,
+      "sha256": "e14ad44f714511f27a96fd2947aedd233ffb6a1436730119e367671f41ad9c90"
+    },
+    {
+      "path": "android/res/drawable/ic_cine_volume.xml",
+      "bytes": 553,
+      "sha256": "07b3a5e8af2843b0900e610f64e3b4afb4db1f391532aee1d42cc05daf4625ed"
+    },
+    {
+      "path": "android/res/drawable-night-nodpi/cine_placeholder_album.png",
+      "bytes": 30148,
+      "sha256": "c284f1d1f2fd4c9f1751e15ae52c777f5fdcfb8c5a7a3247eb831033057d68b7",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "android/res/drawable-night-nodpi/cine_placeholder_artist.png",
+      "bytes": 23536,
+      "sha256": "3d3184a5404c135325809a1a5651ca0e00cb32343554a8f00760bd4bff0a7dc0",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "android/res/drawable-night-nodpi/cine_placeholder_favorites.png",
+      "bytes": 23025,
+      "sha256": "0ac70006c9b197bff76152bc5ac71ff82a5d9ab7fa4071b5da5e567d572f95d7",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "android/res/drawable-night-nodpi/cine_placeholder_playlist.png",
+      "bytes": 21158,
+      "sha256": "64f28afa283431325d8bde103475d1651e4d2facef551ca28b79e20cc314addd",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "android/res/drawable-night-nodpi/cine_placeholder_song.png",
+      "bytes": 22014,
+      "sha256": "a67a558f477cc29327a8728458399fa9a5457317de2be693732264457284dc20",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "android/res/drawable-nodpi/cine_placeholder_album.png",
+      "bytes": 27374,
+      "sha256": "507ffa1b9e70fb13e3ccf8414f82c8580fa2e7776400e0dde8660b1ee3244ce4",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "android/res/drawable-nodpi/cine_placeholder_artist.png",
+      "bytes": 21414,
+      "sha256": "2f77660449d3a10fb1f8370972e1c0e422eea42e82e1cfa8737f809ea43772d9",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "android/res/drawable-nodpi/cine_placeholder_favorites.png",
+      "bytes": 20634,
+      "sha256": "889f0acd59da4410729cc0e32805f9d47b47d3f262fcefb40b1263aff29527a5",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "android/res/drawable-nodpi/cine_placeholder_playlist.png",
+      "bytes": 19168,
+      "sha256": "b4162a75ce886f20a6674444cf4d11a5f63bab89e4e99bef2de3b4f53ef06b44",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "android/res/drawable-nodpi/cine_placeholder_song.png",
+      "bytes": 20144,
+      "sha256": "b3863d71be110b0bc1eff8d6d20bc7b6cac66bfc1ca0b89c57961580329978d1",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "android/res/drawable-v24/ic_cine_launcher_foreground.xml",
+      "bytes": 5286,
+      "sha256": "5dd0847a1ee0e3d5aad42ef014f87d42bab4bc2e29ed2c09c2d9ba7f0d10c421"
+    },
+    {
+      "path": "android/res/drawable-v24/ic_cine_shortcut_music.xml",
+      "bytes": 5280,
+      "sha256": "c7417d757c55fc88dc6e89230532258ef799d6c78560d258bc3feddac9e68b64"
+    },
+    {
+      "path": "android/res/drawable-v24/ic_cine_splash.xml",
+      "bytes": 5283,
+      "sha256": "b3611147a420d9cb3699342c209e8fc873e52479de8d86df5a1206effc4aa9bd"
+    },
+    {
+      "path": "android/res/drawable-v24/ic_cine_symbol.xml",
+      "bytes": 5280,
+      "sha256": "4c8515e901af8347db46cfa883705f0b9006a6e6beb44ed278d92e7ccd300a5d"
+    },
+    {
+      "path": "android/res/drawable-v31/avd_cine_splash.xml",
+      "bytes": 520,
+      "sha256": "bd3205e53415b50ade0eec6ed5782466fcc0aa4b482019f28b422be576d0beff"
+    },
+    {
+      "path": "android/res/drawable-v31/ic_cine_splash_motion.xml",
+      "bytes": 5531,
+      "sha256": "f2840f5f324449b56f0f208789b76daca745b53c8dcd6f58f7c09a9ff279eec8"
+    },
+    {
+      "path": "android/res/layout/cine_brand_welcome.xml",
+      "bytes": 928,
+      "sha256": "f0da4d7505df20477771175b07e207c10f783044a60aa2f3d851efe9ffcbd9d8"
+    },
+    {
+      "path": "android/res/mipmap-anydpi-v26/ic_cine_launcher.xml",
+      "bytes": 267,
+      "sha256": "16d919ca396cd3abe2a35aecb70b173391ea9381fe24b816a9d2202612a8aacf"
+    },
+    {
+      "path": "android/res/mipmap-anydpi-v26/ic_cine_launcher_round.xml",
+      "bytes": 267,
+      "sha256": "16d919ca396cd3abe2a35aecb70b173391ea9381fe24b816a9d2202612a8aacf"
+    },
+    {
+      "path": "android/res/mipmap-anydpi-v33/ic_cine_launcher.xml",
+      "bytes": 340,
+      "sha256": "12212a58bcfc465726d32b6af0ff65643aa9c1c73d1f516a25bb05edc7384314"
+    },
+    {
+      "path": "android/res/mipmap-anydpi-v33/ic_cine_launcher_round.xml",
+      "bytes": 340,
+      "sha256": "12212a58bcfc465726d32b6af0ff65643aa9c1c73d1f516a25bb05edc7384314"
+    },
+    {
+      "path": "android/res/mipmap-hdpi/ic_cine_launcher.png",
+      "bytes": 3184,
+      "sha256": "ee7213fae7a0fdc0bb26ac9b80f8f0bdbb0cdd13274dbc5f4712f9006ac88e00",
+      "width": 72,
+      "height": 72,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/mipmap-hdpi/ic_cine_launcher_round.png",
+      "bytes": 3853,
+      "sha256": "04957bcacfeceeb88bab93d8282f72fff26378a1c475c8a45b5b931ca15a3a27",
+      "width": 72,
+      "height": 72,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/mipmap-ldpi/ic_cine_launcher.png",
+      "bytes": 1518,
+      "sha256": "41f6c71540954b7a55fe64a01eaa6522ae630648e411731a11059ae7d1fbd375",
+      "width": 36,
+      "height": 36,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/mipmap-ldpi/ic_cine_launcher_round.png",
+      "bytes": 1800,
+      "sha256": "ea5b010f6b718d2602c1576911eabd6684d43f011592e021248e29a878e8bd81",
+      "width": 36,
+      "height": 36,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/mipmap-mdpi/ic_cine_launcher.png",
+      "bytes": 2083,
+      "sha256": "c6f81dec973f503b447b1ee8600dfae78458bc73caee2ed16fc1d7eff772beb9",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/mipmap-mdpi/ic_cine_launcher_round.png",
+      "bytes": 2488,
+      "sha256": "329f2b32e8991ecf00bb59da9ca1a64121a214e9050b47cc1f69b6d42f49cdc5",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/mipmap-xhdpi/ic_cine_launcher.png",
+      "bytes": 4420,
+      "sha256": "8871e41c65b92dfee9a33412546066549e352f83ff795636c48208496fd427fc",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/mipmap-xhdpi/ic_cine_launcher_round.png",
+      "bytes": 5294,
+      "sha256": "aceb05b7f171215930ca13ba1405cc468e82311dcd711e5c467177719c90fa22",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/mipmap-xxhdpi/ic_cine_launcher.png",
+      "bytes": 7019,
+      "sha256": "bed1d54c2b56954df364b5ce5b84a1255878386c566d6c61e7c6a930feed45ac",
+      "width": 144,
+      "height": 144,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/mipmap-xxhdpi/ic_cine_launcher_round.png",
+      "bytes": 8352,
+      "sha256": "943c41a8d1ab5fb25798ae15ca34cb4b7b42da96d0f8ba83dbe409d8851235ad",
+      "width": 144,
+      "height": 144,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/mipmap-xxxhdpi/ic_cine_launcher.png",
+      "bytes": 9562,
+      "sha256": "da3effdc1c5e3316c053b09f36e54884965c9f629708b43538d92118613b3816",
+      "width": 192,
+      "height": 192,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/mipmap-xxxhdpi/ic_cine_launcher_round.png",
+      "bytes": 11375,
+      "sha256": "16a04ca1ae1f8c063800fcf7cb52f8194fc469ecb840759805567110243579c8",
+      "width": 192,
+      "height": 192,
+      "mode": "RGBA"
+    },
+    {
+      "path": "android/res/values/cine_colors.xml",
+      "bytes": 480,
+      "sha256": "3a8defc54c3aa3d40b06a8404e3e9fe6bfe9cfb3b3180be5bd77242019f35da6"
+    },
+    {
+      "path": "android/res/values/cine_strings.xml",
+      "bytes": 72,
+      "sha256": "20485f48a2e44cb2dc2a1a53536d3c5fbb9582df396f710c46195458338754b9"
+    },
+    {
+      "path": "android/res/values/cine_themes.xml",
+      "bytes": 1071,
+      "sha256": "3885b1fdead284cdc8e76f6b145fc7c8451a9fd472265208942fd11709b86b7f"
+    },
+    {
+      "path": "android/res/values-night/cine_colors.xml",
+      "bytes": 117,
+      "sha256": "5a74b22060787346d94ea9868eb1bef67414c542e3d2a3478d227b3bae174b5a"
+    },
+    {
+      "path": "android/res/values-night/cine_themes.xml",
+      "bytes": 455,
+      "sha256": "70d8a413c9e2a27e5a15b113ac0a5f3d43271903f7cf796f07dae2af4164f240"
+    },
+    {
+      "path": "android/res/values-v31/cine_themes.xml",
+      "bytes": 1223,
+      "sha256": "4fb296b053740e5339bb9d48b5d6e6161d3b27480239354f77defa274b462531"
+    },
+    {
+      "path": "documentation/BRAND_GUIDE.md",
+      "bytes": 1897,
+      "sha256": "0405fe7bfabead67489814ccf5ae2b0deb83089a9688b16ab94a57b69d3d394a"
+    },
+    {
+      "path": "documentation/DejaVu_Font_Attribution.txt",
+      "bytes": 3859,
+      "sha256": "63d3ba759d12804c5b31a9d5940d855c1820d1f5999e6b0872eb1c7ff045fbc9"
+    },
+    {
+      "path": "documentation/VALIDATION_REPORT.json",
+      "bytes": 978,
+      "sha256": "5992550cab71bd3077dd7509674163576e1633191baeefb422c4873512098ef7"
+    },
+    {
+      "path": "icons/adaptive_png/hdpi/cine_background.png",
+      "bytes": 575,
+      "sha256": "aad44556315aa3ef2d778a39e63d0820173eb6289ad04dd5755b26b423ed3f13",
+      "width": 162,
+      "height": 162,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/hdpi/cine_foreground.png",
+      "bytes": 5173,
+      "sha256": "f917190bc9e54352d5bcd748c13edb7066b849d12218878d5d681d78c2dbcd92",
+      "width": 162,
+      "height": 162,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/hdpi/cine_monochrome.png",
+      "bytes": 3160,
+      "sha256": "b8bca1b0d594782ceddb5b6928b7859f6b6b810a308d18fc3d78d08a0a77767f",
+      "width": 162,
+      "height": 162,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/ldpi/cine_background.png",
+      "bytes": 324,
+      "sha256": "a9fa6e0c7d5847a8e91b093dc6cfcd1a8755d956d6e697e4b37c6f64fe398480",
+      "width": 81,
+      "height": 81,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/ldpi/cine_foreground.png",
+      "bytes": 2374,
+      "sha256": "6bccb706561c54edbb35b3c241295be9b7b5b1bf139598c1f55961713cde0f82",
+      "width": 81,
+      "height": 81,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/ldpi/cine_monochrome.png",
+      "bytes": 1594,
+      "sha256": "20455c88adef5dffd517a8bec79708c8510fcd0c1d3521e82f854184d5a4110d",
+      "width": 81,
+      "height": 81,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/mdpi/cine_background.png",
+      "bytes": 394,
+      "sha256": "d74255cfcfe104e03f9ca815f65ad80f16105dfddf2afeb04bb20ad1c8a25260",
+      "width": 108,
+      "height": 108,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/mdpi/cine_foreground.png",
+      "bytes": 3131,
+      "sha256": "30b0c6775256a8f0a0c5c5e32ca3b2b71a4a8d6db4a668089d324eba0a9a7e92",
+      "width": 108,
+      "height": 108,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/mdpi/cine_monochrome.png",
+      "bytes": 2053,
+      "sha256": "eb430dfcb798012ce2f4d3966e2fe41a1f2850b4638b8adae868621fe413ea96",
+      "width": 108,
+      "height": 108,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/xhdpi/cine_background.png",
+      "bytes": 745,
+      "sha256": "5e83b152500a874fe36c857df02df634b7293acf7df137a2e52ef5503aff9d5b",
+      "width": 216,
+      "height": 216,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/xhdpi/cine_foreground.png",
+      "bytes": 6955,
+      "sha256": "0aebd58f255a6292871bc12e1e7b6e687a75d228e7b34143388e03eff3ff1a3c",
+      "width": 216,
+      "height": 216,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/xhdpi/cine_monochrome.png",
+      "bytes": 4201,
+      "sha256": "00a65972791fcfdb0287830a3fc295e8e445fb487360681f37eb699bb2b1d961",
+      "width": 216,
+      "height": 216,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/xxhdpi/cine_background.png",
+      "bytes": 1082,
+      "sha256": "47a1693ef22fa8aba5ba60d7c388e71e927908008e238375b6a214827fa5eb6d",
+      "width": 324,
+      "height": 324,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/xxhdpi/cine_foreground.png",
+      "bytes": 11089,
+      "sha256": "777a48926e6dee92adfc86099cb49b5393c4e3669d126a381df8e599a195eb56",
+      "width": 324,
+      "height": 324,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/xxhdpi/cine_monochrome.png",
+      "bytes": 6505,
+      "sha256": "c72992c1ca787afb1b49c141a3ced1039efd33e511d07e9f1ff12e5fb77760d6",
+      "width": 324,
+      "height": 324,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/xxxhdpi/cine_background.png",
+      "bytes": 1771,
+      "sha256": "5e8676bdb5994cfef5e16d047da632af9b75957d3a7824470b862257e1b20d39",
+      "width": 432,
+      "height": 432,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/xxxhdpi/cine_foreground.png",
+      "bytes": 15294,
+      "sha256": "177a93cad7089fd68df1009f66de28f469abb9d6fa7483bdaa3ff0ac1bc00fa6",
+      "width": 432,
+      "height": 432,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/adaptive_png/xxxhdpi/cine_monochrome.png",
+      "bytes": 8806,
+      "sha256": "b7e98317efd1805d39d1629353a4adb8b737634ebf3abe384667d02f479bd58e",
+      "width": 432,
+      "height": 432,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_round_1024.png",
+      "bytes": 74912,
+      "sha256": "e4d89c16a81143b1a794597a9c99a6e59a6be1d00811f236827c7e3a3bb00774",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_round_128.png",
+      "bytes": 7347,
+      "sha256": "fc93a2e4c7af1a8c2714ba3fed7ec1e1d76b1b8830ba68f6a7fa8f2cb53bfe28",
+      "width": 128,
+      "height": 128,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_round_256.png",
+      "bytes": 15751,
+      "sha256": "e8c5284236884d41e3a952222aa48505e7fe5db43a851eeee30e6b68263dd1f7",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_round_512.png",
+      "bytes": 34051,
+      "sha256": "69dfce1e9e99abae9c0b22cba265de5965395d4217bea22e97f8ca68337842eb",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_rounded_1024.png",
+      "bytes": 63594,
+      "sha256": "e47f4ac92f810c636d84050f659b6eeef793887f85c53799573435864f4695e5",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_rounded_128.png",
+      "bytes": 6160,
+      "sha256": "4ec8021ce4b662dfd3375ca30a8e6acef59f7c782e55a09b3599da0d62f8fce7",
+      "width": 128,
+      "height": 128,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_rounded_256.png",
+      "bytes": 13233,
+      "sha256": "efadd943d086e4659e65d83c9c4a366da120970b1b3c5dc36dfd7ed648f52ef1",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_rounded_512.png",
+      "bytes": 28502,
+      "sha256": "d59a6f1be196921a069bc8f40a5ed35a8f82db8e6e9b8c7ce1dda8841c101691",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_square_1024.png",
+      "bytes": 53254,
+      "sha256": "a5ed5a6de3ed66a02f8d38ca38e4fad03711a006fc4825e7bb8fe1c0ca49a0f9",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_square_128.png",
+      "bytes": 5095,
+      "sha256": "7be67583c7ee862bc3903719a71ee1637bfa95a82de3ed30026316e5eb9ef0ce",
+      "width": 128,
+      "height": 128,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_square_256.png",
+      "bytes": 11035,
+      "sha256": "a26c552bc56eccb969523fe74f0d71796f33f04dbc7899f2fa8ea3155bf25af7",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/cine_app_icon_square_512.png",
+      "bytes": 23625,
+      "sha256": "91abe9543867d7e24c8c54a9c66af8b6fce392ebafddcc637d0343f04af0ff3a",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/notification/hdpi/ic_cine_notification.png",
+      "bytes": 769,
+      "sha256": "eab892244b0633a66f9eb329b982c095cdf733a10d8a59192434f078908d26e2",
+      "width": 36,
+      "height": 36,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/notification/ldpi/ic_cine_notification.png",
+      "bytes": 436,
+      "sha256": "1ee43fa8ac5428fc989979e7735c72a865f852975c90e53eda05f839119ed831",
+      "width": 18,
+      "height": 18,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/notification/mdpi/ic_cine_notification.png",
+      "bytes": 513,
+      "sha256": "0e1098809b146570d121a54409de8ab5b8c5942bc5d281088a02e7e5c926ab6d",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/notification/xhdpi/ic_cine_notification.png",
+      "bytes": 999,
+      "sha256": "bb3ce66e2c4cb157a44551c2d2f466aaac72bc8be8c377f947868e17523638a1",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/notification/xxhdpi/ic_cine_notification.png",
+      "bytes": 1480,
+      "sha256": "ea23b73837ce9b4145ed7d69879434f2fb62f125fa4e6e862ee869f9db8ad38e",
+      "width": 72,
+      "height": 72,
+      "mode": "RGBA"
+    },
+    {
+      "path": "icons/notification/xxxhdpi/ic_cine_notification.png",
+      "bytes": 1952,
+      "sha256": "9e0f4561f2a80bbab43cdf6fa47af669bac2e1e649e25fed78249d8c08af1aeb",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_logo_horizontal_black_2200.png",
+      "bytes": 49426,
+      "sha256": "8fe2e278fb1a2c7884dd02e1b944a76401885fda848bc3e428c27a5e520143c7",
+      "width": 2200,
+      "height": 600,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_logo_horizontal_dark_1100.png",
+      "bytes": 29258,
+      "sha256": "56605a04a040d17d20e35779fb7aa3de9287ec08d45f51c06532d98210643a3f",
+      "width": 1100,
+      "height": 300,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_logo_horizontal_dark_2200.png",
+      "bytes": 63335,
+      "sha256": "1ee5a33fc5280d3ec10232260097041986811da866d7092f945780bd9be0e80a",
+      "width": 2200,
+      "height": 600,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_logo_horizontal_light_1100.png",
+      "bytes": 30261,
+      "sha256": "0c121382d2df016e9cd1761e17807e9d972bae9c6e70031a8031f2211d38f922",
+      "width": 1100,
+      "height": 300,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_logo_horizontal_light_2200.png",
+      "bytes": 65280,
+      "sha256": "e3f0a37ec881c77d5fb1bba17f9291db7c6fcd51c6506819c0db273f1b1c8cbb",
+      "width": 2200,
+      "height": 600,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_logo_horizontal_white_2200.png",
+      "bytes": 46476,
+      "sha256": "d101462370df2e64bdc4aae55796a240a800689474cad2c670aa3c4445b18780",
+      "width": 2200,
+      "height": 600,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_logo_stacked_dark_1400.png",
+      "bytes": 92829,
+      "sha256": "b66243f4a6cbff79d98128c8b3fa5bb8ad691c011db324e7ccf02772f84791d5",
+      "width": 1400,
+      "height": 1500,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_logo_stacked_dark_700.png",
+      "bytes": 41488,
+      "sha256": "901d67586e6c254899c505248ff1d68b016d37af91367456ce4ff72d7e23fe3a",
+      "width": 700,
+      "height": 750,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_logo_stacked_light_1400.png",
+      "bytes": 94498,
+      "sha256": "da92a28ac15b7e465bb61100d44c5713a4add69c892eb5f41e1e5d787e31ef4f",
+      "width": 1400,
+      "height": 1500,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_logo_stacked_light_700.png",
+      "bytes": 42364,
+      "sha256": "3e883f699fe102ace59c871b5bd4e21f4a6d1cc9d7ec6cd89bffc3fd8ff17bbb",
+      "width": 700,
+      "height": 750,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_black_1024.png",
+      "bytes": 34306,
+      "sha256": "931a4ed5b21d04944d93217e40449688cd454dc5deb12c3a39cce45b58f9aad5",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_black_2048.png",
+      "bytes": 77782,
+      "sha256": "be90c7c0a9199c0b2e141d6629df829555ad9afe999435c8a802c912a16b4bcd",
+      "width": 2048,
+      "height": 2048,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_black_256.png",
+      "bytes": 7476,
+      "sha256": "3b2f85543d5e0cc3fc59dfc2646b321ca5982e39e26caa76171c4ff326ee4850",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_black_512.png",
+      "bytes": 15730,
+      "sha256": "fbe3936a9df98b56aff4c4ea1370ede79faf2332dd1294659d9e9289ef3dc38a",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_cyan_1024.png",
+      "bytes": 32262,
+      "sha256": "4f508aa7c2069ff05a702d5e928c89fa6d0a0284e461554614668bdbdf8977b9",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_cyan_2048.png",
+      "bytes": 73539,
+      "sha256": "32ecb1633ad87d6e287c22336c76201e439acead58fce5e89d7662854f8072db",
+      "width": 2048,
+      "height": 2048,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_cyan_256.png",
+      "bytes": 6901,
+      "sha256": "d3b0e2100f46f669cb72f32d26a212e2dffca92e19a8690c46df67effcf77b76",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_cyan_512.png",
+      "bytes": 14765,
+      "sha256": "66aabd4a27b75d86b0a150a03ae9e0c6b5cc246e140167c9c8df96c7c14823e2",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_gradient_1024.png",
+      "bytes": 63033,
+      "sha256": "8632a736678eafdac64a4618561a0e0340649b6958539d243f2e065fff8767c6",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_gradient_2048.png",
+      "bytes": 145446,
+      "sha256": "0a41fba5a831bbccd81232c30c0f16e70fc40ac1a6c11dfb0cafe5b47dcfe5ab",
+      "width": 2048,
+      "height": 2048,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_gradient_256.png",
+      "bytes": 12767,
+      "sha256": "200ccecdc82b68b320ad12f5b102d5f99e712d82da38618d86402ae4cd31de7c",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_gradient_512.png",
+      "bytes": 27682,
+      "sha256": "27924deb8c7bbdca3b44930ded9f119e47d1100fb74fc6138bb6398469c6ae8b",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_white_1024.png",
+      "bytes": 32536,
+      "sha256": "c2e38900d6bd5c36282daaed5366ca229c4f2a6a26c9941ac927c44aa3740033",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_white_2048.png",
+      "bytes": 74207,
+      "sha256": "8f2d27d5f952a04ff05919a35805e47449be84bb991d27dad5730f4b2e8181f2",
+      "width": 2048,
+      "height": 2048,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_white_256.png",
+      "bytes": 7002,
+      "sha256": "fac6f939c0050fb8955fe15595bc80ef25dabe5bcf0d951c07e14b9ebea14c66",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_symbol_white_512.png",
+      "bytes": 14861,
+      "sha256": "b6dd546f89cd58d00ac80b2bf3ba3ea5934109f8c1745d2333beb8463a2bbc37",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_wordmark_dark_1400.png",
+      "bytes": 24219,
+      "sha256": "e49b57c61aa5ace0ee3223562fd78c1971ef79954d6ae5418380a214bd65f648",
+      "width": 1400,
+      "height": 400,
+      "mode": "RGBA"
+    },
+    {
+      "path": "logos/png/cine_wordmark_light_1400.png",
+      "bytes": 25734,
+      "sha256": "a45e9a23605dec60482acd40f1809ee6b5f689fc2d8ebce5a32125825ba28feb",
+      "width": 1400,
+      "height": 400,
+      "mode": "RGBA"
+    },
+    {
+      "path": "placeholders/cine_album_dark_1024.png",
+      "bytes": 70654,
+      "sha256": "95b72d2ca884b392a2ce3837a45b5cbd7a41c7d189c779c3c67ebf0921ccb295",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_album_dark_512.png",
+      "bytes": 30148,
+      "sha256": "c284f1d1f2fd4c9f1751e15ae52c777f5fdcfb8c5a7a3247eb831033057d68b7",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_album_light_1024.png",
+      "bytes": 63744,
+      "sha256": "fa4c94fc8c6f0602759e44bea120eeb380d29a4c8de5b9887bf9ecb63155e4b0",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_album_light_512.png",
+      "bytes": 27374,
+      "sha256": "507ffa1b9e70fb13e3ccf8414f82c8580fa2e7776400e0dde8660b1ee3244ce4",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_artist_dark_1024.png",
+      "bytes": 56263,
+      "sha256": "2df03898f8ee1573c22cb1de51c33a00dcdeb4c6a0fbed0ad661fafa3cf5e469",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_artist_dark_512.png",
+      "bytes": 23536,
+      "sha256": "3d3184a5404c135325809a1a5651ca0e00cb32343554a8f00760bd4bff0a7dc0",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_artist_light_1024.png",
+      "bytes": 50827,
+      "sha256": "d0575cd27b94d4f8d983e5043ff8e6fc2f8866b35d6cf0b715d02c7a34baa931",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_artist_light_512.png",
+      "bytes": 21414,
+      "sha256": "2f77660449d3a10fb1f8370972e1c0e422eea42e82e1cfa8737f809ea43772d9",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_favorites_dark_1024.png",
+      "bytes": 59311,
+      "sha256": "363d84dddb38e838bdb2ea521b38094120b7d9a6fa9c87e1edd875f3b4aa0f96",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA"
+    },
+    {
+      "path": "placeholders/cine_favorites_dark_512.png",
+      "bytes": 23025,
+      "sha256": "0ac70006c9b197bff76152bc5ac71ff82a5d9ab7fa4071b5da5e567d572f95d7",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_favorites_light_1024.png",
+      "bytes": 49306,
+      "sha256": "93570d54a6ecaa02906895a345221f4aa04a11407aa95aec5212f23ec9310688",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_favorites_light_512.png",
+      "bytes": 20634,
+      "sha256": "889f0acd59da4410729cc0e32805f9d47b47d3f262fcefb40b1263aff29527a5",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_playlist_dark_1024.png",
+      "bytes": 51388,
+      "sha256": "94de70ec9a901c57c4e04a26efe8dd5705eca6819eb630042a034a5b5293d110",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_playlist_dark_512.png",
+      "bytes": 21158,
+      "sha256": "64f28afa283431325d8bde103475d1651e4d2facef551ca28b79e20cc314addd",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_playlist_light_1024.png",
+      "bytes": 46347,
+      "sha256": "16f45fe16e2238931f275a2df1bc2d3330d077015602b2869ff13abc489d6435",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_playlist_light_512.png",
+      "bytes": 19168,
+      "sha256": "b4162a75ce886f20a6674444cf4d11a5f63bab89e4e99bef2de3b4f53ef06b44",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_song_dark_1024.png",
+      "bytes": 53323,
+      "sha256": "8169b59f1941936626f11b094a0ba5d4a07766de985c83a84f8596df11706628",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_song_dark_512.png",
+      "bytes": 22014,
+      "sha256": "a67a558f477cc29327a8728458399fa9a5457317de2be693732264457284dc20",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_song_light_1024.png",
+      "bytes": 48243,
+      "sha256": "b66caf129378e0874139af3db4c0c718fc7bbefe322e9fbe349427ec1669ff6b",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "path": "placeholders/cine_song_light_512.png",
+      "bytes": 20144,
+      "sha256": "b3863d71be110b0bc1eff8d6d20bc7b6cac66bfc1ca0b89c57961580329978d1",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB"
+    },
+    {
+      "path": "preview/Cine_Music_Asset_Pack_Preview.png",
+      "bytes": 238913,
+      "sha256": "fe77847f76bfb643a0dbda97b160b5cf0b565fd5e672e7b361218c5b06597950",
+      "width": 1920,
+      "height": 1360,
+      "mode": "RGB"
+    },
+    {
+      "path": "source/GENERATION_PROMPTS.md",
+      "bytes": 1928,
+      "sha256": "2067c2050c6b845e51e799f0b5b81e6f6b87414f708892ca2319593c60d0d222"
+    },
+    {
+      "path": "source/build_animation.py",
+      "bytes": 12358,
+      "sha256": "a03633b14483b209b5b45d17253d30c57f62db91c0193a853a476c52944a1013"
+    },
+    {
+      "path": "source/build_assets.py",
+      "bytes": 46637,
+      "sha256": "3611a6288d900ce2875c9038e841c846fb9d0951e7f9dd4d066e753db787edc3"
+    },
+    {
+      "path": "source/requirements.txt",
+      "bytes": 17,
+      "sha256": "4446a8d3776d750d82a9d7c58d379afceee5674b35e12bf1144c967875c9bcd9"
+    },
+    {
+      "path": "source_svg/cine_adaptive_background.svg",
+      "bytes": 1200,
+      "sha256": "c3e58e7de786127a296d96d1ef124599d7342124818dca70e5e6bc3af2b1a22c"
+    },
+    {
+      "path": "source_svg/cine_adaptive_foreground.svg",
+      "bytes": 4789,
+      "sha256": "5fe1c5430033982f37ad362f80101534d649046961f55be740e5ae2938c13c6e"
+    },
+    {
+      "path": "source_svg/cine_adaptive_monochrome.svg",
+      "bytes": 4777,
+      "sha256": "0d140de941999fa8d95331ac2e1e4b77e22b9125f836aee3aa76f6ca1eaee33e"
+    },
+    {
+      "path": "source_svg/cine_app_icon_round.svg",
+      "bytes": 4863,
+      "sha256": "dfe4609b686b7025c7fd936761bbc75e2b35aa05a41eb2789fda8671693ac91e"
+    },
+    {
+      "path": "source_svg/cine_app_icon_rounded.svg",
+      "bytes": 4868,
+      "sha256": "a61f57c3b542c68be23804f9e54e4ffff79716fc5bc7deb37f61d58592c8c878"
+    },
+    {
+      "path": "source_svg/cine_app_icon_square.svg",
+      "bytes": 4863,
+      "sha256": "1cd52d18dd92710d5077910e1d01a4876bd545cd5d5ecd1c4919fcff6d015efb"
+    },
+    {
+      "path": "source_svg/cine_asset_pack_overview.svg",
+      "bytes": 57731,
+      "sha256": "b9a33e31db373271b79f9734e5ce207b87245b7c05bfbebc97f8c5105753366e"
+    },
+    {
+      "path": "source_svg/cine_logo_horizontal_black.svg",
+      "bytes": 14120,
+      "sha256": "64fcc5a2c77d180d2c7e45811f202f5c00b6a337d913ec8f45da4a48debb512d"
+    },
+    {
+      "path": "source_svg/cine_logo_horizontal_dark.svg",
+      "bytes": 14132,
+      "sha256": "c0f99b1283d58b25d36e0f4a42316a27550b3249cf60de047a152f0afff590c0"
+    },
+    {
+      "path": "source_svg/cine_logo_horizontal_light.svg",
+      "bytes": 14132,
+      "sha256": "44500bd93fc8d29743dfd99971de5cb9f51bbb54a5acae2eadbecb7978afadd8"
+    },
+    {
+      "path": "source_svg/cine_logo_horizontal_white.svg",
+      "bytes": 14120,
+      "sha256": "c9c4ea68f25e2522e2b7bb2ccd82ae3c88e1848863d022c6c11e67a22e7e7dcf"
+    },
+    {
+      "path": "source_svg/cine_logo_stacked_dark.svg",
+      "bytes": 14106,
+      "sha256": "4ca9f712c5252dbfa94af64d4dddd179ddee73984d28e4e8966521e2559ea885"
+    },
+    {
+      "path": "source_svg/cine_logo_stacked_light.svg",
+      "bytes": 14106,
+      "sha256": "abe5c9b80b8d1414aec409f3018469b91be787f1bf43871fb057d52aaab9da3c"
+    },
+    {
+      "path": "source_svg/cine_notification.svg",
+      "bytes": 4766,
+      "sha256": "21c37d1aaf290c84688b9112cc44d172483a94d7a63b8116d6ee8c3512aac9a6"
+    },
+    {
+      "path": "source_svg/cine_placeholder_album_dark.svg",
+      "bytes": 5031,
+      "sha256": "beb72b3c973c36b5202f722eb21b9a10028f04311504106662aaf881a03fb37a"
+    },
+    {
+      "path": "source_svg/cine_placeholder_album_light.svg",
+      "bytes": 5031,
+      "sha256": "6fd33bc04f13ca59c6bb6d279da7bef70740435c51ec87e31c2f70c7247ffa0f"
+    },
+    {
+      "path": "source_svg/cine_placeholder_artist_dark.svg",
+      "bytes": 1625,
+      "sha256": "6fe197ceeb09317382ea47e858bf03f8dd5a574947d10d7e8fe228d94b34dc5c"
+    },
+    {
+      "path": "source_svg/cine_placeholder_artist_light.svg",
+      "bytes": 1625,
+      "sha256": "7459562d7e5ea63ed07d23924fac6000509044e03e0739012436a2fb89fe8b34"
+    },
+    {
+      "path": "source_svg/cine_placeholder_favorites_dark.svg",
+      "bytes": 1611,
+      "sha256": "97a0cf58197e03a8488f5a6d187689978daf709c22c864ba2e5944aa950dee28"
+    },
+    {
+      "path": "source_svg/cine_placeholder_favorites_light.svg",
+      "bytes": 1611,
+      "sha256": "4d165f4009b9766f9567da77b9b338082cc2a686ee8fd22a2f4a3107b9d81a56"
+    },
+    {
+      "path": "source_svg/cine_placeholder_playlist_dark.svg",
+      "bytes": 1645,
+      "sha256": "5ceb919ce437b519ea2e3dc5ce1549afe654a08e08946339ab1c74511c1adba3"
+    },
+    {
+      "path": "source_svg/cine_placeholder_playlist_light.svg",
+      "bytes": 1645,
+      "sha256": "1889d1db622497c68ca600a93b29ee809f86364aa1fb4c0609acf9de35a88fc6"
+    },
+    {
+      "path": "source_svg/cine_placeholder_song_dark.svg",
+      "bytes": 1675,
+      "sha256": "59334fd76c05ec62f3aa301b83b069b7a9245cf61ef8872695fff37383e5e0b2"
+    },
+    {
+      "path": "source_svg/cine_placeholder_song_light.svg",
+      "bytes": 1675,
+      "sha256": "57bdb5b3fc77bd0280264ecb028215c790314e13f1274ac089a47f6302a29484"
+    },
+    {
+      "path": "source_svg/cine_play_feature_graphic.svg",
+      "bytes": 14459,
+      "sha256": "bfbc26d3f46147856d1584b607f7be5e29247392752b604945447299bd32ab10"
+    },
+    {
+      "path": "source_svg/cine_splash_branding_dark.svg",
+      "bytes": 10495,
+      "sha256": "fd60a87d6e3719ac47e5afbe062f05657365df1f581c4080a098059dcc0b3a66"
+    },
+    {
+      "path": "source_svg/cine_splash_branding_light.svg",
+      "bytes": 10495,
+      "sha256": "cdfee6e1478e6f6776d3bf0b8af98140ae82726bafc0f5a5849dc18e53d8cd8f"
+    },
+    {
+      "path": "source_svg/cine_splash_dark_1080x1920.svg",
+      "bytes": 14245,
+      "sha256": "f95c8a175faefa9d8140f3a814a579a98435e9e2aeeeb40bd565176c805b4394"
+    },
+    {
+      "path": "source_svg/cine_splash_dark_1080x2400.svg",
+      "bytes": 14245,
+      "sha256": "7e84a1aacf0c79a2e713764145e12710b28d6c1bae3d5d7fa0da55541eb4d430"
+    },
+    {
+      "path": "source_svg/cine_splash_dark_1440x2560.svg",
+      "bytes": 14219,
+      "sha256": "358167f860b4022804e9d171dc7e1bc0934f92b6e61f90fac5a2f2976803a91a"
+    },
+    {
+      "path": "source_svg/cine_splash_dark_1920x1080.svg",
+      "bytes": 14207,
+      "sha256": "98a7181167013351bd5a886f63bea203982bda155033fc2dc7fbe7c2e394a61c"
+    },
+    {
+      "path": "source_svg/cine_splash_icon_dark.svg",
+      "bytes": 4789,
+      "sha256": "35994c2b29925aab320e2cb797b3d0b5c9bfb70acfbea0c555ec6e145c024fed"
+    },
+    {
+      "path": "source_svg/cine_splash_icon_light.svg",
+      "bytes": 4789,
+      "sha256": "35994c2b29925aab320e2cb797b3d0b5c9bfb70acfbea0c555ec6e145c024fed"
+    },
+    {
+      "path": "source_svg/cine_splash_light_1080x1920.svg",
+      "bytes": 14245,
+      "sha256": "6d8263bdca7ca502df63364df240961445708245b4ed6319bab178fce31862c2"
+    },
+    {
+      "path": "source_svg/cine_splash_light_1080x2400.svg",
+      "bytes": 14245,
+      "sha256": "8be46934566d70a88ce54de1134fc3b1b1d5b7a45000890d4c3ad1ed3f59d0b9"
+    },
+    {
+      "path": "source_svg/cine_splash_light_1440x2560.svg",
+      "bytes": 14219,
+      "sha256": "1fcb8c3d706acee457d7c925989d3cefb2bcdb7f10cb3199aeb85a663d0cad62"
+    },
+    {
+      "path": "source_svg/cine_splash_light_1920x1080.svg",
+      "bytes": 14207,
+      "sha256": "0ccc2227b0d86c2bc0efd154bdfe1eecb2d059cf2b62d18721f881afcfe8c5a2"
+    },
+    {
+      "path": "source_svg/cine_store_screenshot_backdrop.svg",
+      "bytes": 14388,
+      "sha256": "348ae0ce922adccc12bb2b42a63e86917a8556024b827f7c983ea56ccdd22082"
+    },
+    {
+      "path": "source_svg/cine_symbol_black.svg",
+      "bytes": 4776,
+      "sha256": "d8e7bd22e4ac5e643691775e5f1469b12fdb1c942644f5d18ad66aa122c952a8"
+    },
+    {
+      "path": "source_svg/cine_symbol_cyan.svg",
+      "bytes": 4776,
+      "sha256": "ec16aaf6cb85b5bb7ba007c8cd5247e3c2fcc79208585246d943c18346066497"
+    },
+    {
+      "path": "source_svg/cine_symbol_gradient.svg",
+      "bytes": 4788,
+      "sha256": "792c3e9100bc88f6eff8a2a3e875d1d31692435797e28ec28c1c72572b70e264"
+    },
+    {
+      "path": "source_svg/cine_symbol_white.svg",
+      "bytes": 4776,
+      "sha256": "a6ad912c7f3f5ae31968e4c4d6a4f25389a3e7bfaab57dc9dac322e9ce06de7e"
+    },
+    {
+      "path": "source_svg/cine_wordmark_dark.svg",
+      "bytes": 10496,
+      "sha256": "738cd09f6ed68c3e74029afe75fae846010b925de62cb38b1948832f54531b00"
+    },
+    {
+      "path": "source_svg/cine_wordmark_light.svg",
+      "bytes": 10496,
+      "sha256": "81d265ffae737ceb4369cf0d0626c507c380edd55705d7a9f8713662c1b64aec"
+    },
+    {
+      "path": "splash/animation/README.md",
+      "bytes": 1100,
+      "sha256": "9289a11a41c3a1b3730b2c773f2e172d0d57c110345512a28cf87b00b46461e5"
+    },
+    {
+      "path": "splash/animation/cine_splash_animated_dark.svg",
+      "bytes": 14730,
+      "sha256": "b0d0f5a32e6459ccabfe57314b3958a3fd7d2f2b9387ce91c844696f65a99d67"
+    },
+    {
+      "path": "splash/animation/cine_splash_animated_light.svg",
+      "bytes": 14730,
+      "sha256": "e11e50746b4e2bdee0c18d25a985292862e879b68d83b11b7e536a3188dea4eb"
+    },
+    {
+      "path": "splash/animation/cine_splash_preview.gif",
+      "bytes": 135953,
+      "sha256": "e9830a0d0dba52254d97472207a30ce1ed6d82fd675a869371635e9d206ee776"
+    },
+    {
+      "path": "splash/animation/cine_splash_preview.mp4",
+      "bytes": 25144,
+      "sha256": "8c91cc099997101d710f8732c0f4142ece47a637ce65c4edd2c628bd5b56d683"
+    },
+    {
+      "path": "splash/cine_splash_branding_dark_800x320.png",
+      "bytes": 14299,
+      "sha256": "29ed39b717c22acc4f9f686f29ab670d72c1bc6db1c1d0b99667242a47c7b946",
+      "width": 800,
+      "height": 320,
+      "mode": "RGBA"
+    },
+    {
+      "path": "splash/cine_splash_branding_light_800x320.png",
+      "bytes": 15221,
+      "sha256": "45855ba915a9a133456f3c9da8f147ad67068f59256403398515e0e918610b3f",
+      "width": 800,
+      "height": 320,
+      "mode": "RGBA"
+    },
+    {
+      "path": "splash/cine_splash_dark_1080x1920.png",
+      "bytes": 51786,
+      "sha256": "d327c5524805e8e341d20710678a1bdb90ba2e69c44aa5a6d8adb1ce0a1bee9e",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB"
+    },
+    {
+      "path": "splash/cine_splash_dark_1080x2400.png",
+      "bytes": 54960,
+      "sha256": "02ab4e66ed8f3cb2727c7ebed41f6b39a7772ff37eea139c9bed6a640eced40a",
+      "width": 1080,
+      "height": 2400,
+      "mode": "RGB"
+    },
+    {
+      "path": "splash/cine_splash_dark_1440x2560.png",
+      "bytes": 72798,
+      "sha256": "455a912575afcf5a498426feb919903f7c3d7c28ea221356bc33884ee97f6f92",
+      "width": 1440,
+      "height": 2560,
+      "mode": "RGB"
+    },
+    {
+      "path": "splash/cine_splash_dark_1920x1080.png",
+      "bytes": 43719,
+      "sha256": "bca00dcd22081d757ff9dd2e83205f240eb0b43ad86e4c2f2e5623f8e29c89c3",
+      "width": 1920,
+      "height": 1080,
+      "mode": "RGB"
+    },
+    {
+      "path": "splash/cine_splash_icon_dark_1152.png",
+      "bytes": 52727,
+      "sha256": "7a5525708a6b4d3091f7f8850d9bfa0515cf4e87526cfb313b918982f7c92c3c",
+      "width": 1152,
+      "height": 1152,
+      "mode": "RGBA"
+    },
+    {
+      "path": "splash/cine_splash_icon_light_1152.png",
+      "bytes": 52727,
+      "sha256": "7a5525708a6b4d3091f7f8850d9bfa0515cf4e87526cfb313b918982f7c92c3c",
+      "width": 1152,
+      "height": 1152,
+      "mode": "RGBA"
+    },
+    {
+      "path": "splash/cine_splash_light_1080x1920.png",
+      "bytes": 49740,
+      "sha256": "099bd6950f14dac30a507b9ada68514e0fa9c678226fd692d3573ae836db1432",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB"
+    },
+    {
+      "path": "splash/cine_splash_light_1080x2400.png",
+      "bytes": 52477,
+      "sha256": "33fee01b07eb57849d25a792750214b91b0aa989b462596e548fc7aff2831043",
+      "width": 1080,
+      "height": 2400,
+      "mode": "RGB"
+    },
+    {
+      "path": "splash/cine_splash_light_1440x2560.png",
+      "bytes": 70033,
+      "sha256": "f1f5a73209212bc0fcd512b5f2c23768b65a0f2e07fc21a364a2bc06c4c8f6d3",
+      "width": 1440,
+      "height": 2560,
+      "mode": "RGB"
+    },
+    {
+      "path": "splash/cine_splash_light_1920x1080.png",
+      "bytes": 42045,
+      "sha256": "ec5aa811d8c2d133d89d7734751807c3442b0f43c3efb164a11dbdbc694caec0",
+      "width": 1920,
+      "height": 1080,
+      "mode": "RGB"
+    },
+    {
+      "path": "store/cine_music_feature_graphic_1024x500.png",
+      "bytes": 81950,
+      "sha256": "ea41c96e7316d441dd2c743fd67711d6d4135e3d9ec29111d2c3ae4178e3ef04",
+      "width": 1024,
+      "height": 500,
+      "mode": "RGB"
+    },
+    {
+      "path": "store/cine_music_play_store_icon_512.png",
+      "bytes": 23625,
+      "sha256": "91abe9543867d7e24c8c54a9c66af8b6fce392ebafddcc637d0343f04af0ff3a",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA"
+    },
+    {
+      "path": "store/cine_screenshot_backdrop_1080x1920.png",
+      "bytes": 159470,
+      "sha256": "723bdcbf3f0d74c6a286341a9895c5cb5993c971901f84284471eda3dba57be4",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB"
+    },
+    {
+      "path": "ui_icons/png/24/cine_add.png",
+      "bytes": 244,
+      "sha256": "d75d21eb2a914bef0340049a87353607a85e63dc7a36fac0419847e955369f91",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_album.png",
+      "bytes": 715,
+      "sha256": "60b15e9fea47e2b0ffe6c86a1ff7849384f2ce1cd9d9c6376f44f28ce15348f3",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_artist.png",
+      "bytes": 550,
+      "sha256": "2a055c48cac9156ccb98d3142261c196abc9ffa312a119a1f7180173fac2908b",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_back.png",
+      "bytes": 305,
+      "sha256": "f611f6f5774cdc5a4f4ea8e832c05fb0eb32e10fce74e8cb171709b19ee87438",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_chevron_down.png",
+      "bytes": 315,
+      "sha256": "29e7b3b8d25e635c1cf05601e9de2614dc4ea2d31d60915f28d082bb385483a9",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_close.png",
+      "bytes": 384,
+      "sha256": "bf7f35ad3367aa4ce14d6da559f532b6fb92aa5e38cd92f31a96d5bb68635d0e",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_download.png",
+      "bytes": 387,
+      "sha256": "5ae20e63d74c60ef8a62a83e8ef0949f5c6151e9e9b10c3060e7a7862a47afbd",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_equalizer.png",
+      "bytes": 259,
+      "sha256": "17884ca903b0b5d5d27ef2ccd91f3bde8d580384b10a67c18586e307a4b8179d",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_headphones.png",
+      "bytes": 628,
+      "sha256": "36b88fb0075e4a2acb5b0cc9372cca66406683fff7c778ea41a4ae64ac0fedb0",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_heart.png",
+      "bytes": 646,
+      "sha256": "b8ba048108bb93f1f2bf11eb2b6a6b56ec45aab62de6a7838df21069f7591efa",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_heart_filled.png",
+      "bytes": 475,
+      "sha256": "bcaa79d822b64af591860d7d427f407c8b0ff0e57e2e5f9a525df5cb32064698",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_home.png",
+      "bytes": 499,
+      "sha256": "8103efb1a4c4cf374b1aa9e7d5bb7bf03b3b492f955ba249e8abd52ea2b94eb4",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_library.png",
+      "bytes": 345,
+      "sha256": "d5f57ebe766e81463cb7ac05f7f9b440ce0e392714e7381c3f07a943c7e7b8a3",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_moon.png",
+      "bytes": 583,
+      "sha256": "1ed740f05b70665e26f3455338c7b4cef3d47fc100a55c3163450e933101bcf9",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_more.png",
+      "bytes": 172,
+      "sha256": "8b8bf1316c7827569d9bc35e77189a93710904c91403d8ddc7a4126fa108deee",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_music.png",
+      "bytes": 567,
+      "sha256": "ccd9f886d3cfbb67cf118d43eab0339880c67b423a8fc9579d7d3698aa1bc25d",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_mute.png",
+      "bytes": 510,
+      "sha256": "3fa0fba63d53d702f70a93e6bc769ef5aaf47a49e5d340c7d18562d4a97dd210",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_next.png",
+      "bytes": 379,
+      "sha256": "90f2733345b12906be46b41b96a171d57a97831f90f79be95f1db536fdaf0cdc",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_pause.png",
+      "bytes": 207,
+      "sha256": "e13f0740cd5866571e47f59263a9003413d1939037f7d9fb59a1f6c05d1d5107",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_play.png",
+      "bytes": 376,
+      "sha256": "f0267fc5a8a9123d60e86683cb6cd86bcc5b23687488cca58a4d88824b5e87b9",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_playlist.png",
+      "bytes": 462,
+      "sha256": "46d43b6f0abc28371b339f4605b6d79e824819c7bcf9b48c1664e2fded57cc10",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_previous.png",
+      "bytes": 386,
+      "sha256": "f83f47885e423c5f9c4842f25c8625543c9a569fd47a48f423ada2ea2854af21",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_queue.png",
+      "bytes": 298,
+      "sha256": "662ef34466f49183336cc9f8eb3e1400c39c85b8627601b259798250b85e0eb9",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_repeat.png",
+      "bytes": 431,
+      "sha256": "58ab12c0d83d136175d88562d2986eb3a4c127a1799583384c2ca9f58ede6a2f",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_repeat_one.png",
+      "bytes": 458,
+      "sha256": "7dc323f32a643895b0211aefed1a0b73286ed50a5ed20141c0a1190dffedfc37",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_search.png",
+      "bytes": 630,
+      "sha256": "a3a0f9901e874ebb22b6d12da46acdce102086e8d71a3e727ad7dee8b5d0a87c",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_settings.png",
+      "bytes": 298,
+      "sha256": "b555eb6ae497ba841e05794a46cc6093b84ec5aff70213e5839e175fa1ac2e4c",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_share.png",
+      "bytes": 453,
+      "sha256": "07c286d8a9d4f6cb20ca1744a4b981fd3c9fc2e7306104fd985220826168546a",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_shuffle.png",
+      "bytes": 559,
+      "sha256": "c50cf01b6e784919cc077e2896ab95d0be6d92d24734cb84b18c55449fece2ec",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_stop.png",
+      "bytes": 205,
+      "sha256": "e70e5eaadad3e55d481f3b50922497dc54d829f9b440ba159dd72f18eb6bb423",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_timer.png",
+      "bytes": 776,
+      "sha256": "de82edbb60e0b107a6886838d6db5cd8fa50ed2f69ae7dd31b30f003d53c81a1",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/24/cine_volume.png",
+      "bytes": 607,
+      "sha256": "bdb14c866f97bcf5e88ff14929c29d01be9febdfc19d1173c0c7fe07d2ae20aa",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_add.png",
+      "bytes": 365,
+      "sha256": "b92c5c56578f57c9ace4f337e303b2c0659704a75f44701574ec39d42866fdf1",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_album.png",
+      "bytes": 1676,
+      "sha256": "e3f5a22b0e158de688780e9100ac5188ea6eb59fa8aac2d1a25ab356bdfa448a",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_artist.png",
+      "bytes": 1265,
+      "sha256": "c33fb46afc4c71d4fb068240eef31abeacedf3f431d400e600c31342e1461860",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_back.png",
+      "bytes": 500,
+      "sha256": "70ec70d7e264d6e68614be89268165db484ad80e7bf56d7ec2c90ed46fe833d2",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_chevron_down.png",
+      "bytes": 537,
+      "sha256": "9e29f0092bf0953fe41dbd68212593645a8e323813ee8069967a3bb42d0b6cd8",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_close.png",
+      "bytes": 642,
+      "sha256": "b784cf82ac0bf707df723a3cef90822582e08ecd6d2f62c7c6af60a48699a368",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_download.png",
+      "bytes": 627,
+      "sha256": "f6aaf1183ac950a2579939fc6fbe8a6a6367076c69fa3f1d786a819aaaa8c1aa",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_equalizer.png",
+      "bytes": 382,
+      "sha256": "2b0e7ce523d82829316573a341f7b435d79417cb8119716a5922bb6eba09a267",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_headphones.png",
+      "bytes": 1228,
+      "sha256": "f49ebdebd4110be5c58072ca26f8429890e8110ea83017ca6b08476df0b4acf9",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_heart.png",
+      "bytes": 1336,
+      "sha256": "d897deec11662a762a4be6bb1a390d4db3fa26af06f3bce738f68a326c55fa10",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_heart_filled.png",
+      "bytes": 864,
+      "sha256": "ce786540e95473c4a1b3297f5affc4e1496f97aa9afecbd50e5577e8e6069e02",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_home.png",
+      "bytes": 793,
+      "sha256": "fafdc60610403e796335258a599d5d38ef60f730b4a464e01377fb4e952d9fbe",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_library.png",
+      "bytes": 524,
+      "sha256": "6b9f0b4ab2e40552edc6f0a9ad19a6be63fa61c3cbf88c403d5f026fb265c5da",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_moon.png",
+      "bytes": 1260,
+      "sha256": "46f69c860e11c4c461c178522bf5fab0c19a36e84c85b73e2ac5279c7d9cc1da",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_more.png",
+      "bytes": 272,
+      "sha256": "83d5c3d9be8da9760e25e04dc0cd3109b130c4042c71590ef3a8914c6fd506be",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_music.png",
+      "bytes": 952,
+      "sha256": "e9fef51f3e480fe523eb0b454f4cb8a3bfc6c2e0793603239d9f5462ab29b188",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_mute.png",
+      "bytes": 819,
+      "sha256": "bac026ae3f14775db193d747e65c0393add7a660932c8dbe7ce05d5b67ce7c74",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_next.png",
+      "bytes": 573,
+      "sha256": "fdff4c11e9152ab52f1648374875c1b1e5f2413377c721a3de7ca285b3ac7c9c",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_pause.png",
+      "bytes": 294,
+      "sha256": "6ddb632290aedb94817f6e7e537dae567de844dda2f91d93d07e11f684521423",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_play.png",
+      "bytes": 636,
+      "sha256": "daa4ba70759519d736c7dc10f414553bab19028799e1849019ea62276b76b65f",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_playlist.png",
+      "bytes": 778,
+      "sha256": "5f757d1cff7ad20175f0b927601a6df716f85f0fac7eb97886eee1b972aff372",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_previous.png",
+      "bytes": 596,
+      "sha256": "9317d16158a08b13da71da9cde96a5eb6beae1540774a06596fd3f88c94748fe",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_queue.png",
+      "bytes": 490,
+      "sha256": "5f3b4291094145286cce732b4908f14630e9f7389c55cc763e7a5400de028508",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_repeat.png",
+      "bytes": 702,
+      "sha256": "b74081712b85719a5ae78805041aeb6576affe5cb6300b719235264e55f2039c",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_repeat_one.png",
+      "bytes": 758,
+      "sha256": "2050c6e49fd28c4ab9269830e42a8f97685dc5648672ff92326d040c178052ba",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_search.png",
+      "bytes": 1392,
+      "sha256": "5265284accc5ee1cc20d49865a49ab276bba29e49fe63b1d28277c8336118041",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_settings.png",
+      "bytes": 469,
+      "sha256": "31fef2e105e92e846fd220f605bbaabf97ad0250d100d557311faaa3a3ce125f",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_share.png",
+      "bytes": 955,
+      "sha256": "45379c20ed8804086a32056add64508c4eeff9ee7442b76bdb7163f412645b6e",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_shuffle.png",
+      "bytes": 1003,
+      "sha256": "e612db34d8b194c87e850ced7db6ffba150a7742470ff1764256c7bd25e4a6af",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_stop.png",
+      "bytes": 298,
+      "sha256": "1df879c2cc8c9ac43c04633227b2bedc12fb119053520646d48bd633eb409d91",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_timer.png",
+      "bytes": 1548,
+      "sha256": "f9396e1f68d6182dc8111b489770b5234f9cfaa9be96d701b29f01891ea112f7",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/48/cine_volume.png",
+      "bytes": 1282,
+      "sha256": "15eaa6f368b0b17934af6d7f5f35dc1727dee9192eb35e9ba8c3fdda124fd30f",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_add.png",
+      "bytes": 602,
+      "sha256": "ed7e5a74b852d13a3fc09799b0179e0427c3ba94a560277d91c3a0d3063082a9",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_album.png",
+      "bytes": 3730,
+      "sha256": "21a02f7b88324edabebe2bb2ab84ff1003f036755463294045e2b17a1ab94a24",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_artist.png",
+      "bytes": 2542,
+      "sha256": "8fc5337a877467efbceb08a8d3d3fd67bbe8682ada98127ec416c723b3ef868e",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_back.png",
+      "bytes": 801,
+      "sha256": "5fe4bd2e8723b351a9cdf29decde5075b4509789f47ebc146113330bfca65838",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_chevron_down.png",
+      "bytes": 838,
+      "sha256": "63ca4686a2e2ec04414135734810404c375a22a47a8c849c07e7cf7d3a440816",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_close.png",
+      "bytes": 1050,
+      "sha256": "41117be1cce6665beef41269e93b67bcd50ed21bbac81ba5a6d6508dee76a099",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_download.png",
+      "bytes": 1050,
+      "sha256": "665b42088d6d3193aaf22102ac3013dead526d46f23c4bf3f2fdf2d78e52d1c4",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_equalizer.png",
+      "bytes": 713,
+      "sha256": "99209be36110b624d33bf584d76711fe17615b786b99dd4f6b723ce819d14dc2",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_headphones.png",
+      "bytes": 2485,
+      "sha256": "8e61e0fb32a2355dfabb05abf9dd472ee1cc157cb9bf880d9f8035933521cbd4",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_heart.png",
+      "bytes": 2516,
+      "sha256": "60946a4aa4e0f73313cf8148230a113caae6516d050d3fe8d990a3caa504d388",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_heart_filled.png",
+      "bytes": 1618,
+      "sha256": "64aad5a97fa212ec3b0c327a874ed201e267a8a510ef4a47edfb5e208845eaf8",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_home.png",
+      "bytes": 1368,
+      "sha256": "3c5157baffa83dbbf1cf3575e6534b4f92195a48564e978113b798ee297aa1fd",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_library.png",
+      "bytes": 893,
+      "sha256": "11db5846c0a4a8bb370f0368525471caedd2c286e410319e7c190c60eba60947",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_moon.png",
+      "bytes": 2530,
+      "sha256": "a4b864395625fdc1bf64cf96766aaf11aeae7ed0a39e06ef0025552041bb0b5a",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_more.png",
+      "bytes": 506,
+      "sha256": "e5f0f4709066c7cca379acce7544fa679b05769177ecd513118549e34a4a50f4",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_music.png",
+      "bytes": 1721,
+      "sha256": "c0fc038b7b5b4c915a9486b34b40dbcea8a00b9bd7cacb6679108b2d8f6d1211",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_mute.png",
+      "bytes": 1316,
+      "sha256": "29dd076e4654bfdf36d5e46eff54c4ccf673590c78f34f81bfd7652f3f9bb727",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_next.png",
+      "bytes": 908,
+      "sha256": "d32f7f5807d2b653eb05ca3fe3ad13add9c0a321d9cb169bbc13096252cc4254",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_pause.png",
+      "bytes": 519,
+      "sha256": "372a6bb75ff241d40a5b18c7f1c5257ee1e40a4fae814517a60e4f1b34d851e2",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_play.png",
+      "bytes": 1127,
+      "sha256": "03b57b94a8b93bfe80c30cc33c103b841f709a1ccc71d7bee63e68d395a677e4",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_playlist.png",
+      "bytes": 1516,
+      "sha256": "97f5d065c164f8e15189bd174b863f95f3fe2da24d4c3c994616f5205dbd33de",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_previous.png",
+      "bytes": 925,
+      "sha256": "01f371dbf50c4958140a7f2b30ee2cbc831a8e00c9df97a603aaaa6faf89e07a",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_queue.png",
+      "bytes": 820,
+      "sha256": "689fae882711feb31d4f0ab1e1b2cd612f842ac19785885394210594273d4d46",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_repeat.png",
+      "bytes": 1150,
+      "sha256": "b9faf8d6bb846f6a54fee32fc8783b350bf8f2813531acbfca68641d00e54226",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_repeat_one.png",
+      "bytes": 1254,
+      "sha256": "9cc0c7b6079e6d7f182747bc39d09cc491cff14e4689d80ba163819c8cbd45a1",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_search.png",
+      "bytes": 2618,
+      "sha256": "82a06bad0943bb5c809a3cbecf4cd7f92f3911d608187ad72559008a3645a41a",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_settings.png",
+      "bytes": 768,
+      "sha256": "e49fa98e63c1389a4bd0873e1b4e7fee2f8bd4bb69cafadbcf87e0606e1af65c",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_share.png",
+      "bytes": 2012,
+      "sha256": "e04f663b840d692068bd614653157c60c75a25adb890c8eb6398bdcf81f69820",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_shuffle.png",
+      "bytes": 2225,
+      "sha256": "7658cdb92bb735ded4c57431fabc15374d9fd5dc5a1e126ea626c838a04a04cc",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_stop.png",
+      "bytes": 506,
+      "sha256": "95218ed6d691c011149dcbf899769521cf9d480cc7c4c77ae88c5f5b4fbf0430",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_timer.png",
+      "bytes": 3085,
+      "sha256": "31b3e9005e9cfdc5fc5bcd4235649cb6b4bab575c5bcc69864bb2e74bdf618fe",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/png/96/cine_volume.png",
+      "bytes": 2378,
+      "sha256": "0959b7007a1ade4f743d44f935eaf141a636ec02f9fc21aa4c85f648628311c8",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "ui_icons/svg/cine_add.svg",
+      "bytes": 1269,
+      "sha256": "3ffb29eada8c274b5b9a2c372ab09666b6d1d742881f89b044202b58c29eb3a6"
+    },
+    {
+      "path": "ui_icons/svg/cine_album.svg",
+      "bytes": 1331,
+      "sha256": "e866ad0b76674ec4cece9c57a88fe5c6c0e817a9261d28ae7a0b20fab9e066c7"
+    },
+    {
+      "path": "ui_icons/svg/cine_artist.svg",
+      "bytes": 1322,
+      "sha256": "8d8869eb71edf4d6237615c9f4bb6947eb262b46ab95f207b197d9a79dca495e"
+    },
+    {
+      "path": "ui_icons/svg/cine_back.svg",
+      "bytes": 1278,
+      "sha256": "eb180459a90467feb1b5d6febd7632da8481dfde77147d9baa104156a5be0571"
+    },
+    {
+      "path": "ui_icons/svg/cine_chevron_down.svg",
+      "bytes": 1267,
+      "sha256": "86e63f639d2b26f523c893c80544de9cbe59d8a49fcd161137e252d5864f3b54"
+    },
+    {
+      "path": "ui_icons/svg/cine_close.svg",
+      "bytes": 1273,
+      "sha256": "fed1cb48f089122825c26b7d34d3328f5d2e6025eff7f05ac9e3cccad3f4c35d"
+    },
+    {
+      "path": "ui_icons/svg/cine_download.svg",
+      "bytes": 1297,
+      "sha256": "19665e0d581d8819dcd76433af0a31cedad58fb05ab321d81b64748dc3e08e1b"
+    },
+    {
+      "path": "ui_icons/svg/cine_equalizer.svg",
+      "bytes": 1297,
+      "sha256": "eb06e03169a856ca88b80f7c47b9cdf91ceb1a6d3bbb767c66edbedc2a41e41e"
+    },
+    {
+      "path": "ui_icons/svg/cine_headphones.svg",
+      "bytes": 1367,
+      "sha256": "aa137d03508b0cc1ed765fbd3ca097cb8236481bfb6068adac485aac4266ff14"
+    },
+    {
+      "path": "ui_icons/svg/cine_heart.svg",
+      "bytes": 1308,
+      "sha256": "584c5c681621b028c999483e677ac0a604633834f978bd3d22b35fe90e07615e"
+    },
+    {
+      "path": "ui_icons/svg/cine_heart_filled.svg",
+      "bytes": 1228,
+      "sha256": "e4cb58b5bed80a39a98c211b25ac048436f8a245dc8222d1c7fd1eeaeddeda71"
+    },
+    {
+      "path": "ui_icons/svg/cine_home.svg",
+      "bytes": 1292,
+      "sha256": "22c3fb3da966970b1ec0dec08e41d8e1745342709bb5aa15b041abb7f3df055c"
+    },
+    {
+      "path": "ui_icons/svg/cine_library.svg",
+      "bytes": 1290,
+      "sha256": "e816542aaa301ca84ecffda1339905255a3c106b24fe9cd259b622005d19c6bd"
+    },
+    {
+      "path": "ui_icons/svg/cine_moon.svg",
+      "bytes": 1300,
+      "sha256": "48dad625e10a1ea753fa399df24d43b42c7ba842dd88b4db5db4841d593ef0e4"
+    },
+    {
+      "path": "ui_icons/svg/cine_more.svg",
+      "bytes": 1295,
+      "sha256": "768d3bfeddf01e809362ef84412cdfeb0f4235a4617782e5633b6456ffee00a2"
+    },
+    {
+      "path": "ui_icons/svg/cine_music.svg",
+      "bytes": 1372,
+      "sha256": "6b368780c26424ab71cea8bcfb121c6fcf6a5249bf1c9bd286c722e0a0f6d837"
+    },
+    {
+      "path": "ui_icons/svg/cine_mute.svg",
+      "bytes": 1304,
+      "sha256": "0de7a093434fd9c5dd2748759188253c5ca5e31adb7d1b65e8d5f8a731a3dca7"
+    },
+    {
+      "path": "ui_icons/svg/cine_next.svg",
+      "bytes": 1305,
+      "sha256": "17108ac17274936b21c8976825f8f98992330ea2ea10e5031259471e8aaeb682"
+    },
+    {
+      "path": "ui_icons/svg/cine_pause.svg",
+      "bytes": 1303,
+      "sha256": "efbb8a7a759cf538f6d46b5accbc8abb19b82dd5905bd99d392f1dc906915f1a"
+    },
+    {
+      "path": "ui_icons/svg/cine_play.svg",
+      "bytes": 1244,
+      "sha256": "c7d5c5591a473049e0bd0d0edc1319d88aec9913c208d6d544f737cee79a32ab"
+    },
+    {
+      "path": "ui_icons/svg/cine_playlist.svg",
+      "bytes": 1342,
+      "sha256": "fdc42704acd94495acf951c469f52f2b013c045abe727e0db3cb7f1ab4966e6e"
+    },
+    {
+      "path": "ui_icons/svg/cine_previous.svg",
+      "bytes": 1305,
+      "sha256": "43c9879095970e18c430776d8d030670f4ab8e29bea9739e068d88dcf59d9aa8"
+    },
+    {
+      "path": "ui_icons/svg/cine_queue.svg",
+      "bytes": 1337,
+      "sha256": "0ff209422a24e6f1d7216f8a5c7a6525dc3885c1c35d7056d9abd64bb9ae0f0f"
+    },
+    {
+      "path": "ui_icons/svg/cine_repeat.svg",
+      "bytes": 1325,
+      "sha256": "8b9a3c6756ad9867edb7d7ebe3d246d15544e10dce1c5c3c1b1e6cd2effdf7b3"
+    },
+    {
+      "path": "ui_icons/svg/cine_repeat_one.svg",
+      "bytes": 1342,
+      "sha256": "e03355afca642a4a106b755b53d2f3937b64476336e9e4ab71680b4a49faf9ab"
+    },
+    {
+      "path": "ui_icons/svg/cine_search.svg",
+      "bytes": 1318,
+      "sha256": "dbcff0b5e51097be95a20c4879934033f942b4717ee0ae38dd511d136d4c4146"
+    },
+    {
+      "path": "ui_icons/svg/cine_settings.svg",
+      "bytes": 1307,
+      "sha256": "4de569dbfc1422b07e775126ab0db0ca72afae243c3ecf8167a251c370bb34eb"
+    },
+    {
+      "path": "ui_icons/svg/cine_share.svg",
+      "bytes": 1411,
+      "sha256": "074f05e57a434de3d83f1b38638530b59bc8e53d012587f8654d2dc9a56290bd"
+    },
+    {
+      "path": "ui_icons/svg/cine_shuffle.svg",
+      "bytes": 1348,
+      "sha256": "19bac3db756ea00d1efe16f4e3097aebbda3ef0a309541e5d298fc16468e3dae"
+    },
+    {
+      "path": "ui_icons/svg/cine_stop.svg",
+      "bytes": 1234,
+      "sha256": "9e2f96a9b1bc56d79caae0057e4b5d4607e5edb5c9c394f244a5679c756d597d"
+    },
+    {
+      "path": "ui_icons/svg/cine_timer.svg",
+      "bytes": 1338,
+      "sha256": "7d72f892fac3eb472f8ada96219ad4f4e2a1b626b9655d1817c2555a83a05c8f"
+    },
+    {
+      "path": "ui_icons/svg/cine_volume.svg",
+      "bytes": 1327,
+      "sha256": "6001013974c3c263a65d304db2e8ecf6e98e6af6c37218e3f112b5d357671601"
+    }
+  ]
+}

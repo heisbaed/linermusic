@@ -1,0 +1,4 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/cine_midnight" />
+    <item android:drawable="@drawable/ic_cine_splash" android:gravity="center" />
+</layer-list>

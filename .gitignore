@@ -1,0 +1,9 @@
+﻿.device-test/
+.npm-cache/
+.npm-logs/
+.source-import/
+android/app/build/
+android/app/.cxx/
+android/.gradle/
+mobile/node_modules/
+mobile/dist/

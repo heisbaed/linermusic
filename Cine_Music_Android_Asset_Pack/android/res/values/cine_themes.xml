@@ -1,0 +1,19 @@
+<resources>
+  <style name="Theme.CineMusic" parent="android:style/Theme.Material.Light.NoActionBar">
+    <item name="android:windowBackground">@color/cine_background</item>
+    <item name="android:colorAccent">@color/cine_cyan</item>
+    <item name="android:statusBarColor">@color/cine_background</item>
+    <item name="android:navigationBarColor">@color/cine_background</item>
+    <item name="android:windowLightStatusBar">true</item>
+  </style>
+  <style name="Theme.CineMusic.Starting" parent="Theme.SplashScreen">
+    <item name="windowSplashScreenBackground">@color/cine_midnight</item>
+    <item name="windowSplashScreenAnimatedIcon">@drawable/ic_cine_splash</item>
+    <item name="postSplashScreenTheme">@style/Theme.CineMusic</item>
+  </style>
+  <style name="Theme.CineMusic.Starting.Light" parent="Theme.SplashScreen">
+    <item name="windowSplashScreenBackground">@color/cine_ivory</item>
+    <item name="windowSplashScreenAnimatedIcon">@drawable/ic_cine_splash</item>
+    <item name="postSplashScreenTheme">@style/Theme.CineMusic</item>
+  </style>
+</resources>

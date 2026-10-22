@@ -1,0 +1,100 @@
+.account-screen { padding-top: 8px; }
+.account-group { margin: 28px 0 8px; }
+.account-group > h2 { margin: 0 0 8px; color: var(--muted); font-size: .75rem; letter-spacing: .08em; font-weight: 500; }
+.account-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 12px 0; border: 0; border-bottom: 1px solid var(--divider); background: none; color: var(--text); text-align: left; }
+.account-row > svg:first-child, .account-row > .cine-icon-mask:first-child { flex-shrink: 0; color: var(--muted); }
+.account-row > span:not(.cine-icon-mask) { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
+.account-row strong { font-size: 1rem; font-weight: 400; }
+.account-row small { color: var(--muted); font-size: .8125rem; line-height: 1.45; }
+.account-row > :last-child { flex-shrink: 0; color: var(--muted); }
+.account-row-value { max-width: 35%; text-align: right; }
+.account-row:disabled { opacity: 1; }
+.account-row:disabled > :last-child { display: none; }
+.profile-identity { display: flex; align-items: center; flex-direction: column; gap: 8px; padding: 8px 0 12px; text-align: center; }
+.profile-avatar { display: grid; flex-shrink: 0; place-items: center; width: 100px; height: 100px; overflow: hidden; margin-bottom: 8px; border: 1px solid var(--divider); border-radius: 50%; background: var(--raised); color: var(--text); font-size: 2rem; font-weight: 400; }
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-identity h2 { max-width: 100%; margin: 0; overflow-wrap: anywhere; font-size: 1.75rem; font-weight: 500; letter-spacing: -.035em; }
+.profile-identity p { max-width: 100%; margin: 0; overflow-wrap: anywhere; color: var(--muted); font-size: .875rem; }
+.profile-edit-button { display: block; min-width: 148px; min-height: 48px; margin: 4px auto 24px; padding: 8px 24px; border: 1px solid var(--line); border-radius: 99px; background: none; font-size: .875rem; }
+.profile-links { margin-top: 20px; }
+.account-signin-note { margin: 20px 0 16px; padding: 18px; border-radius: 14px; background: var(--surface); }
+.account-signin-note p { margin: 0 0 14px; color: var(--muted); font-size: .875rem; }
+.account-intro { margin: 0 0 24px; color: var(--muted); font-size: .9375rem; line-height: 1.6; }
+.account-help { margin: 12px 0; color: var(--muted); font-size: .8125rem; line-height: 1.6; }
+.account-field { display: grid; gap: 8px; margin: 0 0 18px; color: var(--muted); font-size: .875rem; }
+.account-field > input, .account-field > select, .account-field > textarea, .account-password > input { display: block; width: 100%; min-width: 0; min-height: 52px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 11px; outline: none; background: var(--surface); color: var(--text); font-size: 1rem; }
+.account-field input:focus, .account-field textarea:focus, .account-field select:focus { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 25%, transparent); outline-offset: 0; }
+.account-field input[readonly] { opacity: .8; }
+.account-field input[aria-invalid=true] { border-color: var(--error); }
+.account-password { position: relative; display: flex; align-items: center; }
+.account-password > input { padding-right: 72px; }
+.account-password > button { position: absolute; right: 4px; min-width: 60px; min-height: 48px; padding: 8px; border: 0; border-radius: 9px; background: none; color: var(--accent); font-size: .8125rem; }
+.account-primary, .account-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 52px; padding: 12px 20px; border: 1px solid transparent; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-size: 1rem; font-weight: 500; text-decoration: none; }
+.account-secondary { border-color: var(--line); background: transparent; color: var(--text); }
+.account-text { display: inline-flex; align-items: center; justify-content: flex-start; min-height: 48px; padding: 8px 0; border: 0; background: none; color: var(--accent); font-size: .875rem; text-align: left; }
+.account-back { display: inline-flex; align-self: flex-start; align-items: center; gap: 8px; min-height: 48px; padding: 0; border: 0; background: none; color: var(--muted); font-size: .875rem; }
+.account-error { margin: 12px 0; color: var(--error); font-size: .875rem; line-height: 1.5; }
+.account-notice { margin: 12px 0; color: var(--accent); font-size: .875rem; line-height: 1.5; }
+.account-supported { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 68px; padding: 12px 0; border-bottom: 1px solid var(--divider); }
+.account-supported strong { font-size: .9375rem; font-weight: 400; }
+.account-supported > span:last-child { flex-shrink: 0; max-width: 40%; color: var(--muted); font-size: .8125rem; text-align: right; }
+.account-supported small { display: block; margin-top: 5px; color: var(--muted); font-size: .8125rem; }
+.account-sync { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; color: var(--muted); font-size: .8125rem; }
+.account-sync > .text-button { flex-shrink: 0; }
+.appearance-options { margin: 20px 0 32px; }
+.appearance-choice { display: flex; align-items: center; gap: 16px; min-height: 84px; padding: 12px 0; border-bottom: 1px solid var(--divider); }
+.appearance-swatch { display: grid; flex-shrink: 0; place-items: center; width: 46px; height: 46px; border: 1px solid color-mix(in srgb, var(--text) 25%, transparent); border-radius: 12px; }
+.appearance-swatch > i { width: 16px; height: 16px; border-radius: 50%; }
+.appearance-choice > span:nth-child(2) { display: flex; flex: 1; flex-direction: column; gap: 4px; }
+.appearance-choice strong { font-size: 1rem; font-weight: 500; }
+.appearance-choice small { color: var(--muted); font-size: .8125rem; }
+.appearance-choice input { flex-shrink: 0; width: 22px; height: 22px; margin: 12px 4px; accent-color: var(--accent); }
+.appearance-choice.selected strong { color: var(--accent); }
+.account-preview-title { margin: 0 0 12px; color: var(--muted); font-size: .75rem; }
+.appearance-preview { padding: 16px; border: 1px solid var(--divider); border-radius: 16px; background: var(--bg); }
+.appearance-album-row { display: flex; align-items: center; gap: 12px; padding: 0 0 20px; }
+.appearance-album-row .row-copy strong { font-size: .9375rem; }
+.appearance-mini { display: flex; align-items: center; gap: 8px; min-height: 58px; padding: 8px; border-radius: 10px; background: var(--surface); box-shadow: 0 4px 18px #0001; }
+.appearance-mini > .cover { width: 28px; height: 28px; }
+.appearance-mini > div { display: flex; flex-shrink: 0; align-items: center; gap: 5px; }
+.appearance-mini .row-copy strong { font-size: .75rem; }
+.appearance-mini .row-copy small { font-size: .6875rem; }
+.storage-summary { display: flex; align-items: center; gap: 16px; padding: 16px 0 24px; }
+.storage-summary > svg { color: var(--accent); }
+.storage-summary p { display: flex; flex-direction: column; gap: 5px; margin: 0; }
+.storage-summary strong { font-size: 2.25rem; font-weight: 500; letter-spacing: -.04em; }
+.storage-summary span { color: var(--muted); font-size: .875rem; }
+.about-brand { display: flex; align-items: center; flex-direction: column; gap: 10px; margin: 12px 0 28px; text-align: center; }
+.about-brand .brand-symbol { width: 70px; height: 70px; }
+.about-brand h2 { margin: 0; font-size: 1.5rem; }
+.about-brand p { margin: 0; color: var(--muted); font-size: .8125rem; }
+.account-about .settings-info { margin: 24px 0; }
+.account-about .settings-info > p { margin: 8px 0 0; }
+.account-licences h2 { margin: 24px 0 10px; font-size: 1rem; }
+.account-licences p { color: var(--muted); font-size: .8125rem; }
+.profile-form fieldset, .account-auth fieldset, .edit-profile-screen .modal-sheet fieldset { display: grid; gap: 0; min-width: 0; margin: 0; padding: 0; border: 0; }
+.profile-photo-editor { display: flex; align-items: center; flex-direction: column; gap: 0; margin: 4px 0 24px; }
+.profile-photo-editor .profile-avatar { margin: 0; }
+.profile-form .account-primary { margin-top: 12px; }
+.profile-form .account-text { padding-top: 0; }
+.account-auth { display: flex; align-items: stretch; flex-direction: column; min-height: 100%; padding-bottom: 20px; }
+.auth-brand { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 0 30px; }
+.auth-brand > img { width: 36px; height: 36px; object-fit: contain; }
+.auth-brand > span { font-size: 1.125rem; font-weight: 500; }
+.auth-brand > .brand-logo { width: 170px; height: 46px; }
+.auth-brand b { font-weight: 400; }
+.auth-artwork { position: relative; display: grid; align-self: center; place-items: center; width: min(62vw, 240px); aspect-ratio: 1; margin: 0 0 30px; border-radius: 24px; background: linear-gradient(155deg, var(--raised), var(--bg)); box-shadow: 0 20px 50px #0002; }
+.auth-artwork img { width: 62%; height: 62%; object-fit: contain; }
+.account-auth h1 { margin: 0 0 18px; font-size: 1.875rem; font-weight: 500; }
+.account-auth .account-eyebrow { margin: 0 0 12px; color: var(--muted); font-size: .6875rem; font-weight: 500; letter-spacing: .12em; }
+.account-auth[data-auth-view=welcome] h1 { font-size: 2rem; }
+.account-auth[data-auth-view=welcome] .account-intro { max-width: 34ch; margin-bottom: 26px; }
+.account-auth > .account-primary, .account-auth > .account-secondary { margin-bottom: 12px; }
+.account-auth .account-switch { margin: 20px 0; color: var(--muted); font-size: .875rem; text-align: center; }
+.account-switch > button { min-height: 48px; padding: 6px; border: 0; background: none; color: var(--accent); }
+.account-auth .account-primary { margin-top: 8px; }
+.google-signin { margin: 12px 0; }
+.google-mark { display: inline-block; flex-shrink: 0; width: 20px; height: 20px; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--muted); font-size: .75rem; }
+.auth-divider::before, .auth-divider::after { flex: 1; height: 1px; background: var(--divider); content: ''; }
+@media (max-width: 350px) { .appearance-preview { padding: 12px; } .appearance-mini > div { gap: 2px; } .auth-artwork { width: 180px; margin-bottom: 24px; } }

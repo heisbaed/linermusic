@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.CineMusic.Starting" parent="AppTheme">
+        <item name="android:windowBackground">@color/cine_midnight</item>
+        <item name="android:windowSplashScreenBackground">@color/cine_midnight</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/avd_cine_splash</item>
+        <item name="android:windowSplashScreenAnimationDuration">840</item>
+        <item name="android:windowSplashScreenBrandingImage">@drawable/cine_splash_branding_white</item>
+    </style>
+</resources>

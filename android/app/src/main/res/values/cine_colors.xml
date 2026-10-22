@@ -1,0 +1,12 @@
+<resources>
+  <color name="cine_midnight">#061126</color>
+  <color name="cine_icon_background">#071127</color>
+  <color name="cine_cyan">#00D9F2</color>
+  <color name="cine_blue">#2477FF</color>
+  <color name="cine_violet">#8143FF</color>
+  <color name="cine_magenta">#C42AF7</color>
+  <color name="cine_ivory">#F6F7FC</color>
+  <color name="cine_ink">#101B33</color>
+  <color name="cine_background">#F6F7FC</color>
+  <color name="cine_on_background">#101B33</color>
+</resources>
