@@ -5,6 +5,7 @@ import { resolveStream } from './catalog';
 import { innertubeCatalog } from '@/shared/media/innertube/innertubeCatalog';
 import type { PlaybackController, Preferences } from './AppContext';
 import type { PlayerState, Song } from './types';
+import { relatedSongs } from './catalogQuality';
 
 function uniqueSongs(songs: Song[]): Song[] {
   const ids = new Set<string>();
@@ -24,6 +25,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
   live.current = { player, queue, shuffle, repeat, context, downloads, prefs, onRecent, toast };
   const resolving = useRef<AbortController | null>(null);
   const playedId = useRef('');
+  const heard = useRef<Song[]>([]);
   const autoplayTask = useRef<ReturnType<typeof setTimeout> | undefined>();
   const autoplayController = useRef<AbortController | null>(null);
 
@@ -42,6 +44,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
         if (state.track && state.repeat) { setLocalRepeat(state.repeat); live.current.repeat = state.repeat; }
         if (state.status === 'playing' && state.track && playedId.current !== state.track.id) {
           playedId.current = state.track.id;
+          heard.current = [state.track,...heard.current.filter(s=>s.id!==state.track!.id)].slice(0,50);
           live.current.onRecent(state.track);
         }
         if (state.status === 'error') live.current.toast(state.error || 'Playback could not start. Check your connection and try again.');
@@ -77,12 +80,23 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
       const url = isAndroid || local ? undefined : await resolveStream(track.id, controller.signal);
       if (controller.signal.aborted) return;
       playNative(track, url, items, live.current.shuffle, live.current.repeat);
+      if(items.length===1 && live.current.prefs.autoplay) void prepareRelated(track);
     } catch (error) {
       if (controller.signal.aborted) return;
       const message = error instanceof Error ? error.message : 'This song could not be played.';
       setPlayer({ track, status: 'error', positionMs: 0, durationMs: track.durationMs, error: message });
       live.current.toast(message);
     }
+  }
+
+  async function prepareRelated(seed:Song){
+    const controller=new AbortController();autoplayController.current=controller;
+    try{
+      const result=await innertubeCatalog.getRadio(seed.id,{signal:controller.signal,k:25});
+      if(controller.signal.aborted||!live.current.prefs.autoplay||live.current.queue.length!==1||live.current.queue[0]?.id!==seed.id)return;
+      const added=relatedSongs(result.items,[seed,...heard.current]).slice(0,15).map(track=>({id:track.id,title:track.title,artist:track.artists.map(a=>a.name).join(', '),artistId:track.artists[0]?.id,albumId:track.album?.id,cover:track.cover?.url,durationMs:track.durationMs}));
+      if(added.length)setQueue([seed,...added]);
+    }catch{ /* Keep the selected song available if related music cannot load. */ }
   }
 
   async function appendRadio() {
@@ -92,7 +106,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
     try {
       const { items: tracks } = await innertubeCatalog.getRadio(current.player.track.id, { signal: controller.signal, k: 20 });
       if (controller.signal.aborted || live.current.player.status !== 'ended') return;
-      const songs: Song[] = tracks.filter(item => item.id !== current.player.track?.id).slice(0, 20).map(track => ({ id: track.id, title: track.title, artist: track.artists.map(artist => artist.name).join(', '), artistId: track.artists[0]?.id, albumId: track.album?.id, cover: track.cover?.url, durationMs: track.durationMs }));
+      const songs: Song[] = relatedSongs(tracks,[current.player.track,...heard.current,...current.queue]).slice(0, 20).map(track => ({ id: track.id, title: track.title, artist: track.artists.map(artist => artist.name).join(', '), artistId: track.artists[0]?.id, albumId: track.album?.id, cover: track.cover?.url, durationMs: track.durationMs }));
       if (songs.length) await play(songs[0], songs, 'Autoplay');
     } catch { /* Autoplay failure leaves the completed queue available to replay. */ }
   }

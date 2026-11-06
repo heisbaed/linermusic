@@ -1,5 +1,8 @@
-export type IconName = 'home' | 'search' | 'library' | 'download' | 'account' | 'check' | 'play' | 'pause' | 'next' | 'previous' | 'heart' | 'close' | 'back' | 'queue' | 'plus' | 'shuffle' | 'repeat' | 'repeat_one' | 'settings' | 'music' | 'trash' | 'wifi' | 'lyrics' | 'more' | 'chevron_down' | 'lock' | 'headphones' | 'chevron_up' | 'chevron_right' | 'album' | 'artist' | 'playlist' | 'equalizer' | 'timer' | 'share' | 'bell' | 'info' | 'edit' | 'logout' | 'eye' | 'drag' | 'sort';
-const paths: Record<IconName, React.ReactNode> = {
+import { useContext } from 'react';
+import { AppContext } from './AppContext';
+import { figmaAssets } from './figmaAssets';
+export type IconName = 'home' | 'search' | 'explore' | 'library' | 'download' | 'account' | 'check' | 'play' | 'pause' | 'next' | 'previous' | 'heart' | 'close' | 'back' | 'queue' | 'plus' | 'shuffle' | 'repeat' | 'repeat_one' | 'settings' | 'music' | 'trash' | 'wifi' | 'lyrics' | 'more' | 'chevron_down' | 'lock' | 'headphones' | 'chevron_up' | 'chevron_right' | 'album' | 'artist' | 'playlist' | 'equalizer' | 'timer' | 'share' | 'bell' | 'info' | 'edit' | 'logout' | 'eye' | 'drag' | 'sort' | 'arrow_right' | 'refresh' | 'mail' | 'shield' | 'eye_off' | 'tag' | 'camera' | 'folder';
+const paths: Partial<Record<IconName, React.ReactNode>> = {
   home: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" /></>,
   search: <><circle cx="10.5" cy="10.5" r="7" /><path d="m16 16 5 5" /></>,
   library: <><rect x="3" y="4" width="5" height="16" rx="1" /><path d="M12 4v16m5-16 4 15" /></>,
@@ -43,7 +46,13 @@ const paths: Record<IconName, React.ReactNode> = {
   drag: <><path d="M4 7h16M4 12h16M4 17h16"/></>,
   sort: <><path d="M4 5h16M4 12h10M4 19h5m8-6v8m-3-3 3 3 3-3"/></>,
 };
-export function Icon({ name, filled = false, size = 22 }: { name: IconName; filled?: boolean; size?: number }) {
+export function Icon({ name, filled = false, size = 22, active = false }: { name: IconName; filled?: boolean; size?: number; active?: boolean }) {
+  const app = useContext(AppContext);
+  const skin = figmaAssets[app?.theme || 'default'];
+  const src = active ? skin.nav[name] || skin.icons[name] : skin.icons[name];
+  if (src && !(name === 'heart' && filled) && name !== 'repeat_one') {
+    return <span className="cine-icon-mask figma-icon" data-icon={name} style={{ width: size, height: size, maskImage: `url("${src}")`, WebkitMaskImage: `url("${src}")` }} aria-hidden="true" />;
+  }
   const assetName = name === 'plus' ? 'add' : name === 'heart' && filled ? 'heart_filled' : name;
   if (['home', 'search', 'library', 'download', 'play', 'pause', 'next', 'previous', 'heart', 'heart_filled', 'close', 'back', 'queue', 'add', 'shuffle', 'repeat', 'repeat_one', 'settings', 'music', 'more', 'chevron_down', 'headphones', 'album', 'artist', 'playlist', 'equalizer', 'timer', 'share'].includes(assetName)) {
     const url = `url("/cine-icons/cine_${assetName}.svg")`;

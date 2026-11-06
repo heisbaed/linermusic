@@ -102,6 +102,28 @@ describe('Firebase authentication contract', () => {
     expect(native.googleSignIn).not.toHaveBeenCalled();
   });
 
+  it('reports verification email quota failures instead of claiming a link was sent', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => url === '/firebase-config.json' ? response({ apiKey: 'test-key' }) : response({ error: { message: 'QUOTA_EXCEEDED' } }, 400)));
+    await expect(auth.sendCineVerification(tokens)).rejects.toMatchObject({ code: 'QUOTA_EXCEEDED' });
+    expect(auth.loadCineUser()).toBeNull();
+  });
+
+  it('refreshes an expired verification token before retrying the email request', async () => {
+    const requests: { url: string; init?: RequestInit }[] = [];
+    let sends = 0;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      requests.push({ url, init });
+      if (url === '/firebase-config.json') return response({ apiKey: 'test-key' });
+      if (url.includes('securetoken')) return response({ id_token: 'fresh-verification-token', refresh_token: 'fresh-refresh', user_id: tokens.localId, expires_in: '3600' });
+      if (sends++ === 0) return response({ error: { message: 'ID_TOKEN_EXPIRED' } }, 400);
+      return response({ email: tokens.email });
+    }));
+    await auth.sendCineVerification(tokens);
+    const sent = requests.filter(request => request.url.includes('sendOobCode'));
+    expect(sent).toHaveLength(2);
+    expect(JSON.parse(String(sent[1].init?.body))).toEqual({ requestType: 'VERIFY_EMAIL', idToken: 'fresh-verification-token' });
+  });
+
   it('exchanges a Google provider token with Firebase and verifies the account', async () => {
     const requests: { url: string; init?: RequestInit }[] = [];
     native.googleSignIn.mockResolvedValue('provider-id-token');

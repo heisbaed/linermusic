@@ -2,7 +2,7 @@ import type { Track, TrackArtist, TrackDetails } from "@/shared/contracts";
 import { asArray, asRecord, type JsonRecord } from "@/shared/utils/json";
 import { getRuns, getText, runsToAlbum, runsToArtists } from "./innertubeJson";
 import { coverFromThumbnail } from "./innertubeThumbnail";
-import { hasExplicitBadge, parseDurationMs } from "./innertubeTrackMapper";
+import { hasExplicitBadge, parseDurationMs, musicVideoType } from "./innertubeTrackMapper";
 
 function panelRenderer(raw: unknown): JsonRecord | undefined {
   return asRecord(asRecord(raw)?.playlistPanelVideoRenderer);
@@ -68,6 +68,7 @@ export function mapInnertubeRadioTrack(raw: unknown): Track | null {
     durationMs: parseDurationMs(durationText) ?? 0,
     cover: coverFromThumbnail(renderer.thumbnail),
     explicit: hasExplicitBadge(renderer),
+    musicVideoType: musicVideoType(renderer),
   };
 }
 

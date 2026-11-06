@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Frame">
+<rect x="0.5" y="0.5" width="31" height="31" rx="15.5" fill="#F2F0EC"/>
+<rect x="0.5" y="0.5" width="31" height="31" rx="15.5" stroke="#D7D4CD"/>
+<path id="Download icon" d="M16 7V19.375M21.1429 14.875L16 19.375L10.8571 14.875M7 19.375V25H25V19.375" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" stroke="#555F48"/>
+</g>
+</svg>

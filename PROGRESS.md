@@ -1,3 +1,63 @@
+ Cine music progress
+
+## Home redesign — 2026-11-06
+
+- [x] Added replay tiles, artwork-led release spotlight, horizontal shelves, category filters and a playlist import entry.
+- [x] Discovery now uses followed artists plus listening/favorites artist IDs, hourly editions and manual Refresh instead of a fixed three-artist cache.
+- [x] Offline Home only offers downloaded songs for direct playback.
+- [x] 80 mobile tests, TypeScript/Vite and Android APK builds passed.
+- [x] Isolated four-theme layout checks, Refresh and playlist-import navigation passed. Real phone Home rendered personal library and a 2026 release.
+- [ ] Actual provider playlist imports, download timing, lyrics timing, gestures and deep links still require end-to-end validation.
+- [ ] Startup splash cold-launch verification and broader profile/UI review remain open.
+
+
+Updated: 2026-11-05 (Africa/Nairobi). This checkpoint supersedes the historical notes below.
+
+## Current checklist
+
+- [x] Inventory the supplied Figma file: 144 top-level frames, 36 screen types across four themes.
+- [x] Implement the four-theme Android interface with the supplied artwork, icons and Inter font.
+- [x] Connect onboarding, Home, Search, Explore, Library, catalog details, playlists, player, lyrics, queue, downloads and account screens to application state and services.
+- [x] Remove the unwanted authentication footer.
+- [x] Correct verification-request messaging, focus visible errors, and avoid offering unsupported Google sign-in in the browser preview.
+- [x] Preserve the selected song when creating a playlist; save artwork and reorder drafts, preserve remote additions, and discard cancelled edits.
+- [x] Add explicit back/collapse affordances; fix full-player artwork sizing and library icon contrast in all themes.
+- [x] Warm the anonymous music connection on launch and reuse validated, unexpired stream URLs; invalidate rejected sources before retry.
+- [x] Complete the browser flow review, native resolver checks and updated Android debug build.
+- [ ] Validate this build on a connected Android device: Google consent, audible/background playback, media controls, encrypted download completion and offline replay. No device was attached at this checkpoint.
+- [ ] Confirm the user's actual login error and inbox delivery. Real backend checks passed earlier in this work, but delivery to the user's address is not verified.
+- [ ] Release preparation and optional feature expansion: public playlists, release notifications, crossfade and gapless playback are not implemented. Their UI does not pretend they work.
+
+## Review this build
+
+- APK: `android/app/build/outputs/apk/debug/app-debug.apk` (9,141,025 bytes).
+- SHA-256: `5af48465bb1b440fd7bec852e5a3e42f05b1ae64885b1f097f3e8a1f0048c3ad`.
+- APK signature verified (v2); all 502 built web files matched the APK byte for byte, including 460 Figma assets and the font. No browser test fixture was packaged.
+- Local preview: http://127.0.0.1:5178/ served by `node scripts/preview-mobile.mjs`. Browser preview uses real email/password auth; Android Google sign-in and native audio/download features require the APK.
+- Browser screenshots and report: `.device-test/design-review/`. These use explicitly isolated synthetic catalog/account/native fixtures, not real listening or email delivery.
+- APK verification report: `.device-test/apk-verification.json`.
+
+## Current validation
+
+- `npm.cmd run build --prefix mobile`: TypeScript and Vite production build passed.
+- `npm.cmd test --prefix mobile -- --maxWorkers=1 --no-file-parallelism`: 72 tests passed.
+- `node android/tests/native-bridge.test.mjs`: five bridge checks passed.
+- `node android/tests/stream-resolver.test.mjs`: 27 production resolver cases passed, including cancellation, source restrictions, cache expiry and invalidation.
+- `node android/tests/stream-resolver.test.mjs --live`: three public tracks resolved through the production Java resolver; media MIME/container checks passed with a 4 KB read cap. This establishes stream availability, not audible device playback.
+- `node scripts/check-design-ui.mjs`: 15 browser checks passed, no uncaught errors. Covers four themes, onboarding, verification failure/retry, playlist persistence/discard/reorder, profile save/discard, search empty/error/retry, download job controls, player seek/pause/queue removal, and widths 320/360/720.
+- `node scripts/check-cloud-ui.mjs` against a temporary Vite server: six isolated real-hook account-sync regressions passed, no uncaught errors or external requests.
+- Offline Gradle `assembleDebug`: passed. No new device installation or release is claimed.
+
+## Streaming decision
+
+Keep the currently validated catalog while improving its startup path. The tested JioSaavn public host failed DNS resolution; an Audius catalog request succeeded but did not establish a faster equivalent catalog. No alternative has been proven to improve the user's actual playback experience. Measure time to audible playback on the device before claiming a speed improvement. The resolver's short-lived URL cache and launch warm-up are implemented and regression-tested.
+
+## Historical record
+
+The sections below retain earlier implementation history. Their build hashes, test counts, device results, preview behavior and feature descriptions may be outdated; use the checkpoint above for current status.
+
+---
+
  # Cine music — progress and resume notes
 
 Updated: 2026-10-21. Workspace: `D:\2nd Year projects\linermusic`.

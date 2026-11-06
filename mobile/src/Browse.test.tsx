@@ -56,9 +56,9 @@ describe('browse data boundaries', () => {
 describe('browse initial and offline states', () => {
   it('renders truthful offline Home without fabricated recommendations', () => {
     const html = render(<HomeScreen />);
-    expect(html).toContain('Find your rhythm.');
+    expect(html).toMatch(/Good (morning|afternoon|evening)|Welcome back/);
     expect(html).toContain('You are offline');
-    expect(html).toContain('Back in rotation');
+    expect(html).toContain('Open downloads');
     expect(html).not.toContain('/reference-art');
   });
   it('renders four catalog-artwork genre categories without sketch illustrations', () => {
@@ -67,7 +67,7 @@ describe('browse initial and offline states', () => {
     expect(html).not.toContain('viewBox="0 0 220 150"');
     for (const filter of ['All', 'Songs', 'Artists', 'Albums']) expect(html).toContain(`>${filter}</button>`);
     expect(html).not.toContain('browse-result-artist');
-    expect(html).toContain('Search only runs when you submit');
+    expect(html).toContain('Browse genres');
   });
   it('counts actual saved albums and artists instead of inferring them from songs', () => {
     const state = app();

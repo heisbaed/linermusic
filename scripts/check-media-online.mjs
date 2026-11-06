@@ -21,10 +21,12 @@ function allowed(value) {
 }
 function safeReason(value) { return String(value || '').replace(/https?:\/\/\S+/g, '[source URL omitted]').replace(/[\r\n\t]+/g, ' ').slice(0, 240); }
 async function request(value, { body, headers = {}, cap = report.metadataByteCap, partial = false } = {}, redirects = 0) {
+  const started = performance.now();
   if (!allowed(value)) throw new Error('Untrusted source address');
   const encoded = body ? JSON.stringify(body) : undefined;
   report.requests += 1; report.sentBytes += Buffer.byteLength(encoded || '');
   const response = await fetch(value, { method: body ? 'POST' : 'GET', body: encoded, headers: { 'User-Agent': DESKTOP_UA, ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers }, redirect: 'manual', credentials: 'omit', signal: AbortSignal.timeout(15_000) });
+  const firstByteMs = Math.round(performance.now() - started);
   if ([301, 302, 303, 307, 308].includes(response.status)) {
     await response.body?.cancel();
     if (body || redirects >= 3 || !response.headers.get('location')) throw new Error(`Source redirect HTTP ${response.status}`);
@@ -42,7 +44,7 @@ async function request(value, { body, headers = {}, cap = report.metadataByteCap
       if (size >= cap) break;
     }
   } finally { await reader?.cancel().catch(() => {}); }
-  return { response, bytes: Buffer.concat(chunks), size };
+  return { response, bytes: Buffer.concat(chunks), size, firstByteMs, elapsedMs: Math.round(performance.now() - started) };
 }
 function parseVisitor(text) {
   try {
@@ -53,9 +55,9 @@ function parseVisitor(text) {
   return text.match(/Cg[s-v][A-Za-z0-9_-]{20,}(?:%3D|=){0,2}/)?.[0] || '';
 }
 async function warm() {
-  const { response, bytes, size } = await request('https://www.youtube.com/sw.js_data');
+  const { response, bytes, size, firstByteMs, elapsedMs } = await request('https://www.youtube.com/sw.js_data');
   const visitor = response.ok ? parseVisitor(bytes.toString('utf8')) : '';
-  const check = { stage: 'anonymous visitor warm', http: response.status, bytes: size, visitorPresent: Boolean(visitor) };
+  const check = { stage: 'anonymous visitor warm', http: response.status, bytes: size, visitorPresent: Boolean(visitor), firstByteMs, elapsedMs };
   report.checks.push(check); console.log(JSON.stringify(check));
   return visitor;
 }
@@ -85,7 +87,7 @@ async function probe(id, profileKey, visitor) {
   const profile = profiles[profileKey];
   if (!profile) throw new Error('Unknown profile');
   const client = { clientName: profile.name, clientVersion: profile.version, hl: 'en', gl: option('gl', legacyRequest ? 'US' : 'TZ'), userAgent: profile.ua, ...profile.extra, ...(visitor ? { visitorData: visitor } : {}), ...(!legacyRequest && profileKey === 'vr' ? { buildId: 'SQ3A.220605.009.A1', packageName: 'com.google.android.apps.youtube.vr.oculus' } : {}) };
-  const { response, bytes, size } = await request(`${profile.origin}/youtubei/v1/player?prettyPrint=false`, {
+  const { response, bytes, size, firstByteMs, elapsedMs } = await request(`${profile.origin}/youtubei/v1/player?prettyPrint=false`, {
     headers: { 'User-Agent': profile.ua, 'X-YouTube-Client-Name': profile.header, 'X-YouTube-Client-Version': profile.version, Origin: profile.origin, Referer: profile.origin + '/', ...(visitor ? { 'X-Goog-Visitor-Id': visitor } : {}) },
     body: { videoId: id, ...(legacyRequest ? { contentCheckOk: true, racyCheckOk: true } : {}), context: { client, user: { lockedSafetyMode: false } } },
   });
@@ -102,8 +104,11 @@ async function probe(id, profileKey, visitor) {
     const mime = sample.response.headers.get('content-type') || '';
     const header = sample.bytes.subarray(0, 12);
     const recognizedAudio = header.subarray(4, 8).toString('ascii') === 'ftyp' || header.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
-    check.media = { http: sample.response.status, mime, bytes: sample.size, itag: selected.itag, recognizedAudio, playableSample: sample.response.ok && mime.startsWith('audio/') && recognizedAudio };
+    check.media = { http: sample.response.status, mime, bytes: sample.size, itag: selected.itag, recognizedAudio, playableSample: sample.response.ok && mime.startsWith('audio/') && recognizedAudio, firstByteMs: sample.firstByteMs, elapsedMs: sample.elapsedMs };
   }
+  check.firstByteMs = firstByteMs;
+  check.elapsedMs = elapsedMs;
+  if (check.media) check.elapsedMs += check.media.elapsedMs || 0;
   report.checks.push(check);
   console.log(JSON.stringify(check));
 }

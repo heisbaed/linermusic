@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Icon, type IconName } from './Icons';
-import { useApp } from './AppContext';
+import { figmaAssets } from './figmaAssets';
+import { THEMES, useApp } from './AppContext';
 import { formatTime } from './library';
 import type { Song } from './types';
-import symbol from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_symbol_gradient.svg';
-import darkLogo from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_logo_horizontal_dark.svg';
-import lightLogo from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_logo_horizontal_light.svg';
 import albumDark from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_placeholder_album_dark.svg';
 import albumLight from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_placeholder_album_light.svg';
 import artistDark from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_placeholder_artist_dark.svg';
@@ -17,7 +15,18 @@ const activeSheets: HTMLElement[] = [];
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   const { theme } = useApp();
-  return <img className={compact ? 'brand-symbol' : 'brand-logo'} src={compact ? symbol : theme === 'light' ? lightLogo : darkLogo} alt="Cine music" draggable={false} />;
+  const src = figmaAssets[theme].logo;
+  return compact ? <img className="brand-symbol" src={src} alt="Cine music" draggable={false} />
+    : <span className="brand-wordmark"><img src={src} alt="" draggable={false} /><span>Cine music</span></span>;
+}
+
+export function ThemeEdition({ changeLabel = false }: { changeLabel?: boolean }) {
+  const app = useApp();
+  const [open, setOpen] = useState(false);
+  const selected = THEMES.find(item => item.id === app.theme)!;
+  return <><button type="button" className="theme-edition" aria-label={`Change theme, currently ${selected.name}`} onClick={() => setOpen(true)}>{changeLabel && <i />}{selected.name}{changeLabel && <span>Change theme</span>}</button>
+    {open && <Sheet title="Choose your look" onClose={() => setOpen(false)}><div className="theme-picker" role="radiogroup" aria-label="App theme">{THEMES.map(item => <button type="button" role="radio" aria-checked={app.theme === item.id} key={item.id} onClick={() => { app.setTheme(item.id); setOpen(false); }}><img src={figmaAssets[item.id].logo} alt="" /><span><strong>{item.name}</strong><small>{item.description}</small></span>{app.theme === item.id && <Icon name="check" size={18} />}</button>)}</div></Sheet>}
+  </>;
 }
 
 export function Cover({ song, large = false, kind = 'album', className = '' }: {
@@ -47,7 +56,7 @@ export function Notice({ title, children, action, icon = 'music' }: { title: str
 
 export function PageHeader({ title, action }: { title: string; action?: ReactNode }) {
   const { back } = useApp();
-  return <header className="page-header"><Action icon="back" label="Back" onClick={back} /><h1 tabIndex={-1}>{title}</h1>{action || <span className="header-balance" />}</header>;
+  return <header className="page-header"><div className="design-brand-row"><button className="brand-back" type="button" aria-label="Back" onClick={back}><Icon name="back" size={16} /><Brand /></button><ThemeEdition /></div>{title && <div className="design-title-row"><h1 tabIndex={-1}>{title}</h1>{action}</div>}</header>;
 }
 
 export function SearchField({ value, onChange, onSubmit, placeholder = 'Songs, artists, albums', label = 'Search music' }: {
@@ -57,8 +66,8 @@ export function SearchField({ value, onChange, onSubmit, placeholder = 'Songs, a
   return <form className="search-field" role="search" onSubmit={submit}><Icon name="search" /><input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} aria-label={label} type="search" enterKeyHint="search" autoComplete="off" autoCapitalize="none" spellCheck={false} />{value && <Action icon="close" label={`Clear ${label.toLowerCase()}`} onClick={() => onChange('')} />}</form>;
 }
 
-export function SongRows({ songs, context = 'Music', editablePlaylistId, showHearts = false, onPlay }: {
-  songs: Song[]; context?: string; editablePlaylistId?: string; showHearts?: boolean; onPlay?: (song: Song) => void;
+export function SongRows({ songs, context = 'Music', editablePlaylistId, showHearts = false, onPlay, singleTrack = false }: {
+  songs: Song[]; context?: string; editablePlaylistId?: string; showHearts?: boolean; onPlay?: (song: Song) => void; singleTrack?: boolean;
 }) {
   const app = useApp();
   function move(id: string, offset: number) {
@@ -74,7 +83,7 @@ export function SongRows({ songs, context = 'Music', editablePlaylistId, showHea
     const current = app.playback.player.track?.id === song.id;
     const saved = app.isFavorite(song.id), downloaded = app.downloads.some(item => item.id === song.id);
     return <div className={`song-row ${current ? 'is-current' : ''} ${editablePlaylistId ? 'editable-song' : ''}`} key={song.id}>
-      <button className="song-main" onClick={() => { onPlay?.(song); void app.playback.play(song, songs, context); }} aria-label={`Play ${song.title} by ${song.artist}`}>
+      <button className="song-main" onClick={() => { onPlay?.(song); void app.playback.play(song, singleTrack ? [song] : songs, context); }} aria-label={`Play ${song.title} by ${song.artist}`}>
         <Cover song={song} /><span className="row-copy"><strong>{song.title}</strong><small>{downloaded && <Icon name="download" size={12} />}{song.artist}</small></span>
       </button>
       {showHearts ? <Action icon="heart" label={`${saved ? 'Remove' : 'Save'} ${song.title} ${saved ? 'from' : 'to'} Favorites`} active={saved} onClick={() => app.toggleFavorite(song)} /> : <span className="song-duration">{formatTime(song.durationMs)}</span>}

@@ -10,6 +10,12 @@ beforeEach(() => {
 const track = { id: 'test-track', title: 'Test track', artist: 'Test artist', durationMs: 120_000 };
 
 describe('account-scoped library', () => {
+  it('restores bundled playlist artwork while rejecting arbitrary local paths', () => {
+    const valid = validateLibrary({ playlists: [{ id: 'art', name: 'Artwork', songs: [], cover: '/figma/05df4.png' }] });
+    expect(valid.playlists[0].cover).toBe('/figma/05df4.png');
+    const invalid = validateLibrary({ playlists: [{ id: 'art', name: 'Artwork', songs: [], cover: '/private/file.png' }] });
+    expect(invalid.playlists[0].cover).toBeUndefined();
+  });
   it('migrates device data only into the guest library', () => {
     stored.set('cine:favorites', JSON.stringify([track]));
     stored.set('cine:playlists', JSON.stringify([{ id: 'test-list', name: 'Test list', songs: [track] }]));

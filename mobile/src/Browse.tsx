@@ -6,7 +6,10 @@ import { useApp, type Collection, type SearchHistory } from './AppContext';
 import { Icon, type IconName } from './Icons';
 import { Action, ConfirmDialog, Cover, Notice, PageHeader, SearchField, SongRows } from './ui';
 import type { Playlist, Song } from './types';
-import { recommendationIdentity, recommendationQueries } from './musicPreferences';
+import { searchMusicCatalog } from './musicSearch';
+import { figmaArtwork } from './figmaAssets';
+import { mergePlaylistSongDraft } from './playlistDraft';
+import { formatTime } from './library';
 import './browse.css';
 
 type CatalogType = 'artist' | 'album' | 'playlist';
@@ -60,51 +63,8 @@ function SectionHeading({ title, action }: { title: string; action?: ReactNode }
   return <div className="section-heading"><h2>{title}</h2>{action}</div>;
 }
 
-const recommendationKey = 'cine:browse-cache:recommendations-v2:';
-const recommendationCache = new Map<string, { savedAt: number; items: SearchResult[] }>();
 const searchCache = new Map<string, SearchResult[]>();
 const detailCache = new Map<string, CatalogDetails>();
-
-function readRecommendations(identity: string): { savedAt: number; items: SearchResult[] } {
-  const cached = recommendationCache.get(identity);
-  if (cached) return cached;
-  try {
-    const data = JSON.parse(localStorage.getItem(recommendationKey + encodeURIComponent(identity)) || 'null');
-    if (data?.identity === identity && Array.isArray(data.items)) {
-      const items = data.items.filter((item: SearchResult) => Boolean(item && typeof item.id === 'string'
-        && ['album', 'playlist'].includes(item.type) && 'title' in item && typeof item.title === 'string'
-        && (item.type === 'album' ? Array.isArray(item.artists) : true))).slice(0, 24);
-      return { savedAt: Number(data.savedAt) || 0, items };
-    }
-  } catch { /* A damaged metadata cache must not affect the saved library. */ }
-  return { savedAt: 0, items: [] };
-}
-
-async function getRecommendations(identity: string, queries: string[], signal: AbortSignal, retry = false): Promise<SearchResult[]> {
-  const cached = readRecommendations(identity);
-  if (!retry && cached.items.length && Date.now() - cached.savedAt < 21_600_000) return cached.items;
-  // Two bounded metadata searches. Never resolve audio or share a feed between accounts.
-  const settled = await Promise.allSettled([
-    searchCatalog(queries[0], 'playlist', signal), searchCatalog(queries[1], 'album', signal),
-  ]);
-  if (signal.aborted) throw new DOMException('Preferences changed', 'AbortError');
-  const items = uniqueById(settled.flatMap(result => result.status === 'fulfilled' ? result.value : [])
-    .filter(item => item.type === 'playlist' || item.type === 'album')).slice(0, 24);
-  if (!items.length) {
-    const failed = settled.find(result => result.status === 'rejected');
-    throw failed?.status === 'rejected' ? failed.reason : new Error('No recommendations were returned. Try another genre or explore Search.');
-  }
-  const entry = { savedAt: Date.now(), items };
-  if (recommendationCache.size >= 6) recommendationCache.delete(recommendationCache.keys().next().value!);
-  recommendationCache.set(identity, entry);
-  try {
-    const prefix = recommendationKey + encodeURIComponent(JSON.stringify([JSON.parse(identity)[0]]).slice(0, -1));
-    const keys = Object.keys(localStorage).filter(key => key.startsWith(prefix));
-    keys.slice(0, Math.max(0, keys.length - 2)).forEach(key => localStorage.removeItem(key));
-    localStorage.setItem(recommendationKey + encodeURIComponent(identity), JSON.stringify({ identity, ...entry }));
-  } catch { /* Metadata caching must not block the Home feed. */ }
-  return items;
-}
 
 const genres = [
   { name: 'Afrobeats', artist: 'Burna Boy' },
@@ -201,103 +161,7 @@ function CatalogRow({ item, onOpen }: { item: CatalogItem; onOpen?: (item: Catal
   </button>;
 }
 
-export function HomeScreen() {
-  const app = useApp();
-  const taste = app.account.library.taste;
-  const identity = recommendationIdentity(app.account.user?.localId || 'guest', taste, app.account.library.artists);
-  const queries = recommendationQueries(taste, app.account.library.artists);
-  const root = useRef<HTMLElement>(null);
-  const featuredRequest = useRef<AbortController | null>(null);
-  const [starting, setStarting] = useState(false);
-  const [filter, setFilter] = useState<'For you' | 'Discover' | 'Recent'>('For you');
-  const [feed, setFeed] = useState(() => ({ identity, items: readRecommendations(identity).items }));
-  const items = feed.identity === identity ? feed.items : readRecommendations(identity).items;
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [retry, setRetry] = useState(0);
-  const lastRetry = useRef(0);
-  useEffect(() => {
-    if (!app.online || app.tab !== 'home' || filter === 'Recent') return;
-    let active = true;
-    const controller = new AbortController();
-    setFeed({ identity, items: readRecommendations(identity).items });
-    setLoading(true);
-    setError('');
-    const force = retry > lastRetry.current;
-    lastRetry.current = retry;
-    void getRecommendations(identity, queries, controller.signal, force).then(results => { if (active) setFeed({ identity, items: results }); })
-      .catch(reason => { if (active) setError(message(reason)); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; controller.abort(); };
-  }, [identity, app.online, app.tab, filter === 'Recent', retry]);
-
-  const playlists = items.filter((item): item is PlaylistItem => item.type === 'playlist');
-  const featured = playlists[0];
-  useEffect(() => { setStarting(false); return () => featuredRequest.current?.abort(); }, [identity]);
-  async function playFeatured() {
-    if (!featured || starting) return;
-    featuredRequest.current?.abort();
-    const abort = new AbortController();
-    featuredRequest.current = abort;
-    setStarting(true);
-    try {
-      const key = `playlist:${featured.id}`;
-      const cached = detailCache.get(key);
-      const data = cached?.type === 'playlist' ? cached : await innertubeCatalog.getPlaylist(featured.id, abort.signal);
-      if (abort.signal.aborted || !root.current?.getClientRects().length) return;
-      detailCache.set(key, data);
-      const songs = data.tracks.map(songFrom);
-      if (!songs.length) { app.toast('This playlist did not return playable songs.'); return; }
-      app.playback.playAll(songs, false, data.title);
-    } catch (reason) { if (!abort.signal.aborted && root.current?.getClientRects().length) app.toast(message(reason)); }
-    finally { if (!abort.signal.aborted) setStarting(false); }
-  }
-  const catalogAlbums = items.filter((item): item is AlbumItem => item.type === 'album').map(item => ({
-    id: item.id, title: item.title, artist: item.artists.map(artist => artist.name).join(', '), cover: item.cover?.url,
-  }));
-  const albums = uniqueById([...app.account.library.albums, ...catalogAlbums]).slice(0, 10);
-  const search = (query: string) => {
-    app.goTab('search');
-    window.dispatchEvent(new CustomEvent('cine:browse-search', { detail: { query } }));
-  };
-  const retryButton = <button className="secondary-button" onClick={() => setRetry(value => value + 1)}>Try again</button>;
-  return <section className="screen browse-home" ref={root}>
-    <h1 className="page-title browse-home-title">Find your rhythm.</h1>
-    <div className="filter-tabs browse-home-tabs" aria-label="Home feed">{(['For you', 'Discover', 'Recent'] as const).map(tab =>
-      <button key={tab} className={filter === tab ? 'selected' : ''} aria-pressed={filter === tab} onClick={() => setFilter(tab)}>{tab}</button>)}</div>
-    {filter === 'For you' && <>
-      {featured ? <article className="browse-feature">
-        <button className="browse-feature-open" onClick={() => app.openRoute({ kind: 'catalog', type: 'playlist', id: featured.id })}
-          aria-label={`Open ${featured.title}`}><Cover kind="playlist" song={{ title: featured.title, cover: featured.cover?.url }} /></button>
-        <div className="browse-feature-copy"><div><p className="browse-eyebrow">PLAYLIST PICK</p><h2>{featured.title}</h2>
-          <p>{featured.author || 'Discover your next repeat.'}</p></div>
-          <button className="browse-feature-arrow" aria-label={`Play ${featured.title}`} disabled={starting} onClick={() => { void playFeatured(); }}>{starting ? <span className="browse-spinner" /> : <Icon name="play" size={24} />}</button>
-        </div>
-      </article> : loading ? <div className="browse-feature-loading"><Loading>Finding a playlist for you...</Loading></div>
-        : <Notice title={app.online ? 'Your next discovery is waiting' : 'You are offline'} icon={app.online ? 'music' : 'wifi'}
-          action={app.online ? retryButton : <button className="secondary-button" onClick={() => app.openRoute({ kind: 'collection', collection: 'downloads' })}>Open downloads</button>}>
-          {error || (app.online ? 'The catalog did not return a featured playlist. Try again or explore Search.' : 'Connect to load music. Your saved downloads are still here.')}
-        </Notice>}
-      {!!featured && error && <p className="browse-cache-note" role="status">Showing saved recommendations. {error} <button className="text-button" onClick={() => setRetry(value => value + 1)}>Retry</button></p>}
-      <SectionHeading title="Back in rotation" action={<button className="text-button" onClick={() => app.openRoute({ kind: 'collection', collection: 'albums' })}>Your albums <Icon name="chevron_right" size={16} /></button>} />
-      {albums.length ? <AlbumShelf items={albums} /> : loading ? <Loading>Finding albums...</Loading>
-        : <Notice title="Make room for an album" action={<button className="text-button" onClick={() => search('new albums')}>Explore albums <Icon name="chevron_right" size={16} /></button>}>Save an album as you explore and find it here. No albums have been loaded yet.</Notice>}
-    </>}
-    {filter === 'Discover' && <>
-      <SectionHeading title="A different kind of discovery" />
-      <Genres onSearch={search} />
-      <SectionHeading title="Playlist picks" />
-      {playlists.length ? <div className="art-shelf">{playlists.slice(0, 8).map(playlist => <button className="shelf-item" key={playlist.id}
-        onClick={() => app.openRoute({ kind: 'catalog', type: 'playlist', id: playlist.id })}><Cover kind="playlist" song={{ title: playlist.title, cover: playlist.cover?.url }} /><strong>{playlist.title}</strong><small>{playlist.author || 'Playlist'}</small></button>)}</div>
-        : loading ? <Loading>Loading playlist picks...</Loading> : <Notice title="No playlist picks loaded" action={retryButton}>{error || 'Connect and retry, or choose a genre to search the catalog.'}</Notice>}
-    </>}
-    {filter === 'Recent' && <>
-      <SectionHeading title="Recently played" />
-      {app.account.library.recent.length ? <SongRows songs={app.account.library.recent} context="Recently played" />
-        : <Notice title="Start a little listening history" action={<button className="secondary-button" onClick={() => app.goTab('search')}>Find your first song</button>}>The songs you actually play will appear here.</Notice>}
-    </>}
-  </section>;
-}
+export { HomeFeed as HomeScreen } from "./HomeFeed";
 
 const filters: { id: SearchType; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'track', label: 'Songs' }, { id: 'artist', label: 'Artists' }, { id: 'album', label: 'Albums' },
@@ -350,7 +214,7 @@ export function SearchScreen() {
     request.current = abort;
     setLoading(true);
     try {
-      const found = await searchCatalog(value, type, abort.signal);
+      const found = await searchMusicCatalog(value, type, abort.signal);
       if (abort.signal.aborted || ticket !== sequence.current) return;
       searchCache.set(key, found);
       if (searchCache.size > 30) searchCache.delete(searchCache.keys().next().value!);
@@ -389,7 +253,7 @@ export function SearchScreen() {
   const history = app.account.library.history;
   return <section className="screen browse-search">
     <h1 className="page-title">Search</h1>
-    <SearchField value={query} onChange={changeQuery} onSubmit={() => { void run(); }} placeholder="Songs, artists, albums" label="Search music" />
+    <SearchField value={query} onChange={changeQuery} onSubmit={() => { void run(); }} placeholder="Artists, albums, playlists" label="Search music" />
     {target && <div className="browse-context" role="status"><span>Adding to <strong>{target.name}</strong></span><button className="text-button" onClick={() => { app.setAddToPlaylist(null); app.openRoute({ kind: 'playlist', id: target.id }); }}>Done</button></div>}
     <div className="filter-tabs browse-search-filters" aria-label="Search type">{filters.map(tab => <button key={tab.id}
       className={filter === tab.id ? 'selected' : ''} aria-pressed={filter === tab.id}
@@ -404,8 +268,8 @@ export function SearchScreen() {
         </div>)}
       </section>}
       {!!query.trim() && <button className="browse-submit-hint" onClick={() => { void run(); }}><Icon name="search" size={19} /><span>Search for <strong>{query.trim()}</strong></span><Icon name="chevron_right" size={18} /></button>}
-      <SectionHeading title="Browse music" /><Genres onSearch={text => { void run(text, 'all'); }} />
-      <p className="browse-footnote">Search only runs when you submit or choose a category.</p>
+      <SectionHeading title="Browse genres" /><Genres onSearch={text => { void run(text, 'all'); }} />
+      <p className="browse-footnote">Find the artists, albums, and playlists that move you.</p>
     </>}
     {loading && <Loading>Searching for {submitted}...</Loading>}
     {!!error && !loading && <Notice title="Search could not connect" icon="wifi" action={<button className="secondary-button" onClick={() => { void run(submitted, filter, true); }}>Try again</button>}>{error}</Notice>}
@@ -415,13 +279,13 @@ export function SearchScreen() {
       {!!artists.length && <section><SectionHeading title={artists.length === 1 ? 'Artist' : 'Artists'} />{artists.map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
       {!!songs.length && <section><SectionHeading title="Songs" />{target ? <div className="song-list">{songs.map(song => {
         const added = target.songs.some(item => item.id === song.id);
-        return <div className="song-row browse-add-result" key={song.id}><button className="song-main" onClick={() => void app.playback.play(song, songs, `Search: ${submitted}`)} aria-label={`Preview ${song.title} by ${song.artist}`}><Cover song={song} /><span className="row-copy"><strong>{song.title}</strong><small>{song.artist}</small></span></button>
+        return <div className="song-row browse-add-result" key={song.id}><button className="song-main" onClick={() => void app.playback.play(song, [song], `Search: ${submitted}`)} aria-label={`Preview ${song.title} by ${song.artist}`}><Cover song={song} /><span className="row-copy"><strong>{song.title}</strong><small>{song.artist}</small></span></button>
           <Action icon={added ? 'check' : 'plus'} label={added ? `${song.title} is in ${target.name}` : `Add ${song.title} to ${target.name}`} active={added} disabled={added} onClick={() => {
             app.account.setLibrary(library => ({ ...library, playlists: library.playlists.map(playlist => playlist.id === target.id && !playlist.songs.some(item => item.id === song.id) ? { ...playlist, songs: [...playlist.songs, song] } : playlist) }));
             app.toast(`Added to ${target.name}.`);
           }} />
         </div>;
-      })}</div> : <SongRows songs={songs} context={`Search: ${submitted}`} />}</section>}
+      })}</div> : <SongRows songs={songs} singleTrack context={`Search: ${submitted}`} />}</section>}
       {!!albums.length && <section><SectionHeading title="Albums" />{albums.map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
       {!!playlists.length && <section><SectionHeading title="Playlists" />{playlists.map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
     </div>}
@@ -431,21 +295,32 @@ export function SearchScreen() {
 export function LibraryScreen() {
   const app = useApp();
   const library = app.account.library;
+  const current = app.playback.player;
+  const featured = current.track || library.recent[0] || library.favorites[0];
   const destinations: { id: Collection; icon: IconName; title: string; subtitle: string }[] = [
-    { id: 'favorites', icon: 'heart', title: 'Favorites', subtitle: count(library.favorites.length) },
-    { id: 'downloads', icon: 'download', title: 'Downloads', subtitle: `${count(app.downloads.length)} · Available offline` },
-    { id: 'playlists', icon: 'library', title: 'Playlists', subtitle: count(library.playlists.length, 'playlist') },
-    { id: 'albums', icon: 'album', title: 'Albums', subtitle: count(library.albums.length, 'album') },
+    { id: 'favorites', icon: 'heart', title: 'Liked Songs', subtitle: count(library.favorites.length) },
+    { id: 'downloads', icon: 'download', title: 'Downloaded music', subtitle: `${count(app.downloads.length)} · Available offline` },
+    { id: 'playlists', icon: 'library', title: 'Your playlists', subtitle: count(library.playlists.length, 'playlist') },
+    { id: 'albums', icon: 'album', title: 'Saved albums', subtitle: count(library.albums.length, 'album') },
     { id: 'artists', icon: 'artist', title: 'Artists', subtitle: count(library.artists.length, 'artist') },
   ];
   return <section className="screen browse-library">
-    <h1 className="page-title">Library</h1>
+    <h1 className="page-title">Your Library</h1>
+    <button className="text-button library-import-link" onClick={()=>app.openRoute({kind:'playlist-import'})}><Icon name="plus" size={16}/>Import playlist</button>
+    <article className="library-feature">
+      <Cover large song={{ cover: featured?.cover || figmaArtwork.midnight }} />
+      <div className="library-feature-copy"><small>{current.track ? 'NOW PLAYING' : featured ? 'PLAY IT AGAIN' : 'YOUR MUSIC'}</small><strong>{featured?.title || 'Make yourself at home'}</strong><span>{featured?.artist || 'Save songs and build your first playlist.'}</span></div>
+      <button className="library-feature-play" aria-label={featured ? current.track ? current.status === 'playing' ? 'Pause current song' : 'Resume current song' : `Play ${featured.title}` : 'Create your first playlist'} onClick={() => featured ? current.track ? app.playback.toggle() : app.playback.play(featured, library.recent.length ? library.recent : library.favorites, 'Your library') : app.openRoute({ kind: 'playlist-form' })}><Icon name={featured ? current.status === 'playing' ? 'pause' : 'play' : 'plus'} size={24} /></button>
+      {current.track && current.durationMs > 0 && <span className="library-feature-time">{formatTime(current.positionMs)} / {formatTime(current.durationMs)}</span>}
+    </article>
     <div className="browse-library-links">{destinations.map(item => <button className={`list-link browse-destination${item.id === 'downloads' ? ' browse-download-destination' : ''}`} key={item.id}
       onClick={() => app.openRoute({ kind: 'collection', collection: item.id })}>
       <span className={`browse-destination-icon browse-destination-${item.id}`}><Icon name={item.icon} size={29} /></span>
       <span className="row-copy"><strong>{item.title}{item.id === 'downloads' && <Icon name="lock" size={14} />}</strong><small>{item.subtitle}</small>{item.id === 'downloads' && <small className="browse-download-note">Saved securely. Plays in Cine music.</small>}</span>
       <Icon name="chevron_right" size={20} />
     </button>)}</div>
+    <SectionHeading title="Recently played" action={<button className="text-button" onClick={() => app.openRoute({ kind: 'account', page: 'history' })}>See all</button>} />
+    {library.recent.length ? <SongRows songs={library.recent.slice(0, 3)} context="Recently played" /> : <p className="design-quiet-copy">Your listening history will appear here.</p>}
     <SectionHeading title="Your playlists" action={<Action icon="plus" label="Create playlist" onClick={() => app.openRoute({ kind: 'playlist-form' })} />} />
     {library.playlists.length ? <PlaylistRail playlists={library.playlists} />
       : <Notice title="A place for your kind of music" action={<button className="secondary-button" onClick={() => app.openRoute({ kind: 'playlist-form' })}><Icon name="plus" size={18} />Create playlist</button>}>Start a private playlist. Add the songs you want to come back to.</Notice>}
@@ -712,27 +587,29 @@ export function CatalogScreen({ type, id }: { type: CatalogType; id: string }) {
   </section>;
 }
 
-export function PlaylistForm({ id }: { id?: string }) {
+export function PlaylistForm({ id, initialSong }: { id?: string; initialSong?: Song }) {
   const app = useApp();
   const playlist = app.account.library.playlists.find(item => item.id === id);
   if (!app.account.ready) return <section className="screen browse-playlist-form"><PageHeader title={id ? 'Edit playlist' : 'New playlist'} /><Loading>Opening your library...</Loading></section>;
   if (id && !playlist) return <section className="screen browse-playlist-form"><PageHeader title="Edit playlist" /><Notice title="Playlist not found">The playlist may have been removed. Your other saved music is unchanged.</Notice></section>;
-  return <PlaylistEditor key={id || 'new'} playlist={playlist} />;
+  return <PlaylistEditor key={id || 'new'} playlist={playlist} initialSong={initialSong} />;
 }
 
-function PlaylistEditor({ playlist }: { playlist?: Playlist }) {
+function PlaylistEditor({ playlist, initialSong }: { playlist?: Playlist; initialSong?: Song }) {
   const app = useApp();
-  const original = useRef({ name: playlist?.name || '', description: playlist?.description || '', cover: playlist?.cover || '' });
+  const original = useRef({ name: playlist?.name || '', description: playlist?.description || '', cover: playlist?.cover || '', songs: playlist?.songs || (initialSong ? [initialSong] : []) });
   const [name, setName] = useState(original.current.name);
   const [description, setDescription] = useState(original.current.description);
   const [cover, setCover] = useState(original.current.cover);
+  const [songs, setSongs] = useState(original.current.songs);
+  const songsChanged = songs.map(song => song.id).join(',') !== original.current.songs.map(song => song.id).join(',');
   const [nameError, setNameError] = useState('');
   const [coverError, setCoverError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [leave, setLeave] = useState<(() => void) | null>(null);
   const imageRequest = useRef(0);
   const guardEnabled = useRef(true);
-  const dirty = name !== original.current.name || description !== original.current.description || cover !== original.current.cover;
+  const dirty = name !== original.current.name || description !== original.current.description || cover !== original.current.cover || songsChanged;
   useEffect(() => () => { imageRequest.current++; }, []);
   useEffect(() => {
     if (!dirty) return;
@@ -789,8 +666,8 @@ function PlaylistEditor({ playlist }: { playlist?: Playlist }) {
     const id = playlist?.id || crypto.randomUUID();
     app.account.setLibrary(library => {
       const fields = { name: value, description: description.trim(), cover: cover || undefined, isPublic: false };
-      return { ...library, playlists: playlist ? library.playlists.map(item => item.id === id ? { ...item, ...fields } : item)
-        : [{ id, ...fields, songs: [] }, ...library.playlists] };
+      return { ...library, playlists: playlist ? library.playlists.map(item => item.id === id ? { ...item, ...fields, songs: songsChanged ? mergePlaylistSongDraft(item.songs, original.current.songs, songs) : item.songs } : item)
+        : [{ id, ...fields, songs }, ...library.playlists] };
     });
     guardEnabled.current = false;
     app.toast(playlist ? 'Playlist updated.' : 'Your private playlist is ready.');
@@ -798,9 +675,11 @@ function PlaylistEditor({ playlist }: { playlist?: Playlist }) {
     if (!playlist) app.openRoute({ kind: 'playlist', id });
   }
 
-  return <section className="screen browse-playlist-form">
+  return <section className={`screen browse-playlist-form ${playlist ? 'editing-playlist' : 'creating-playlist'}`}>
     <PageHeader title={playlist ? 'Edit playlist' : 'New playlist'} />
+    <p className="design-form-description">{playlist ? 'Update the cover, name, and track order before saving.' : 'Choose a cover, add a name, and describe the mood.'}</p>
     <form className="browse-form" onSubmit={save} noValidate>
+      {!playlist && <fieldset className="playlist-cover-presets"><legend>Playlist artwork</legend><div>{Object.entries(figmaArtwork).map(([label, image]) => <button type="button" key={label} aria-label={`Use ${label} artwork`} aria-pressed={cover === image} onClick={() => { setCover(image); setCoverError(''); }}><img src={image} alt="" /><span>{cover === image ? 'Selected' : label === 'midnight' ? 'Midnight Echo' : label[0].toUpperCase() + label.slice(1)}</span></button>)}</div></fieldset>}
       <div className="browse-cover-editor"><label className="browse-cover-picker">
         <Cover kind="playlist" large song={{ title: name || 'Playlist cover', cover: cover || undefined }} />
         <span><Icon name="plus" size={16} />{uploading ? 'Resizing image...' : cover ? 'Change cover' : 'Add cover'}</span>
@@ -812,8 +691,8 @@ function PlaylistEditor({ playlist }: { playlist?: Playlist }) {
       {nameError && <p className="browse-field-error" id="browse-playlist-name-error" role="alert">{nameError}</p>}
       <label className="browse-form-field" htmlFor="browse-playlist-description">Description <span className="muted">(optional)</span><textarea id="browse-playlist-description" rows={3} maxLength={400} value={description} onChange={event => setDescription(event.target.value)} placeholder="Add a few words" /></label>
       <div className="browse-privacy-note"><Icon name="lock" size={20} /><span><strong>Private playlist</strong><small>Only in your library. Public publishing is not available.</small></span><Icon name="check" size={19} /></div>
-      <button className="primary-button" type="submit" disabled={uploading}>{playlist ? 'Save changes' : 'Create playlist'}</button>
-      <button className="text-button browse-form-cancel" type="button" onClick={() => dirty ? setLeave(() => app.back) : app.back()}>Cancel</button>
+      {songs.length > 0 && <section className="playlist-draft-songs"><h2>{playlist ? 'Reorder songs' : 'Included song'}<small>{count(songs.length)}</small></h2>{songs.map((song, index) => <div className="playlist-draft-row" key={song.id}><Cover song={song} /><span className="row-copy"><strong>{song.title}</strong><small>{song.artist}</small></span><div className="playlist-draft-controls"><Action icon="chevron_up" label={`Move ${song.title} up`} disabled={index === 0} onClick={() => setSongs(previous => { const next = [...previous]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })} /><Action icon="chevron_down" label={`Move ${song.title} down`} disabled={index === songs.length - 1} onClick={() => setSongs(previous => { const next = [...previous]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next; })} /><Action icon="close" label={`Remove ${song.title} from draft`} onClick={() => setSongs(previous => previous.filter(item => item.id !== song.id))} /></div></div>)}</section>}
+      <div className="playlist-form-actions"><button className="secondary-button" type="button" onClick={() => dirty ? setLeave(() => app.back) : app.back()}>Cancel</button><button className="primary-button" type="submit" disabled={uploading}>{playlist ? 'Save changes' : 'Create playlist'}</button></div>
     </form>
     {leave && <ConfirmDialog title="Discard your changes?" confirmLabel="Discard changes" destructive onClose={() => setLeave(null)} onConfirm={() => { guardEnabled.current = false; const proceed = leave; setLeave(null); proceed(); }}><p>Your unsaved playlist details and cover changes will be lost.</p></ConfirmDialog>}
   </section>;

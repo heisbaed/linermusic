@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="shuffle" clip-path="url(#clip0_0_12)">
+<path id="shuffle path" d="M0 3.6H3C7 3.6 11 14.4 15 14.4H18M14 18L18 14.4L14 10.8M0 14.4H3C7 14.4 11 3.6 15 3.6H18M14 7.2L18 3.6L14 0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" stroke="#555F48"/>
+</g>
+<defs>
+<clipPath id="clip0_0_12">
+<rect width="18" height="18" fill="white"/>
+</clipPath>
+</defs>
+</svg>

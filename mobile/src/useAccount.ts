@@ -4,6 +4,7 @@ import type { Playlist, Song } from './types';
 import { FirebaseError, firebaseFetch, freshCineUser, getFirebaseDatabaseUrl, loadCineUser, storeCineUser, updateCineDisplayName, type CineUser } from './FirebaseAuth';
 import { loadSaved, save } from './library';
 import { normalizeTaste } from './musicPreferences';
+import { figmaArtwork } from './figmaAssets';
 
 type Wire = Record<string, unknown>;
 type Patch = Record<string, unknown>;
@@ -15,7 +16,8 @@ export function emptyLibrary(): LibraryData {
 }
 function values(value: unknown): unknown[] { return Array.isArray(value) ? value : value && typeof value === 'object' ? Object.values(value) : []; }
 function record(value: unknown): value is Record<string, unknown> { return Boolean(value && typeof value === 'object' && !Array.isArray(value)); }
-function image(value: unknown): string | undefined { return typeof value === 'string' && value.length < 180_000 && (/^https:\/\//.test(value) || /^data:image\/(jpeg|png|webp);base64,/.test(value)) ? value : undefined; }
+const bundledArtwork = new Set<string>(Object.values(figmaArtwork));
+function image(value: unknown): string | undefined { return typeof value === 'string' && value.length < 180_000 && (bundledArtwork.has(value) || /^https:\/\//.test(value) || /^data:image\/(jpeg|png|webp);base64,/.test(value)) ? value : undefined; }
 function text(value: unknown, max = 500): string { return typeof value === 'string' ? value.slice(0, max) : ''; }
 function song(value: unknown): value is Song { return record(value) && typeof value.id === 'string' && value.id.length < 256 && typeof value.title === 'string' && typeof value.artist === 'string' && Number.isFinite(value.durationMs) && Number(value.durationMs) >= 0; }
 function cleanSong(value: Song): Song { return { id: value.id, title: value.title.slice(0, 500), artist: value.artist.slice(0, 500), durationMs: value.durationMs, cover: image(value.cover), artistId: typeof value.artistId === 'string' ? value.artistId : undefined, albumId: typeof value.albumId === 'string' ? value.albumId : undefined }; }

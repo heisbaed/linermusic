@@ -18,6 +18,7 @@ export interface Track {
   durationMs: number;
   cover?: Cover;
   explicit?: boolean;
+  musicVideoType?: string;
 }
 
 export interface ApiTrack extends Track {

@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppContext, THEMES, type AppState, type Preferences, type Route, type Tab, type Theme, type Utility } from './AppContext';
 import { Icon } from './Icons';
-import { Brand, Action } from './ui';
+import { Brand, Action, ThemeEdition } from './ui';
+import { ExploreScreen } from './Explore';
+import { PlaylistImport } from './PlaylistImport';
+import { useListeningRecorder } from './useListening';
+import { innertubeCatalog } from '@/shared/media/innertube/innertubeCatalog';
+import { songFrom } from './Browse';
 import { loadSaved, save, toggleFavorite } from './library';
 import { useAccount } from './useAccount';
 import { usePlayback } from './usePlayback';
@@ -10,7 +15,7 @@ import { HomeScreen, SearchScreen, LibraryScreen, CollectionScreen, CatalogScree
 import { AccountScreen } from './Account';
 import { FirebaseAuth } from './FirebaseAuth';
 import { OnboardingScreen } from './Onboarding';
-import { MiniPlayer, FullPlayer, QueueSheet, SongMenu, UtilitySheet } from './Player';
+import { MiniPlayer, FullPlayer, QueueSheet, SongMenu, UtilitySheet, useLyrics } from './Player';
 import type { Song } from './types';
 import { control, subscribe } from './native';
 
@@ -48,7 +53,9 @@ export default function CineApp() {
   const toast = (text: string) => setMessage({ text, at: Date.now() });
   const downloads = useDownloads(prefs, toast);
   const playback = usePlayback({ downloads: downloads.downloads, prefs, toast, onRecent: song => { if (account.user?.emailVerified && !prefs.privateListening) account.setLibrary(old => ({ ...old, recent: [song, ...old.recent.filter(item => item.id !== song.id)].slice(0, 40) })); } });
+  useLyrics(playback.player.track, true);
   const verified = account.user?.emailVerified === true;
+  useListeningRecorder(account.user?.localId || '', playback.player, verified && !prefs.privateListening);
   const canAccess = verified && account.ready && account.library.taste.completed;
   const access = useRef(canAccess); access.current = canAccess;
   const previousAccount = useRef(account.user?.localId);
@@ -56,8 +63,25 @@ export default function CineApp() {
   live.current = { routes, tab, sheet, playerOpen, lyricsOpen };
   const currentRoute = routes.at(-1)?.route;
   const accountRoute = currentRoute?.kind === 'account';
-  const focusedForm = currentRoute?.kind === 'playlist-form' || (accountRoute && ['auth', 'music-preferences', 'edit-profile', 'change-email', 'change-password', 'delete-account'].includes(currentRoute.page));
+  const focusedForm = currentRoute?.kind === 'playlist-form' || currentRoute?.kind === 'playlist-import' || (accountRoute && ['auth', 'music-preferences', 'edit-profile', 'change-email', 'change-password', 'delete-account'].includes(currentRoute.page));
   const reduced = prefs.reducedMotion === 'on' || (prefs.reducedMotion === 'system' && deviceReducedMotion);
+  const songLinkTask=useRef<AbortController|null>(null);
+  useEffect(()=>{
+    if(!canAccess)return;
+    async function openSong(){
+      const id=window.CineAndroid?.consumeSongLink?.();
+      if(!id||!/^[a-zA-Z0-9_-]{11}$/.test(id))return;
+      songLinkTask.current?.abort();const controller=new AbortController();songLinkTask.current=controller;
+      try{
+        const track=await innertubeCatalog.getTrack(id,controller.signal);
+        if(controller.signal.aborted||!access.current)return;
+        const song=songFrom(track);await playback.play(song,[song],'Shared song');
+        setSheet(null);setLyricsOpen(false);setPlayerOpen(true);
+      }catch(e){if(!controller.signal.aborted)toast(e instanceof Error?e.message:'This song could not be opened.');}
+    }
+    void openSong();const unsubscribe=subscribe(event=>{if(event.type==='songLink')void openSong();});
+    return()=>{unsubscribe();songLinkTask.current?.abort();};
+  },[canAccess,account.user?.localId]);
 
   function guardedNavigation(action: () => void) {
     if (!access.current) return;
@@ -148,14 +172,15 @@ export default function CineApp() {
       : !account.ready ? <main className="screen account-hydration" aria-label="Opening account library"><Brand /><span className="spinner" aria-hidden="true" /><h1>Bringing your music home.</h1><p role="status">{account.syncStatus}</p><p>We are checking your saved preferences before opening Home. Your account stays signed in if the connection drops.</p><button className="account-primary" onClick={account.retrySync}>Retry connection</button><button className="text-button" onClick={account.signOut}>Use another account</button></main>
       : !account.library.taste.completed ? <OnboardingScreen key={account.user!.localId} /> : <>
     <div className="app-viewport" ref={viewport} aria-hidden={playerOpen || Boolean(sheet) ? true : undefined}>
-      {!routes.length && <header className="app-header"><Brand /><div className="header-end">{!online && <span className="offline-tag">Offline</span>}<button className="avatar-button" aria-label="Open profile" onClick={() => openRoute({ kind: 'account', page: 'profile' })}>{account.library.profile.photo ? <img src={account.library.profile.photo} alt="" /> : <span>{profileName.slice(0, 1).toUpperCase()}</span>}</button></div></header>}
+      {!routes.length && <header className="app-header"><button className="brand-profile" aria-label="Open profile" onClick={() => openRoute({ kind: 'account', page: 'profile' })}><Brand /></button><div className="header-end">{!online && <button className="offline-tag" onClick={() => openRoute({ kind: 'account', page: 'offline' })}>Offline</button>}<ThemeEdition /></div></header>}
       <main className="app-main" aria-label="Music content">
         <div className="tab-screen" hidden={tab !== 'home' || routes.length > 0}><HomeScreen /></div>
         <div className="tab-screen" hidden={tab !== 'search' || routes.length > 0}><SearchScreen /></div>
+        <div className="tab-screen" hidden={tab !== 'explore' || routes.length > 0}><ExploreScreen /></div>
         <div className="tab-screen" hidden={tab !== 'library' || routes.length > 0}><LibraryScreen /></div>
         {routes.map((entry, at) => <div className="route-layer" key={entry.key} hidden={at !== routes.length - 1}>{renderRoute(entry.route)}</div>)}
       </main>
-      <footer className="bottom-dock" hidden={playerOpen || focusedForm || keyboard}><MiniPlayer />{!accountRoute && <nav className="tab-bar" aria-label="Main navigation">{(['home', 'search', 'library'] as const).map(id => <button key={id} className={tab === id ? 'selected' : ''} aria-current={tab === id ? 'page' : undefined} onClick={() => goTab(id)}><Icon name={id} filled={tab === id} /><span>{id[0].toUpperCase() + id.slice(1)}</span>{tab === id && <i className="nav-indicator" />}</button>)}</nav>}</footer>
+      <footer className="bottom-dock" hidden={playerOpen || focusedForm || keyboard}><MiniPlayer /><nav className="tab-bar" aria-label="Main navigation">{(['home', 'search', 'explore', 'library'] as const).map(id => <button key={id} className={tab === id ? 'selected' : ''} aria-current={tab === id ? 'page' : undefined} onClick={() => goTab(id)}><Icon name={id} active={tab === id} size={18} /><span>{id[0].toUpperCase() + id.slice(1)}</span></button>)}</nav></footer>
     </div>
     {playerOpen && playback.player.track && <FullPlayer lyricsOpen={lyricsOpen} onLyrics={() => setLyricsOpen(true)} onCloseLyrics={() => setLyricsOpen(false)} onClose={() => setPlayerOpen(false)} onQueue={() => setSheet({ kind: 'queue' })} onMenu={() => setSheet({ kind: 'menu', song: playback.player.track! })} active={!sheet} />}
     {sheet?.kind === 'queue' ? <QueueSheet onClose={() => setSheet(null)} /> : sheet?.kind === 'menu' ? <SongMenu song={sheet.song} onClose={() => setSheet(null)} openUtility={utility => setSheet({ kind: utility })} /> : sheet && <UtilitySheet utility={sheet.kind} onClose={() => setSheet(null)} />}
@@ -168,6 +193,7 @@ function renderRoute(route: Route) {
   if (route.kind === 'collection') return <CollectionScreen collection={route.collection} />;
   if (route.kind === 'catalog') return <CatalogScreen type={route.type} id={route.id} />;
   if (route.kind === 'playlist') return <PlaylistScreen id={route.id} />;
-  if (route.kind === 'playlist-form') return <PlaylistForm id={route.id} />;
+  if (route.kind === 'playlist-form') return <PlaylistForm id={route.id} initialSong={route.initialSong} />;
+  if (route.kind === 'playlist-import') return <PlaylistImport />;
   return <AccountScreen page={route.page} />;
 }

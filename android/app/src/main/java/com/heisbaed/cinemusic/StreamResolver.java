@@ -22,6 +22,40 @@ final class StreamResolver {
         {"ANDROID_VR", "1.65.10", "28", "https://www.youtube.com", "com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"}
     };
     private static volatile VisitorSession session;
+    private static final Map<String, CachedStream> streams = new LinkedHashMap<>(8, .75f, true);
+    private static final class CachedStream {
+        final String url;
+        final long deadline;
+        CachedStream(String url, long remainingMs) { this.url = url; this.deadline = System.nanoTime() + remainingMs * 1_000_000; }
+    }
+    static synchronized void invalidate(String videoId) { streams.remove(videoId); }
+    private static synchronized String cachedStream(String videoId) {
+        CachedStream stream = streams.get(videoId);
+        if (stream == null) return null;
+        if (stream.deadline <= System.nanoTime()) { streams.remove(videoId); return null; }
+        return stream.url;
+    }
+    private static synchronized void cacheStream(String videoId, String url) {
+        // Reuse only a successfully probed, unexpired URL. Keep URLs in memory,
+        // for at most two minutes, and leave a full minute before source expiry.
+        try {
+            String query = new URL(url).getQuery();
+            if (query == null) return;
+            for (String part : query.split("&")) if (part.startsWith("expire=")) {
+                long expiresSeconds = Long.parseLong(part.substring(7));
+                long nowSeconds = System.currentTimeMillis() / 1000;
+                if (expiresSeconds <= nowSeconds + 60) return;
+                long remaining = Math.min(120, expiresSeconds - nowSeconds - 60) * 1000;
+                streams.put(videoId, new CachedStream(url, remaining));
+                while (streams.size() > 8) streams.remove(streams.keySet().iterator().next());
+                return;
+            }
+        } catch (Exception ignored) { /* Unparseable expiry requires fresh resolution. */ }
+    }
+    static void warm(BooleanSupplier cancelled, Consumer<HttpURLConnection> connected) {
+        try { visitorData(new Request(cancelled, connected), false); }
+        catch (Exception ignored) { /* Warm-up is optional; playback reports its own failures. */ }
+    }
 
     private static final class VisitorSession {
         final String data;
@@ -77,6 +111,9 @@ final class StreamResolver {
     static String resolve(String videoId, BooleanSupplier cancelled, Consumer<HttpURLConnection> connected) throws Exception {
         if (videoId == null || !videoId.matches("[a-zA-Z0-9_-]{11}")) throw new IOException("Unsupported track");
         Request request = new Request(cancelled, connected);
+        request.check();
+        String cached = cachedStream(videoId);
+        if (cached != null) { request.check(); return cached; }
         String visitor = visitorData(request, false);
         List<String> failures = new ArrayList<>();
         boolean refreshed = false;
@@ -123,6 +160,7 @@ final class StreamResolver {
                             String url = candidate.getString("url");
                             probe(url, request);
                             request.check();
+                            cacheStream(videoId, url);
                             return url;
                         } catch (Exception error) { request.check(); rejected.add("itag " + candidate.optInt("itag") + ": " + safe(error.getMessage())); }
                     }

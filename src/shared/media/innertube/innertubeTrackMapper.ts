@@ -1,5 +1,5 @@
 import type { Track, TrackArtist } from "@/shared/contracts";
-import { asArray, asRecord, type JsonRecord } from "@/shared/utils/json";
+import { asArray, asRecord, findFirst, walkRecords, type JsonRecord } from "@/shared/utils/json";
 import { getRuns, getText, runsToAlbum, runsToArtists } from "./innertubeJson";
 import { coverFromThumbnail, videoThumbnailCover } from "./innertubeThumbnail";
 
@@ -11,6 +11,23 @@ export function hasExplicitBadge(value: unknown): boolean {
     return true;
   }
   return Object.values(record).some(hasExplicitBadge);
+}
+
+export function musicVideoType(value: unknown): string | undefined {
+  const config = findFirst(value, 'watchEndpointMusicSupportedConfigs');
+  const type = asRecord(config?.watchEndpointMusicConfig)?.musicVideoType ?? config?.musicVideoType;
+  return typeof type === 'string' ? type : undefined;
+}
+
+function menuBrowseIds(renderer: JsonRecord, type: string): string[] {
+  const ids = new Set<string>();
+  walkRecords(renderer.menu, record => {
+    const endpoint = asRecord(record.browseEndpoint);
+    const page = asRecord(asRecord(endpoint?.browseEndpointContextSupportedConfigs)?.browseEndpointContextMusicConfig)?.pageType;
+    if(page === type && typeof endpoint?.browseId === 'string') ids.add(endpoint.browseId);
+    return false;
+  });
+  return [...ids];
 }
 
 export function parseDurationMs(value: string): number | undefined {
@@ -89,20 +106,33 @@ export function mapInnertubeTrack(raw: unknown, fallbackArtists: TrackArtist[] =
 
   const metadataRuns = flexRuns(renderer);
   const rowArtists = runsToArtists(metadataRuns);
-  const artists =
+  let artists =
     rowArtists.length > 0
       ? rowArtists
       : fallbackArtists.length > 0
         ? fallbackArtists
         : [fallbackArtistFromColumn(renderer)];
+  // Song-filter responses often put canonical links in the row menu, while
+  // displaying plain artist/album text in the columns.
+  const menuArtists = menuBrowseIds(renderer, 'MUSIC_PAGE_TYPE_ARTIST');
+  if(artists.length === 1 && artists[0].id === 'unknown' && menuArtists.length === 1)
+    artists = [{...artists[0],id:menuArtists[0]}];
+  let album = runsToAlbum(metadataRuns);
+  if(!album) {
+    const ids = menuBrowseIds(renderer,'MUSIC_PAGE_TYPE_ALBUM');
+    const parts = getRuns(columnText(renderer,'flexColumns','musicResponsiveListItemFlexColumnRenderer',1))
+      .map(run=>typeof run.text==='string'?run.text.trim():'').filter(text=>text&&!/^[•·]$/.test(text));
+    if(ids.length===1 && parts[1] && !parseDurationMs(parts[1])) album={id:ids[0],title:parts[1]};
+  }
 
   return {
     id,
     title,
     artists,
-    album: runsToAlbum(metadataRuns),
+    album,
     durationMs: durationFromRuns([...metadataRuns, ...fixedRuns(renderer)]),
     cover: coverFromThumbnail(renderer.thumbnail) ?? videoThumbnailCover(id),
     explicit: hasExplicitBadge(renderer),
+    musicVideoType: musicVideoType(renderer),
   };
 }

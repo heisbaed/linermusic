@@ -1,0 +1,589 @@
+{
+  "fileKey": "KF3CyzPkQyjjgZFZNdCKMs",
+  "url": "https://www.figma.com/design/KF3CyzPkQyjjgZFZNdCKMs",
+  "screenCount": 144,
+  "themes": [
+    "Dark blue",
+    "Dark green",
+    "Smoke white",
+    "Dark"
+  ],
+  "screens": [
+    {
+      "id": "3:7467",
+      "name": "Dark blue · Log in"
+    },
+    {
+      "id": "3:7402",
+      "name": "Dark blue · Sign up"
+    },
+    {
+      "id": "3:7308",
+      "name": "Dark blue · Country"
+    },
+    {
+      "id": "3:7272",
+      "name": "Dark blue · Welcome"
+    },
+    {
+      "id": "3:7196",
+      "name": "Dark · Log in"
+    },
+    {
+      "id": "3:7131",
+      "name": "Dark · Sign up"
+    },
+    {
+      "id": "3:7037",
+      "name": "Dark · Personalize · Country"
+    },
+    {
+      "id": "3:7001",
+      "name": "Dark · Welcome"
+    },
+    {
+      "id": "3:6925",
+      "name": "Smoke white · Log in"
+    },
+    {
+      "id": "3:6860",
+      "name": "Smoke white · Sign up"
+    },
+    {
+      "id": "3:6766",
+      "name": "Smoke white · Country"
+    },
+    {
+      "id": "3:6730",
+      "name": "Smoke white · Welcome"
+    },
+    {
+      "id": "3:6654",
+      "name": "Dark green · Log in"
+    },
+    {
+      "id": "3:6589",
+      "name": "Dark green · Sign up"
+    },
+    {
+      "id": "3:6495",
+      "name": "Dark green · Country"
+    },
+    {
+      "id": "3:6459",
+      "name": "Dark green · Welcome"
+    },
+    {
+      "id": "7:61",
+      "name": "Dark green · Artists"
+    },
+    {
+      "id": "7:143",
+      "name": "Dark green · Genres"
+    },
+    {
+      "id": "7:286",
+      "name": "Smoke white · Artists"
+    },
+    {
+      "id": "7:376",
+      "name": "Smoke white · Genres"
+    },
+    {
+      "id": "7:551",
+      "name": "Dark · Personalize · Artists"
+    },
+    {
+      "id": "7:643",
+      "name": "Dark · Personalize · Genres"
+    },
+    {
+      "id": "7:793",
+      "name": "Dark blue · Artists"
+    },
+    {
+      "id": "7:879",
+      "name": "Dark blue · Genres"
+    },
+    {
+      "id": "18:2",
+      "name": "Dark blue · Home"
+    },
+    {
+      "id": "18:17",
+      "name": "Dark blue · Search"
+    },
+    {
+      "id": "18:31",
+      "name": "Dark blue · Explore"
+    },
+    {
+      "id": "18:46",
+      "name": "Dark blue · Full-screen player"
+    },
+    {
+      "id": "18:56",
+      "name": "Dark blue · Live lyrics"
+    },
+    {
+      "id": "18:68",
+      "name": "Dark blue · Playback queue"
+    },
+    {
+      "id": "18:80",
+      "name": "Dark blue · Your Library"
+    },
+    {
+      "id": "18:94",
+      "name": "Dark blue · Playlist details"
+    },
+    {
+      "id": "18:107",
+      "name": "Dark blue · Album details"
+    },
+    {
+      "id": "18:120",
+      "name": "Dark blue · Artist profile"
+    },
+    {
+      "id": "18:133",
+      "name": "Dark blue · User profile"
+    },
+    {
+      "id": "18:145",
+      "name": "Dark blue · Edit profile"
+    },
+    {
+      "id": "18:157",
+      "name": "Dark blue · Settings"
+    },
+    {
+      "id": "18:169",
+      "name": "Dark blue · Appearance"
+    },
+    {
+      "id": "18:181",
+      "name": "Dark blue · Audio settings"
+    },
+    {
+      "id": "18:193",
+      "name": "Dark blue · Downloads"
+    },
+    {
+      "id": "18:205",
+      "name": "Dark blue · Create playlist"
+    },
+    {
+      "id": "18:217",
+      "name": "Dark blue · Edit playlist"
+    },
+    {
+      "id": "18:229",
+      "name": "Dark blue · Add songs"
+    },
+    {
+      "id": "18:241",
+      "name": "Dark blue · Song options"
+    },
+    {
+      "id": "18:253",
+      "name": "Dark blue · Connect to device"
+    },
+    {
+      "id": "18:265",
+      "name": "Dark blue · Notifications"
+    },
+    {
+      "id": "18:277",
+      "name": "Dark blue · Listening history"
+    },
+    {
+      "id": "18:289",
+      "name": "Dark blue · Listening statistics"
+    },
+    {
+      "id": "18:301",
+      "name": "Dark blue · Privacy &amp; account"
+    },
+    {
+      "id": "18:313",
+      "name": "Dark blue · Search results"
+    },
+    {
+      "id": "18:325",
+      "name": "Dark blue · Offline state"
+    },
+    {
+      "id": "18:335",
+      "name": "Dark blue · Loading state"
+    },
+    {
+      "id": "18:343",
+      "name": "Dark blue · Empty state"
+    },
+    {
+      "id": "18:351",
+      "name": "Dark blue · Playback error"
+    },
+    {
+      "id": "18:361",
+      "name": "Dark green · Home"
+    },
+    {
+      "id": "18:376",
+      "name": "Dark green · Search"
+    },
+    {
+      "id": "18:390",
+      "name": "Dark green · Explore"
+    },
+    {
+      "id": "18:405",
+      "name": "Dark green · Full-screen player"
+    },
+    {
+      "id": "18:415",
+      "name": "Dark green · Live lyrics"
+    },
+    {
+      "id": "18:427",
+      "name": "Dark green · Playback queue"
+    },
+    {
+      "id": "18:439",
+      "name": "Dark green · Your Library"
+    },
+    {
+      "id": "18:453",
+      "name": "Dark green · Playlist details"
+    },
+    {
+      "id": "18:466",
+      "name": "Dark green · Album details"
+    },
+    {
+      "id": "18:479",
+      "name": "Dark green · Artist profile"
+    },
+    {
+      "id": "18:492",
+      "name": "Dark green · User profile"
+    },
+    {
+      "id": "18:504",
+      "name": "Dark green · Edit profile"
+    },
+    {
+      "id": "18:516",
+      "name": "Dark green · Settings"
+    },
+    {
+      "id": "18:528",
+      "name": "Dark green · Appearance"
+    },
+    {
+      "id": "18:540",
+      "name": "Dark green · Audio settings"
+    },
+    {
+      "id": "18:552",
+      "name": "Dark green · Downloads"
+    },
+    {
+      "id": "18:564",
+      "name": "Dark green · Create playlist"
+    },
+    {
+      "id": "18:576",
+      "name": "Dark green · Edit playlist"
+    },
+    {
+      "id": "18:588",
+      "name": "Dark green · Add songs"
+    },
+    {
+      "id": "18:600",
+      "name": "Dark green · Song options"
+    },
+    {
+      "id": "18:612",
+      "name": "Dark green · Connect to device"
+    },
+    {
+      "id": "18:624",
+      "name": "Dark green · Notifications"
+    },
+    {
+      "id": "18:636",
+      "name": "Dark green · Listening history"
+    },
+    {
+      "id": "18:648",
+      "name": "Dark green · Listening statistics"
+    },
+    {
+      "id": "18:660",
+      "name": "Dark green · Privacy &amp; account"
+    },
+    {
+      "id": "18:672",
+      "name": "Dark green · Search results"
+    },
+    {
+      "id": "18:684",
+      "name": "Dark green · Offline state"
+    },
+    {
+      "id": "18:694",
+      "name": "Dark green · Loading state"
+    },
+    {
+      "id": "18:702",
+      "name": "Dark green · Empty state"
+    },
+    {
+      "id": "18:710",
+      "name": "Dark green · Playback error"
+    },
+    {
+      "id": "18:720",
+      "name": "Smoke white · Home"
+    },
+    {
+      "id": "18:735",
+      "name": "Smoke white · Search"
+    },
+    {
+      "id": "18:749",
+      "name": "Smoke white · Explore"
+    },
+    {
+      "id": "18:764",
+      "name": "Smoke white · Full-screen player"
+    },
+    {
+      "id": "18:774",
+      "name": "Smoke white · Live lyrics"
+    },
+    {
+      "id": "18:786",
+      "name": "Smoke white · Playback queue"
+    },
+    {
+      "id": "18:798",
+      "name": "Smoke white · Your Library"
+    },
+    {
+      "id": "18:812",
+      "name": "Smoke white · Playlist details"
+    },
+    {
+      "id": "18:825",
+      "name": "Smoke white · Album details"
+    },
+    {
+      "id": "18:838",
+      "name": "Smoke white · Artist profile"
+    },
+    {
+      "id": "18:851",
+      "name": "Smoke white · User profile"
+    },
+    {
+      "id": "18:863",
+      "name": "Smoke white · Edit profile"
+    },
+    {
+      "id": "18:875",
+      "name": "Smoke white · Settings"
+    },
+    {
+      "id": "18:887",
+      "name": "Smoke white · Appearance"
+    },
+    {
+      "id": "18:899",
+      "name": "Smoke white · Audio settings"
+    },
+    {
+      "id": "18:911",
+      "name": "Smoke white · Downloads"
+    },
+    {
+      "id": "18:923",
+      "name": "Smoke white · Create playlist"
+    },
+    {
+      "id": "18:935",
+      "name": "Smoke white · Edit playlist"
+    },
+    {
+      "id": "18:947",
+      "name": "Smoke white · Add songs"
+    },
+    {
+      "id": "18:959",
+      "name": "Smoke white · Song options"
+    },
+    {
+      "id": "18:971",
+      "name": "Smoke white · Connect to device"
+    },
+    {
+      "id": "18:983",
+      "name": "Smoke white · Notifications"
+    },
+    {
+      "id": "18:995",
+      "name": "Smoke white · Listening history"
+    },
+    {
+      "id": "18:1007",
+      "name": "Smoke white · Listening statistics"
+    },
+    {
+      "id": "18:1019",
+      "name": "Smoke white · Privacy &amp; account"
+    },
+    {
+      "id": "18:1031",
+      "name": "Smoke white · Search results"
+    },
+    {
+      "id": "18:1043",
+      "name": "Smoke white · Offline state"
+    },
+    {
+      "id": "18:1053",
+      "name": "Smoke white · Loading state"
+    },
+    {
+      "id": "18:1061",
+      "name": "Smoke white · Empty state"
+    },
+    {
+      "id": "18:1069",
+      "name": "Smoke white · Playback error"
+    },
+    {
+      "id": "18:1079",
+      "name": "Dark · Home"
+    },
+    {
+      "id": "18:1094",
+      "name": "Dark · Search"
+    },
+    {
+      "id": "18:1108",
+      "name": "Dark · Explore"
+    },
+    {
+      "id": "18:1123",
+      "name": "Dark · Full-screen player"
+    },
+    {
+      "id": "18:1133",
+      "name": "Dark · Live lyrics"
+    },
+    {
+      "id": "18:1145",
+      "name": "Dark · Playback queue"
+    },
+    {
+      "id": "18:1157",
+      "name": "Dark · Your Library"
+    },
+    {
+      "id": "18:1171",
+      "name": "Dark · Playlist details"
+    },
+    {
+      "id": "18:1184",
+      "name": "Dark · Album details"
+    },
+    {
+      "id": "18:1197",
+      "name": "Dark · Artist profile"
+    },
+    {
+      "id": "18:1210",
+      "name": "Dark · User profile"
+    },
+    {
+      "id": "18:1222",
+      "name": "Dark · Edit profile"
+    },
+    {
+      "id": "18:1234",
+      "name": "Dark · Settings"
+    },
+    {
+      "id": "18:1246",
+      "name": "Dark · Appearance"
+    },
+    {
+      "id": "18:1258",
+      "name": "Dark · Audio settings"
+    },
+    {
+      "id": "18:1270",
+      "name": "Dark · Downloads"
+    },
+    {
+      "id": "18:1282",
+      "name": "Dark · Create playlist"
+    },
+    {
+      "id": "18:1294",
+      "name": "Dark · Edit playlist"
+    },
+    {
+      "id": "18:1306",
+      "name": "Dark · Add songs"
+    },
+    {
+      "id": "18:1318",
+      "name": "Dark · Song options"
+    },
+    {
+      "id": "18:1330",
+      "name": "Dark · Connect to device"
+    },
+    {
+      "id": "18:1342",
+      "name": "Dark · Notifications"
+    },
+    {
+      "id": "18:1354",
+      "name": "Dark · Listening history"
+    },
+    {
+      "id": "18:1366",
+      "name": "Dark · Listening statistics"
+    },
+    {
+      "id": "18:1378",
+      "name": "Dark · Privacy &amp; account"
+    },
+    {
+      "id": "18:1390",
+      "name": "Dark · Search results"
+    },
+    {
+      "id": "18:1402",
+      "name": "Dark · Offline state"
+    },
+    {
+      "id": "18:1412",
+      "name": "Dark · Loading state"
+    },
+    {
+      "id": "18:1420",
+      "name": "Dark · Empty state"
+    },
+    {
+      "id": "18:1428",
+      "name": "Dark · Playback error"
+    }
+  ]
+}

@@ -4,14 +4,15 @@ import type { PlayerState, Playlist, Song } from './types';
 import type { MusicTaste } from './musicPreferences';
 
 export type Theme = 'default' | 'dark' | 'green' | 'light';
-export type Tab = 'home' | 'search' | 'library';
+export type Tab = 'home' | 'search' | 'explore' | 'library';
 export type Collection = 'favorites' | 'downloads' | 'playlists' | 'albums' | 'artists';
 export type Utility = 'sound' | 'devices' | 'timer';
 export type Route =
   | { kind: 'collection'; collection: Collection }
   | { kind: 'playlist'; id: string }
   | { kind: 'catalog'; type: 'album' | 'artist' | 'playlist'; id: string }
-  | { kind: 'playlist-form'; id?: string }
+  | { kind: 'playlist-form'; id?: string; initialSong?: Song }
+  | { kind: 'playlist-import' }
   | { kind: 'account'; page: string };
 
 export interface SavedArtist { id: string; name: string; cover?: string }
@@ -101,10 +102,10 @@ export interface AppState {
 }
 
 export const THEMES: { id: Theme; name: string; description: string; background: string; surface: string; accent: string }[] = [
-  { id: 'default', name: 'Default', description: 'Midnight navy', background: '#061126', surface: '#0D1B30', accent: '#00D9F2' },
-  { id: 'dark', name: 'Dark', description: 'Soft charcoal', background: '#101214', surface: '#1B1E22', accent: '#00D9F2' },
-  { id: 'green', name: 'Dark Green', description: 'Deep forest', background: '#08231E', surface: '#10372F', accent: '#73DAC2' },
-  { id: 'light', name: 'Light', description: 'Smoke white', background: '#F3F4F1', surface: '#E8EBE7', accent: '#006C75' },
+  { id: 'default', name: 'Dark blue', description: 'Deep midnight surfaces, rose accents, and cinematic contrast.', background: '#0C142A', surface: '#172440', accent: '#EDB4C5' },
+  { id: 'green', name: 'Dark green', description: 'Forest-inspired depth with deep green surfaces and lime highlights.', background: '#071F19', surface: '#12392E', accent: '#CBF595' },
+  { id: 'light', name: 'Smoke white', description: 'Light, airy surfaces with soft charcoal and olive accents.', background: '#F2F0EC', surface: '#FFFFFF', accent: '#555F48' },
+  { id: 'dark', name: 'Dark', description: 'Minimal charcoal surfaces with soft silver accents.', background: '#101112', surface: '#202224', accent: '#DADCD6' },
 ];
 
 export const AppContext = createContext<AppState | null>(null);

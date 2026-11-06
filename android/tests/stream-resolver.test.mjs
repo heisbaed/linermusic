@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { promisify } from 'node:util';
@@ -117,6 +117,7 @@ public class ResolverChecks {
     }
     static void reset() throws Exception {
         Field session = StreamResolver.class.getDeclaredField("session"); session.setAccessible(true); session.set(null, null);
+        StreamResolver.invalidate(ID);
         MainActivity.replies.clear(); MainActivity.opened.clear();
     }
     static String resolve() throws Exception {
@@ -160,6 +161,36 @@ public class ResolverChecks {
         check("one-bot-visitor-refresh", () -> {
             warm(VISITOR1); denied("LOGIN_REQUIRED", "Sign in to confirm you're not a bot"); warm(VISITOR2); Reply retried = ok(); media(206, "audio/mp4");
             resolve(); require(retried.getRequestProperty("X-Goog-Visitor-Id").equals(VISITOR2), "New authentic visitor used");
+        });
+        check("validated-stream-replay-skips-network", () -> {
+            String url = MEDIA + "&expire=" + (System.currentTimeMillis() / 1000 + 3600);
+            warm(VISITOR1); player(ok(new JSONArray().put(format(140, url)))); media(206, "audio/mp4");
+            require(resolve().equals(url), "Fresh URL resolved");
+            int connections = MainActivity.opened.size();
+            require(resolve().equals(url), "Same validated URL reused");
+            require(MainActivity.opened.size() == connections, "Replay avoids metadata and probe requests");
+        });
+        check("invalidate-rejected-stream-before-retry", () -> {
+            String url = MEDIA + "&expire=" + (System.currentTimeMillis() / 1000 + 3600);
+            warm(VISITOR1); player(ok(new JSONArray().put(format(140, url)))); media(206, "audio/mp4"); resolve();
+            StreamResolver.invalidate(ID);
+            ok(); media(206, "audio/mp4"); require(resolve().equals(MEDIA), "Retry obtains a new URL");
+        });
+        check("expiring-stream-is-not-cached", () -> {
+            String url = MEDIA + "&expire=" + (System.currentTimeMillis() / 1000 + 20);
+            warm(VISITOR1); player(ok(new JSONArray().put(format(140, url)))); media(206, "audio/mp4"); resolve();
+            ok(); media(206, "audio/mp4"); require(resolve().equals(MEDIA), "Near-expiry URL resolved again");
+        });
+        check("cached-stream-respects-cancellation", () -> {
+            String url = MEDIA + "&expire=" + (System.currentTimeMillis() / 1000 + 3600);
+            warm(VISITOR1); player(ok(new JSONArray().put(format(140, url)))); media(206, "audio/mp4"); resolve();
+            try { StreamResolver.resolve(ID, () -> true, connection -> {}); throw new AssertionError("Cancelled cached request must fail"); }
+            catch (InterruptedIOException expected) {}
+        });
+        check("startup-warm-removes-first-play-warm-request", () -> {
+            warm(VISITOR1); StreamResolver.warm(() -> false, connection -> {});
+            ok(); media(206, "audio/mp4"); resolve();
+            require(MainActivity.opened.size() == 3, "Only one visitor fetch across warm and playback");
         });
         check("persistent-bot-is-not-firebase-reauth", () -> {
             warm(VISITOR1); denied("LOGIN_REQUIRED", "Sign in to confirm you're not a bot"); warm(VISITOR2);
@@ -228,7 +259,7 @@ public class ResolverChecks {
 test('production native resolver: HTTP flow, restrictions, cancellation, caps and fallback', { timeout: process.argv.includes('--live') ? 180_000 : 30_000 }, async () => {
   await stat(jsonJar); await stat(androidJar);
   const tempParent = join(tmpdir(), 'kilo');
-  await stat(tempParent);
+  await mkdir(tempParent, { recursive: true });
   const temp = await mkdtemp(join(tempParent, 'cine-resolver-'));
   try {
     const source = join(root, 'android/app/src/main/java/com/heisbaed/cinemusic/StreamResolver.java');
@@ -239,6 +270,6 @@ test('production native resolver: HTTP flow, restrictions, cancellation, caps an
     console.log(stdout.trim());
     assert.equal(stderr, '');
     if (process.argv.includes('--live')) assert.equal((stdout.match(/PASS native-live/g) || []).length, 3);
-    else assert(stdout.includes('RESOLVER_CHECKS_PASSED=22'));
+    else assert(stdout.includes('RESOLVER_CHECKS_PASSED=27'));
   } finally { await rm(temp, { recursive: true, force: true }); }
 });

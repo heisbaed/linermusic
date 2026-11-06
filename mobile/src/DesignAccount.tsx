@@ -1,0 +1,84 @@
+import { useState } from 'react';
+import { THEMES, useApp } from './AppContext';
+import { Action, Brand, Cover, Notice, PageHeader, SongRows } from './ui';
+import { Icon, type IconName } from './Icons';
+import { figmaArtwork, figmaAssets } from './figmaAssets';
+import { countryName, genreLabel } from './musicPreferences';
+import { useListeningHistory } from './useListening';
+
+function Row({ icon, title, detail, value, onClick }: { icon: IconName; title: string; detail?: string; value?: string; onClick: () => void }) {
+  return <button className="design-setting-row" onClick={onClick}><span className="design-setting-icon"><Icon name={icon} size={20} /></span><span className="row-copy"><strong>{title}</strong>{detail && <small>{detail}</small>}</span>{value && <small className="design-setting-value">{value}</small>}<Icon name="chevron_right" size={16} /></button>;
+}
+
+export function DesignAccountPage({ page }: { page: string }) {
+  const app = useApp();
+  const [expanded, setExpanded] = useState('');
+  const entries = useListeningHistory(app.account.user?.localId || '');
+  const go = (next: string) => app.openRoute({ kind: 'account', page: next });
+  const library = app.account.library;
+  const activeTheme = THEMES.find(item => item.id === app.theme)!;
+  const titles: Record<string, string> = { profile: '', settings: 'Settings', appearance: 'Choose your look', playback: 'Audio & playback', quality: 'Audio & playback', notifications: 'Notifications', history: 'Listening history', statistics: 'Your listening', offline: "You’re offline" };
+  const track = app.playback.player.track;
+  const totalMs = entries.reduce((sum, entry) => sum + entry.listenedMs, 0);
+  const artistTimes = new Map<string, number>(), songTimes = new Map<string, { title: string; ms: number }>();
+  for (const entry of entries) {
+    artistTimes.set(entry.song.artist, (artistTimes.get(entry.song.artist) || 0) + entry.listenedMs);
+    const previous = songTimes.get(entry.song.id);
+    songTimes.set(entry.song.id, { title: entry.song.title, ms: (previous?.ms || 0) + entry.listenedMs });
+  }
+  const topArtists = [...artistTimes].sort((a, b) => b[1] - a[1]);
+  const topSongs = [...songTimes.values()].sort((a, b) => b.ms - a.ms);
+  const minutes = (ms: number) => Math.round(ms / 60_000).toLocaleString() + ' min';
+  const profileName = library.profile.name || app.account.user?.displayName || 'Your profile';
+  const stats = [
+    { id: 'minutes', icon: 'timer' as const, title: 'Minutes listened', detail: totalMs ? minutes(totalMs) + ' on this device' : 'Waiting for your first session' },
+    { id: 'artists', icon: 'artist' as const, title: 'Top artists', detail: topArtists[0]?.[0] || 'No listening data yet' },
+    { id: 'songs', icon: 'music' as const, title: 'Top songs', detail: topSongs[0]?.title || 'No top tracks yet' },
+    { id: 'genres', icon: 'tag' as const, title: 'Favorite genres', detail: library.taste.genres.length ? library.taste.genres.slice(0, 3).map(genreLabel).join(', ') : 'No genre preferences yet' },
+  ];
+  return <section className={`screen design-account design-account-${page}`}><PageHeader title={titles[page] || ''} />
+    {page === 'profile' && <>
+      <div className="design-profile-hero"><div className="design-profile-avatar">{library.profile.photo || app.account.user?.photoUrl ? <img src={library.profile.photo || app.account.user?.photoUrl} alt="" /> : <Icon name="account" size={28} />}</div><div><h1>{profileName}</h1><p>{library.profile.username ? '@' + library.profile.username : 'Your music, in one place.'}</p></div></div>
+      <button className="design-profile-edit" onClick={() => go('edit-profile')}><span><Icon name="edit" size={20} /></span>Edit profile<Icon name="chevron_right" size={18} /></button>
+      <div className="section-heading"><h2>Listening activity</h2><button className="text-button" onClick={() => go('history')}>See all</button></div>
+      {library.recent.length ? <SongRows songs={library.recent.slice(0, 2)} context="Listening activity" /> : <p className="design-quiet-copy">Your listening activity will appear here.</p>}
+      <div className="section-heading"><h2>Your playlists</h2><Action icon="plus" label="Create playlist" onClick={() => app.openRoute({ kind: 'playlist-form' })} /></div>
+      {library.playlists.length ? library.playlists.slice(0, 2).map(list => <button className="list-link" key={list.id} onClick={() => app.openRoute({ kind: 'playlist', id: list.id })}><Cover kind="playlist" song={{ cover: list.cover || list.songs[0]?.cover }} /><span className="row-copy"><strong>{list.name}</strong><small>{list.description || list.songs.length + ' songs'}</small></span><Icon name="chevron_right" size={18} /></button>) : <p className="design-quiet-copy">Create a playlist for the songs you come back to.</p>}
+      <div className="section-heading"><h2>Following</h2><span className="section-count">{library.artists.length} artists</span></div>
+      {library.artists.length ? library.artists.slice(0, 3).map(artist => <button className="list-link" key={artist.id} onClick={() => app.openRoute({ kind: 'catalog', type: 'artist', id: artist.id })}><Cover kind="artist" song={{ cover: artist.cover }} /><span className="row-copy"><strong>{artist.name}</strong><small>Following</small></span><Icon name="chevron_right" size={18} /></button>) : <div className="design-centered-card"><strong>No artists followed yet</strong><p>Follow artists to keep their music close.</p></div>}
+      <div className="profile-shortcuts"><Row icon="settings" title="Settings" onClick={() => go('settings')} /><Row icon="timer" title="Your listening" onClick={() => go('statistics')} /></div>
+    </>}
+    {page === 'settings' && <><p className="design-page-description">Refine playback, downloads, and privacy in one place.</p>
+      <section className="design-settings-card"><header><h2>Appearance</h2><small>Theme & layout</small></header><Row icon="eye" title="Theme" detail={activeTheme.description} value={activeTheme.name} onClick={() => go('appearance')} /></section>
+      <section className="design-settings-card"><header><h2>Playback & audio</h2><small>Quality & controls</small></header><Row icon="headphones" title="Audio & playback" detail="Sound, autoplay, and listening controls" value="Manage" onClick={() => go('playback')} /></section>
+      <section className="design-settings-card"><header><h2>Downloads</h2><small>Offline listening</small></header><Row icon="download" title="Storage" detail={app.downloads.length + ' offline tracks'} value="Manage" onClick={() => go('storage')} /></section>
+      <section className="design-settings-card"><header><h2>Privacy & account</h2><small>Personalization</small></header><label className="switch-row"><span><strong>Private listening</strong><small>Keep new plays out of listening history</small></span><input type="checkbox" checked={app.prefs.privateListening} onChange={event => app.updatePrefs({ privateListening: event.target.checked })} /></label></section>
+      <Row icon="music" title="Music preferences" detail={countryName(library.taste.country)} onClick={() => go('music-preferences')} /><Row icon="bell" title="Notifications" onClick={() => go('notifications')} /><Row icon="account" title="Privacy & account" onClick={() => go('privacy')} /><Row icon="info" title="Help & about" onClick={() => go('about')} />
+    </>}
+    {page === 'appearance' && <><p className="design-page-description">Select a theme to shape the mood of your listening experience.</p><div className="design-theme-options" role="radiogroup" aria-label="App theme">{THEMES.map((theme, index) => <button key={theme.id} type="button" role="radio" aria-checked={app.theme === theme.id} className={app.theme === theme.id ? 'selected' : ''} onClick={() => app.setTheme(theme.id)}><span className="design-theme-preview" style={{ backgroundColor: theme.background }}><img src={index === 1 ? figmaArtwork.northbound : index === 2 ? figmaArtwork.solstice : figmaArtwork.midnight} alt="" /><i style={{ backgroundColor: theme.background }} /></span><span className="design-theme-copy"><strong>{theme.id === 'default' ? 'Default dark blue' : theme.id === 'dark' ? 'Pure dark' : theme.name}{app.theme === theme.id && <small className="selected-badge">Selected</small>}</strong><small>{theme.description}</small></span></button>)}</div></>}
+    {(page === 'playback' || page === 'quality') && <>
+      <section className="design-settings-card audio-quality-card"><header><h2>Streaming quality</h2><small>Automatic</small></header><div className="audio-quality-options">{['Low', 'Normal', 'High'].map(label => <div key={label}><strong>{label}</strong><small>{label === 'Low' ? 'Less data' : label === 'Normal' ? 'Balanced' : 'Best available'}</small></div>)}</div><p className="design-card-note">Quality follows the available source automatically.</p></section>
+      <section className="design-settings-card"><header><h2>Crossfade</h2><small>Off</small></header><input className="design-disabled-range" type="range" min={0} max={12} value={0} disabled aria-label="Crossfade unavailable" /><p className="design-card-note">Crossfade is not available yet.</p></section>
+      <section className="design-settings-card"><header><h2>Gapless playback</h2><small>Off</small></header><label className="switch-row"><span><small>Gapless playback is not available yet</small></span><input type="checkbox" disabled checked={false} readOnly aria-label="Gapless playback unavailable" /></label></section>
+      <section className="design-settings-card"><header><h2>Autoplay</h2><small>{app.prefs.autoplay ? 'On' : 'Off'}</small></header><label className="switch-row"><span><small>Continue playing similar music</small></span><input type="checkbox" checked={app.prefs.autoplay} onChange={event => app.updatePrefs({ autoplay: event.target.checked })} /></label></section>
+      <Row icon="equalizer" title="Sound & equalizer" detail="Shape the sound for your headphones" onClick={() => app.openUtility('sound')} /><Row icon="headphones" title="Connected devices" onClick={() => app.openUtility('devices')} /><Row icon="timer" title="Sleep timer" onClick={() => app.openUtility('timer')} />
+      <label className="account-field">Reduced motion<select value={app.prefs.reducedMotion} onChange={event => app.updatePrefs({ reducedMotion: event.target.value as 'system' | 'on' | 'off' })}><option value="system">Follow device</option><option value="on">On</option><option value="off">Off</option></select></label>
+    </>}
+    {page === 'notifications' && <><p className="design-page-description">Manage what you hear first and keep your listening experience quiet when you need it.</p>
+      {track && <div className="discovery-feature"><Cover song={track} /><span className="feature-kicker">NOW PLAYING</span><span className="feature-title">{track.title}</span><span className="feature-author">{track.artist}</span><button className="feature-transport" aria-label="Open current song" onClick={app.openPlayer}><Icon name="play" size={20} /></button></div>}
+      <Row icon="bell" title="System notifications" detail="Playback controls and download progress" onClick={() => window.CineAndroid ? window.CineAndroid.openNotificationSettings() : app.toast('Open notification settings in the Android app.')} />
+      {['New releases', 'Artist updates', 'Recommendations'].map((title, index) => <div className="design-setting-row notification-unavailable" key={title}><span className="design-setting-icon"><Icon name={index === 0 ? 'bell' : index === 1 ? 'artist' : 'music'} size={20} /></span><span className="row-copy"><strong>{title}</strong><small>Coming soon</small></span></div>)}
+      <div className="section-heading"><h2>Earlier</h2></div><div className="design-centered-card"><strong>No new notifications</strong><p>New activity will appear here.</p></div>
+    </>}
+    {page === 'history' && <>
+      {entries.length ? [...new Set(entries.map(entry => new Date(entry.startedAt).toLocaleDateString()))].map(date => { const today = new Date().toLocaleDateString(), yesterday = new Date(Date.now() - 86_400_000).toLocaleDateString(); const songs = entries.filter(entry => new Date(entry.startedAt).toLocaleDateString() === date).map(entry => entry.song); return <section key={date}><div className="section-heading"><h2>{date === today ? 'Today' : date === yesterday ? 'Yesterday' : date}</h2></div><SongRows songs={[...new Map(songs.map(song => [song.id, song])).values()]} context="Listening history" /></section>; }) : library.recent.length ? <><div className="section-heading"><h2>Recently played</h2></div><SongRows songs={library.recent} context="Listening history" /></> : <Notice title="Your listening starts here" icon="music" action={<button className="primary-button" onClick={() => app.goTab('explore')}>Explore music</button>}>The songs you play will appear here.</Notice>}
+      {(entries.length > 0 || library.recent.length > 0) && <button className="primary-button full-button history-play-again" onClick={() => app.playback.playAll(entries.length ? [...new Map(entries.map(entry => [entry.song.id, entry.song])).values()] : library.recent, false, 'Listening history')}><Icon name="play" size={18} />Play again</button>}
+      {app.prefs.privateListening && <p className="design-quiet-copy">Private listening is on. New sessions are not added here.</p>}
+    </>}
+    {page === 'statistics' && <>
+      <div className="design-stat-hero"><small>YOUR STATS</small><h2>{totalMs ? minutes(totalMs) + ' of your world' : 'Your story is still quiet'}</h2><p>{totalMs ? 'The songs and artists that have been part of your days.' : 'Listen to discover your minutes, artists, songs, and genres.'}</p><button className="primary-button" onClick={() => app.goTab('explore')}>{totalMs ? 'Keep discovering' : 'Start listening'}<Icon name="arrow_right" size={16} /></button></div>
+      <div className="section-heading"><h2>Categories</h2></div>{stats.map(stat => <div key={stat.id}><Row icon={stat.icon} title={stat.title} detail={stat.detail} onClick={() => setExpanded(expanded === stat.id ? '' : stat.id)} />{expanded === stat.id && <div className="design-stat-detail">{stat.id === 'minutes' ? <p>{totalMs ? minutes(totalMs) + ' across ' + entries.length + ' listening sessions.' : 'Start a song to record your first listening session.'}</p> : stat.id === 'artists' ? topArtists.length ? topArtists.slice(0, 5).map(([artist, ms]) => <p key={artist}><strong>{artist}</strong><span>{minutes(ms)}</span></p>) : <p>Your most-played artists will appear here.</p> : stat.id === 'songs' ? topSongs.length ? topSongs.slice(0, 5).map(song => <p key={song.title}><strong>{song.title}</strong><span>{minutes(song.ms)}</span></p>) : <p>Your most-played songs will appear here.</p> : <><p>{library.taste.genres.map(genreLabel).join(', ') || 'Choose your preferred genres.'}</p><button className="text-button" onClick={() => go('music-preferences')}>Edit music preferences</button></>}</div>}</div>)}<p className="design-quiet-copy">Listening time is measured on this device while Cine music receives playback updates. Private sessions are excluded.</p>
+    </>}
+    {page === 'offline' && <><p className="design-page-description">Streaming is paused, but your downloaded music is still ready to play.</p>{track && <div className="discovery-feature"><Cover song={track} /><span className="feature-kicker">CURRENT TRACK</span><span className="feature-title">{track.title}</span><span className="feature-author">{track.artist}</span></div>}<div className="section-heading"><h2>Recovery</h2></div><Row icon="refresh" title="Retry connection" detail={app.online ? 'Connection restored. Open Explore to discover music.' : 'Reconnect to resume streaming'} onClick={() => app.online ? app.goTab('explore') : app.toast('Connect to Wi-Fi or mobile data, then try again.')} /><div className="section-heading"><h2>Offline listening</h2></div><Row icon="download" title="Downloaded music" detail={app.downloads.length + ' tracks available offline'} onClick={() => app.openRoute({ kind: 'collection', collection: 'downloads' })} /><Row icon="folder" title="Open downloads" detail="Browse your offline library" onClick={() => app.openRoute({ kind: 'collection', collection: 'downloads' })} /></>}
+  </section>;
+}

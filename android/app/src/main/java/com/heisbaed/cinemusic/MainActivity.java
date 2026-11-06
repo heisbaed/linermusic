@@ -27,9 +27,11 @@ public class MainActivity extends Activity {
     private final ExecutorService network = Executors.newFixedThreadPool(4);
     private final ConcurrentHashMap<String, HttpURLConnection> requests = new ConcurrentHashMap<>();
     private final Set<String> pending = ConcurrentHashMap.newKeySet();
+    private final java.util.concurrent.atomic.AtomicBoolean visitorWarmed = new java.util.concurrent.atomic.AtomicBoolean();
     private WebView web;
     private ValueCallback<Uri[]> fileChooser;
     private JSONObject pendingAuthLink;
+    private volatile String pendingSongLink = "";
     private OnBackInvokedCallback backCallback;
     private final Handler googleHandler = new Handler(Looper.getMainLooper());
     private CancellationSignal googleCancellation;
@@ -62,8 +64,9 @@ public class MainActivity extends Activity {
         setTheme(R.style.AppTheme);
         configureNetworkHosts(this);
         receiveAuthLink(getIntent());
-        getWindow().getDecorView().setBackgroundColor(Color.rgb(6, 17, 38));
-        web = new WebView(this); setContentView(web);
+        int startupColor = getSharedPreferences("cine_appearance", MODE_PRIVATE).getInt("background", Color.rgb(12, 20, 42));
+        getWindow().getDecorView().setBackgroundColor(startupColor);
+        web = new WebView(this); web.setBackgroundColor(startupColor); setContentView(web);
         // Keep content clear of system bars, including Android 15/16 edge-to-edge enforcement.
         web.setOnApplyWindowInsetsListener((view, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
@@ -153,6 +156,12 @@ public class MainActivity extends Activity {
     }
     private void receiveAuthLink(Intent intent) {
         if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction()) || intent.getData() == null) return;
+        Uri song = intent.getData();
+        if ("cinemusic".equals(song.getScheme()) && "song".equals(song.getHost()) && song.getPathSegments().size() == 1) {
+            String id = song.getLastPathSegment();
+            if (id != null && id.matches("[a-zA-Z0-9_-]{11}")) pendingSongLink = id;
+            return;
+        }
         JSONObject action = authAction(intent.getData().toString());
         if (action != null) pendingAuthLink = action;
     }
@@ -178,6 +187,7 @@ public class MainActivity extends Activity {
             PlaybackService service = PlaybackService.instance;
             if (service != null) service.publish(); else emit("player", PlaybackService.idleSnapshot());
             if (pendingAuthLink != null) { emit("authLink", pendingAuthLink); pendingAuthLink = null; }
+            if (!pendingSongLink.isEmpty()) emit("songLink", Events.json("id",pendingSongLink));
         });
     }
 
@@ -239,6 +249,7 @@ public class MainActivity extends Activity {
             URL url = new URL(value); String host = url.getHost().toLowerCase(Locale.ROOT);
             if (!validExternalUrl(value)) return false;
             return host.equals("music.youtube.com") || host.equals("www.youtube.com") || host.equals("api.tryliner.fun")
+                || host.equals("open.spotify.com") || host.equals("api.deezer.com") || host.equals("embed.music.apple.com") || host.equals("music.apple.com")
                 || host.equals("lrclib.net") || host.equals("musicbrainz.org") || host.endsWith(".googlevideo.com") || host.equals("identitytoolkit.googleapis.com")
                 || host.equals("securetoken.googleapis.com") || (!databaseHost.isEmpty() && host.equals(databaseHost));
         } catch (Exception error) { return false; }
@@ -279,7 +290,21 @@ public class MainActivity extends Activity {
             PlaybackService service = PlaybackService.instance;
             return service == null ? PlaybackService.idleSnapshot().toString() : service.snapshot();
         }
-        @JavascriptInterface public void ready() { publishState(); }
+        @JavascriptInterface public void ready() {
+            publishState();
+            if (!visitorWarmed.compareAndSet(false, true) || network.isShutdown()) return;
+            try { network.execute(() -> {
+                try {
+                    StreamResolver.warm(() -> network.isShutdown() || Thread.currentThread().isInterrupted(), connection -> {
+                        requests.put("visitor-warm", connection);
+                        if (network.isShutdown()) connection.disconnect();
+                    });
+                } finally {
+                    HttpURLConnection connection = requests.remove("visitor-warm");
+                    if (connection != null) connection.disconnect();
+                }
+            }); } catch (RejectedExecutionException ignored) { /* Activity is closing. */ }
+        }
         @JavascriptInterface public void sleepTimer(double minutes, boolean endOfSong) {
             runOnUiThread(() -> { if (PlaybackService.instance != null) PlaybackService.instance.sleepTimer(minutes, endOfSong); else emit("player", PlaybackService.idleSnapshot()); });
         }
@@ -314,6 +339,11 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 try {
                     int background = Color.parseColor(color);
+                    getSharedPreferences("cine_appearance", MODE_PRIVATE).edit().putInt("background", background).apply();
+                    if (Build.VERSION.SDK_INT >= 31) {
+                        int splashTheme = color.equalsIgnoreCase("#071f19") ? R.style.CineSplashGreen : color.equalsIgnoreCase("#f2f0ec") ? R.style.CineSplashLight : color.equalsIgnoreCase("#101112") ? R.style.CineSplashDark : R.style.CineSplashBlue;
+                        getSplashScreen().setSplashScreenTheme(splashTheme);
+                    }
                     getWindow().getDecorView().setBackgroundColor(background);
                     if (web != null) web.setBackgroundColor(background);
                     getWindow().setStatusBarColor(background);
@@ -361,6 +391,7 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void background() { runOnUiThread(() -> moveTaskToBack(true)); }
         @JavascriptInterface public void openExternal(String url) { openExternalUrl(url); }
+        @JavascriptInterface public String consumeSongLink() { String id=pendingSongLink; pendingSongLink=""; return id; }
         @JavascriptInterface public void share(String text) {
             if (text == null || text.length() > 16_384) return;
             runOnUiThread(() -> {

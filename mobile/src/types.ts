@@ -60,6 +60,7 @@ export interface NativeApi {
   isWifiConnected(): boolean;
   openNotificationSettings(): void;
   authTokens(): string;
+  consumeSongLink?(): string;
   saveAuthTokens(json: string): void;
   clearAuthTokens(): void;
   googleSignIn(requestId: string, webClientId: string, nonce: string): void;

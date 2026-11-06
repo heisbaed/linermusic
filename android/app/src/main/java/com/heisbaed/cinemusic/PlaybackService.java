@@ -22,7 +22,10 @@ public class PlaybackService extends Service {
     private final ExecutorService loader = Executors.newSingleThreadExecutor();
     private final AtomicReference<HttpURLConnection> resolvingConnection = new AtomicReference<>();
     private Future<?> loadTask;
-    private MediaPlayer player;
+    private CinePlayer player;
+    private long loadStartedAt;
+    private long sourceResolvedMs;
+    private long preparedMs;
     private Equalizer equalizer;
     private boolean equalizerEnabled;
     private int[] equalizerBands = new int[]{0,0,0,0,0};
@@ -112,15 +115,17 @@ public class PlaybackService extends Service {
     private void load(JSONObject next) throws Exception {
         if (sleepTrackId != null && !sleepTrackId.equals(next.optString("id"))) clearSleepTimer();
         track = next; error = ""; status = "loading"; prepared = false; playWhenReady = true; generation++;
+        loadStartedAt = SystemClock.elapsedRealtime(); sourceResolvedMs = 0; preparedMs = 0;
         cancelLoad();
         final int epoch = generation;
         if (equalizer != null) { equalizer.release(); equalizer = null; }
         if (player != null) { player.release(); player = null; }
-        MediaPlayer media = new MediaPlayer(); player = media;
+        CinePlayer media = new CinePlayer(); player = media;
         media.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
         media.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
         media.setOnPreparedListener(value -> {
             if (epoch != generation) return;
+            preparedMs = SystemClock.elapsedRealtime() - loadStartedAt;
             prepared = true; status = "paused";
             applyEqualizer();
             if (playWhenReady) command("resume", 0); else { publish(); updateNotification(); }
@@ -171,6 +176,7 @@ public class PlaybackService extends Service {
                     final String resolved = url;
                     handler.post(() -> {
                         if (epoch != generation) return;
+                        sourceResolvedMs = SystemClock.elapsedRealtime() - loadStartedAt;
                         try {
                             Map<String, String> headers = new HashMap<>(); headers.put("User-Agent", "Mozilla/5.0"); headers.put("Referer", "https://music.youtube.com/");
                             media.setDataSource(this, android.net.Uri.parse(resolved), headers); media.prepareAsync();
@@ -310,11 +316,13 @@ public class PlaybackService extends Service {
         String output = "System default";
         try { AudioDeviceInfo route = player == null ? null : player.getRoutedDevice(); if (route != null) output = route.getProductName().toString(); } catch (Exception ignored) {}
         JSONObject state = Events.json("track", track == null ? JSONObject.NULL : track, "status", status, "positionMs", position, "durationMs", duration, "error", error,
-            "queue", queue, "shuffle", shuffle, "repeat", repeat, "output", output, "sleepDeadline", sleepDeadline, "sleepEndOfSong", sleepTrackId != null, "equalizer", equalizerInfo);
+            "queue", queue, "shuffle", shuffle, "repeat", repeat, "output", output, "sleepDeadline", sleepDeadline, "sleepEndOfSong", sleepTrackId != null, "equalizer", equalizerInfo,
+            "sourceResolvedMs", sourceResolvedMs, "preparedMs", preparedMs);
         snapshotJson = state.toString();
         Events.send(this, "player", state);
     }
     private void fail(String message) {
+        if (track != null) StreamResolver.invalidate(track.optString("id"));
         generation++; error = message; status = "error"; prepared = false; playWhenReady = false; resumeOnFocus = false;
         cancelLoad();
         if (equalizer != null) { equalizer.release(); equalizer = null; }

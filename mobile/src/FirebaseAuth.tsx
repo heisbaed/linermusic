@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Icon } from './Icons';
 import { googleSignIn, subscribe } from './native';
-import { Brand } from './ui';
-import symbol from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_symbol_gradient.svg';
+import { Brand, ThemeEdition } from './ui';
 import './account.css';
 
 export interface CineUser {
@@ -325,10 +324,20 @@ export function FirebaseAuth({ onClose, onSuccess, initialUser }: { onClose: () 
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const [googlePending, setGooglePending] = useState(false);
   const [pending, setPending] = useState<CineUser | null>(initialUser || null);
+  const [verificationRequested, setVerificationRequested] = useState(false);
   const [cooldown, startCooldown] = useEmailCooldown();
   const inFlight = useRef(false), consumed = useRef('');
   const mounted = useRef(true);
   const panel = useRef<HTMLElement>(null);
+  const feedback = useRef<HTMLParagraphElement>(null);
+  const nativeGoogleAvailable = typeof window.CineAndroid?.googleSignIn === 'function';
+
+  useEffect(() => {
+    if (error) {
+      feedback.current?.focus({ preventScroll: true });
+      feedback.current?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [error]);
 
   function goBack() {
     if (inFlight.current) return;
@@ -382,7 +391,7 @@ export function FirebaseAuth({ onClose, onSuccess, initialUser }: { onClose: () 
   async function signIn() {
     const user = await signInCineUser(email, password);
     if (!mounted.current) return;
-    if (!user.emailVerified) { setPending(user); setView('verify'); setNotice('Your email is not verified yet. Open the verification link in your inbox, or check your spam or junk folder.'); return; }
+    if (!user.emailVerified) { setPending(user); setVerificationRequested(false); setView('verify'); setNotice('Your password was accepted. Verify your email to finish signing in.'); return; }
     finish(user);
   }
   async function signInGoogle() {
@@ -395,14 +404,14 @@ export function FirebaseAuth({ onClose, onSuccess, initialUser }: { onClose: () 
     } finally { if (mounted.current) setGooglePending(false); }
   }
   async function signUp() {
-    if (!name.trim() || name.trim().length > 60) throw new FirebaseError('PROFILE', 'Enter a name between 1 and 60 characters.');
+    const displayName = name.trim() || email.split('@')[0].slice(0, 60);
     let user = await createCineUser(email, password);
     if (!mounted.current) return;
-    setPending(user); setView('verify'); setPassword('');
-    try { user = await updateCineDisplayName(user, name); setPending(user); }
+    setPending(user); setVerificationRequested(false); setView('verify'); setPassword('');
+    try { user = await updateCineDisplayName(user, displayName); setPending(user); }
     catch { setNotice('Account created. You can add your display name in Edit profile after verifying your email.'); }
     await sendCineVerification(user);
-    if (mounted.current) { startCooldown(); setNotice('Verification email requested. Open the link in your inbox, then check verification here. If you cannot find it, check your spam or junk folder.'); }
+    if (mounted.current) { setVerificationRequested(true); startCooldown(); setNotice('Verification email requested. Open the link in your inbox, then check verification here. If you cannot find it, check your spam or junk folder.'); }
   }
   async function checkVerified() {
     if (!pending) throw new FirebaseError('SESSION', 'Log in first, then check your email verification.');
@@ -413,7 +422,7 @@ export function FirebaseAuth({ onClose, onSuccess, initialUser }: { onClose: () 
   }
   async function resend() {
     if (!pending || cooldown) return;
-    await sendCineVerification(pending); startCooldown(); setNotice('A new verification email was requested. Check your inbox, spam, or junk folder.');
+    await sendCineVerification(pending); setVerificationRequested(true); startCooldown(); setNotice('A verification email was requested. Check your inbox, spam, or junk folder.');
   }
   async function recover() {
     if (cooldown) return;
@@ -442,31 +451,42 @@ export function FirebaseAuth({ onClose, onSuccess, initialUser }: { onClose: () 
     setPassword(''); setConfirm(''); setAction(null); setView('login'); setNotice('Firebase updated your password. Log in with your new password.');
   }
   const headings: Record<View, string> = {
-    welcome: 'Find your rhythm.', login: 'Welcome back.', signup: 'Create your account.', recovery: 'Reset your password.', sent: 'Check your email.', verify: 'Verify your email.', action: action?.mode === 'verifyAndChangeEmail' ? 'Confirm your new email.' : 'Confirm your email.', reset: 'Choose a new password.', link: 'Open your email link.',
+    welcome: 'Hear beyond the ordinary.', login: 'Good to hear\nyou again.', signup: 'Your next chapter\nsounds like you.', recovery: 'Reset your password.', sent: 'Check your email.', verify: 'Verify your email.', action: action?.mode === 'verifyAndChangeEmail' ? 'Confirm your new email.' : 'Confirm your email.', reset: 'Choose a new password.', link: 'Open your email link.',
   };
   const passwordField = (confirmation = false) => <label className="account-field" htmlFor={confirmation ? 'auth-confirm-password' : 'auth-password'}>{confirmation ? 'Confirm new password' : view === 'reset' ? 'New password' : 'Password'}<span className="account-password"><input id={confirmation ? 'auth-confirm-password' : 'auth-password'} name={confirmation ? 'confirmPassword' : 'password'} type={showPassword ? 'text' : 'password'} autoComplete={view === 'login' ? 'current-password' : 'new-password'} value={confirmation ? confirm : password} onChange={event => confirmation ? setConfirm(event.target.value) : setPassword(event.target.value)} minLength={view === 'login' ? undefined : PASSWORD_MINIMUM} required aria-describedby={view === 'login' ? undefined : 'password-policy'} /><button type="button" aria-label={showPassword ? 'Hide passwords' : 'Show passwords'} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? 'Hide' : 'Show'}</button></span></label>;
   const emailField = <label className="account-field" htmlFor="auth-email">Email address<input id="auth-email" name="email" type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required /></label>;
   const policy = <p className="account-help" id="password-policy">Cine music asks for at least {PASSWORD_MINIMUM} characters. Firebase may require additional complexity; its policy is checked when you submit.</p>;
-  const submitButton = (label: string, working: string) => <button className="account-primary" type="submit" disabled={busy}>{busy ? working : label}</button>;
+  const submitButton = (label: string, working: string) => <button className="account-primary auth-submit" type="submit" disabled={busy}><span>{busy ? working : label}</span><Icon name="arrow_right" size={20} /></button>;
+
+  if (view === 'welcome') return <section className="auth-panel account-auth design-welcome" data-auth-view="welcome" aria-busy={busy} ref={panel}>
+    <header className="welcome-brand"><Brand /><ThemeEdition /></header>
+    <div className="welcome-sculpture"><div className="welcome-logo"><Brand compact /></div><span className="welcome-signature"><Icon name="lyrics" size={14} />FEEL EVERY FREQUENCY</span></div>
+    <div className="welcome-message"><h1>Hear beyond<br />the ordinary.</h1><p>A world of sound, tuned to you.<br />Find your next feeling.</p></div>
+    <div className="welcome-actions"><button className="account-primary auth-submit" type="button" onClick={() => navigate('signup')}><span>Get started</span><Icon name="arrow_right" size={20} /></button><p>Already have an account? <button type="button" onClick={() => navigate('login')}>Log in</button></p></div>
+  </section>;
 
   return <section className="auth-panel account-auth" data-auth-view={view} aria-busy={busy} ref={panel}>
-    <button className="account-back" type="button" disabled={busy} onClick={goBack}><Icon name="back" />Back</button>
+    <button className="account-back" type="button" aria-label="Back" disabled={busy} onClick={goBack}><Icon name="back" size={18} /></button>
     <div className="auth-brand"><Brand /></div>
-    {view === 'welcome' && <div className="auth-artwork" aria-hidden="true"><img src={symbol} alt="" /></div>}
-    <p className="account-eyebrow">{view === 'welcome' ? 'KEEP WHAT MOVES YOU' : 'YOUR CINE ACCOUNT'}</p><h1>{headings[view]}</h1>
-    {error && <p className="account-error" role="alert">{error}</p>}{notice && <p className="account-notice" role="status">{notice}</p>}
+    <h1>{headings[view]}</h1>
+    {(view === 'login' || view === 'signup') && <><p className="auth-description">{view === 'login' ? 'Log in to your own little universe.' : 'Create an account. Make yourself at home.'}</p>{view === 'login' && <div className="listening-signature"><span>THE WORLD OFF. THE MUSIC ON.</span><span aria-hidden="true">▂▅▇▃▆▂▅</span></div>}{nativeGoogleAvailable ? <><GoogleButton busy={busy} onClick={() => void run(signInGoogle)} /><div className="auth-divider">or with email</div></> : <p className="account-help">Use your email and password in this browser preview. Google sign-in is available in the Android app.</p>}</>}
+    {error && <p className="account-error" role="alert" ref={feedback} tabIndex={-1}>{error}</p>}{notice && <p className="account-notice" role="status">{notice}</p>}
     {googlePending && window.CineAndroid?.cancelGoogleSignIn && <button type="button" className="account-secondary" onClick={() => window.CineAndroid?.cancelGoogleSignIn?.()}>Cancel Google sign-in</button>}
-    {view === 'welcome' && <><p className="account-intro">A personal home for your favorites, playlists, and the music you come back to. Create an account or log in to start listening.</p><button className="account-primary" onClick={() => navigate('signup')}>Create account</button><button className="account-secondary" onClick={() => navigate('login')}>Log in with email</button><GoogleButton busy={busy} onClick={() => void run(signInGoogle)} /><button className="account-text" onClick={() => navigate('link')}>Already have a verification or reset link?</button><p className="account-help">Each account has its own private library. Encrypted downloads stay on this device, and are available in Cine music after signing in.</p></>}
     {view === 'login' && <form onSubmit={event => void run(signIn, event)}><fieldset disabled={busy}>{emailField}{passwordField()}<button className="account-text" type="button" onClick={() => navigate('recovery')}>Forgot password?</button>{submitButton('Log in', 'Logging in...')}<p className="account-switch">New here? <button type="button" onClick={() => navigate('signup')}>Create an account</button></p></fieldset></form>}
-    {view === 'signup' && <form onSubmit={event => void run(signUp, event)}><fieldset disabled={busy}><label className="account-field" htmlFor="auth-name">Display name<input id="auth-name" name="name" autoComplete="name" maxLength={60} value={name} onChange={event => setName(event.target.value)} required /></label>{emailField}{passwordField()}{policy}{submitButton('Create account', 'Creating account...')}<p className="account-switch">Already listening? <button type="button" onClick={() => navigate('login')}>Log in</button></p></fieldset></form>}
+    {view === 'signup' && <form onSubmit={event => void run(signUp, event)}><fieldset disabled={busy}>{emailField}{passwordField()}{policy}{submitButton('Create account', 'Creating account...')}<p className="account-switch">Already have an account? <button type="button" onClick={() => navigate('login')}>Log in</button></p></fieldset></form>}
     {view === 'recovery' && <form onSubmit={event => void run(recover, event)}><fieldset disabled={busy}><p className="account-intro">Request a real password reset link from Firebase. This screen will confirm only after the service accepts the request.</p>{emailField}<button className="account-primary" disabled={busy || cooldown > 0}>{busy ? 'Requesting link...' : cooldown ? `Try again in ${cooldown}s` : 'Send reset link'}</button><button className="account-text" type="button" onClick={() => navigate('link')}>Use an existing reset link</button></fieldset></form>}
     {view === 'sent' && <><p className="account-intro">If an eligible account uses that email, a password reset link will arrive. If it is not in your inbox, check your spam or junk folder.</p><button className="account-primary" onClick={() => navigate('login')}>Return to log in</button><button className="account-secondary" disabled={busy || cooldown > 0} onClick={() => void run(recover)}>{cooldown ? `Request another in ${cooldown}s` : 'Request another link'}</button><button className="account-text" onClick={() => navigate('link')}>Open the link here</button></>}
-    {view === 'verify' && <><p className="account-intro">Open the verification link sent to <strong>{pending?.email || email}</strong>, then return here to continue.</p><p className="account-help">Cannot find the email? Check your spam or junk folder before requesting another link.</p><button className="account-primary" disabled={busy} onClick={() => void run(checkVerified)}>{busy ? 'Checking...' : 'Check email verification'}</button><button className="account-secondary" disabled={busy || cooldown > 0} onClick={() => void run(resend)}>{cooldown ? `Resend in ${cooldown}s` : 'Send verification link'}</button><button className="account-text" disabled={busy} onClick={() => navigate('link')}>Open verification link here</button><button className="account-text" disabled={busy} onClick={() => { setPending(null); navigate('login'); }}>Use another account</button></>}
+    {view === 'verify' && <>
+      <p className="account-intro">{verificationRequested ? 'A verification email was requested for ' : 'Verify your email to finish signing in: '}<strong>{pending?.email || email}</strong>.</p>
+      <p className="account-help">{verificationRequested ? 'Open the link in your inbox, then check verification below. If it has not arrived, check spam or junk, or request another link.' : 'Send a verification link below. If you already opened a verification email, choose Check email verification.'}</p>
+      <button className={verificationRequested ? 'account-secondary' : 'account-primary'} disabled={busy || cooldown > 0} onClick={() => void run(resend)}>{cooldown ? `Resend in ${cooldown}s` : verificationRequested ? 'Resend verification link' : 'Send verification link'}</button>
+      <button className={verificationRequested ? 'account-primary' : 'account-secondary'} disabled={busy} onClick={() => void run(checkVerified)}>Check email verification</button>
+      <button className="account-text" disabled={busy} onClick={() => navigate('link')}>Open verification link here</button>
+      <button className="account-text" disabled={busy} onClick={() => { setPending(null); setVerificationRequested(false); navigate('login'); }}>Use another account</button>
+    </>}
     {view === 'action' && <><p className="account-intro">Confirm this email action with Firebase. An expired or previously used link will show an error instead of a success message.</p><button className="account-primary" disabled={busy} onClick={() => void run(applyAction)}>{busy ? 'Confirming...' : action?.mode === 'verifyAndChangeEmail' ? 'Confirm email change' : 'Verify email'}</button><button className="account-text" disabled={busy} onClick={() => navigate('link')}>Use a different link</button></>}
     {view === 'reset' && <form onSubmit={event => void run(reset, event)}><fieldset disabled={busy}><p className="account-intro">Set a new password using the reset link you opened.</p>{passwordField()}{passwordField(true)}{policy}{submitButton('Save new password', 'Saving password...')}<button className="account-text" type="button" onClick={() => navigate('recovery')}>Request a new reset link</button></fieldset></form>}
     {view === 'link' && <form onSubmit={event => { event.preventDefault(); const parsed = parseAuthActionLink(link); if (!parsed) { setError('Paste the complete verification or password reset URL from your Firebase email.'); return; } setAction(parsed); setError(''); setView(parsed.mode === 'resetPassword' ? 'reset' : 'action'); }}><label className="account-field" htmlFor="auth-action-link">Email action link<input id="auth-action-link" name="actionLink" type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" autoComplete="off" value={link} onChange={event => setLink(event.target.value)} placeholder="https://.../__/auth/action?..." required /></label><p className="account-help">Only Firebase verification, email-change, and password-reset links are supported. The service validates the link.</p>{submitButton('Continue with link', 'Checking...')}</form>}
-    {(view === 'login' || view === 'signup') && <><div className="auth-divider">or</div><GoogleButton busy={busy} onClick={() => void run(signInGoogle)} /></>}
-    {(view === 'welcome' || view === 'signup') && <p className="account-help">Product Terms of Service and Privacy Policy URLs have not yet been published for this build. Source and licence information are available in Help &amp; about.</p>}
   </section>;
 }
 

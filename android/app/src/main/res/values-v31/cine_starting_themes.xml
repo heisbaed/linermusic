@@ -6,4 +6,8 @@
         <item name="android:windowSplashScreenAnimationDuration">840</item>
         <item name="android:windowSplashScreenBrandingImage">@drawable/cine_splash_branding_white</item>
     </style>
+    <style name="CineSplashBlue" parent="Theme.CineMusic.Starting"><item name="android:windowSplashScreenBackground">#0c142a</item></style>
+    <style name="CineSplashGreen" parent="Theme.CineMusic.Starting"><item name="android:windowSplashScreenBackground">#071f19</item></style>
+    <style name="CineSplashLight" parent="Theme.CineMusic.Starting"><item name="android:windowSplashScreenBackground">#f2f0ec</item><item name="android:windowSplashScreenBrandingImage">@drawable/cine_splash_branding_dark</item></style>
+    <style name="CineSplashDark" parent="Theme.CineMusic.Starting"><item name="android:windowSplashScreenBackground">#101112</item></style>
 </resources>

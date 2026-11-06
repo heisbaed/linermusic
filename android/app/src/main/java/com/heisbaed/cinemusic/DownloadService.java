@@ -153,16 +153,11 @@ public class DownloadService extends Service {
             if (closed || job.stopped) return;
             if (wifiOnly(this) && !isWifiConnected(this)) { cancel(this, job.id, true, "Connect to Wi-Fi and resume."); return; }
             if (!new URL(url).getHost().endsWith(".googlevideo.com")) throw new IOException("Unsupported audio address");
-            HttpURLConnection connection = MainActivity.connection(url); job.connection = connection; connection.setReadTimeout(60000);
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0"); connection.setRequestProperty("Referer", "https://music.youtube.com/");
-            if (closed || job.stopped) return;
-            if (connection.getResponseCode() != 200) throw new IOException("Download failed (HTTP " + connection.getResponseCode() + "). Try again.");
-            long total = connection.getContentLengthLong(); String contentType = connection.getContentType();
-            if (contentType == null || !(contentType.startsWith("audio/") || contentType.startsWith("video/webm") || contentType.startsWith("application/octet-stream"))) throw new IOException("The server did not return audio");
-            synchronized (DownloadService.class) { if (job.stopped) return; job.status = "downloading"; job.totalBytes = Math.max(0, total); job.progress = total > 0 ? 0 : -1; persist(this); }
-            publishJob(this, job);
             JSONObject track = new JSONObject(job.track.toString()); track.put("offline", true);
-            try (InputStream input = connection.getInputStream()) {
+            try (AudioDownloadStream input = new AudioDownloadStream(url, () -> closed || job.stopped, connection -> job.connection = connection)) {
+                long total = input.length();
+                synchronized (DownloadService.class) { if (job.stopped) return; job.status = "downloading"; job.totalBytes = total; job.progress = 0; persist(this); }
+                publishJob(this, job);
                 vault.store(track, input, total, (read, length) -> {
                     if (closed || job.stopped) throw new InterruptedIOException("Download stopped");
                     long now = SystemClock.elapsedRealtime();
@@ -183,6 +178,7 @@ public class DownloadService extends Service {
         } catch (Exception error) {
             synchronized (DownloadService.class) {
                 if (closed || job.stopped) return;
+                StreamResolver.invalidate(job.id);
                 job.status = "failed"; job.bytes = 0; job.progress = 0;
                 job.error = error.getMessage() == null ? "Download failed. Please retry." : error.getMessage(); persist(this);
             }
