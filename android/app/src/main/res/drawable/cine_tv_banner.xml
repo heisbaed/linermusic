@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="315"
+                android:startColor="#04100A"
+                android:centerColor="#101B33"
+                android:endColor="#2477FF" />
+            <size android:width="320dp" android:height="180dp" />
+        </shape>
+    </item>
+    <item android:gravity="center" android:width="72dp" android:height="72dp" android:drawable="@drawable/ic_cine_launcher_foreground" />
+</layer-list>

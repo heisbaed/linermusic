@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.heisbaed.cinemusic",
+    "sha256_cert_fingerprints": [
+      "51:EF:7C:4A:A1:9F:00:4D:D0:14:E3:B0:5D:DB:22:A8:62:85:9A:8F:09:58:F3:5C:7B:52:71:A9:A1:3F:BB:CD"
+    ]
+  }
+}]

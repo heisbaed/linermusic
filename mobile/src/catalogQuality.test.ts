@@ -9,10 +9,21 @@ import { swipeDirection } from './playerGestures';
 const track=(id:string,title='Shape of You',artist='Ed Sheeran'):Track=>({id,title,artists:[{id:artist==='Ed Sheeran'?'UC_ED':'UC_OTHER',name:artist}],durationMs:234000,musicVideoType:'MUSIC_VIDEO_TYPE_ATV'});
 const result=(id:string,title='Shape of You',artist='Ed Sheeran'):Extract<SearchResult,{type:'track'}>=>({...track(id,title,artist),type:'track'});
 describe('music quality and import boundaries',()=>{
- it('keeps the original and official versions while excluding unrelated artists and videos',()=>{
+  it('ranks the original artist first without hiding other official recordings',()=>{
   const rows:SearchResult[]=[result('acoustic','Shape of You (Acoustic)'),result('studio'),result('live','Shape of You (Live)'),result('remix','Shape of You (Latin Remix)'),result('copy','Shape of You','Other'),{...result('video'),musicVideoType:'MUSIC_VIDEO_TYPE_OMV'},{type:'artist',id:'UC_ED',name:'Ed Sheeran'}];
-  expect(cleanSongResults(rows,'Ed Sheeran Shape of You').map(r=>r.id)).toEqual(['studio','acoustic','live','remix','UC_ED']);
- });
+   const ids=cleanSongResults(rows,'Ed Sheeran Shape of You').map(r=>r.id);
+   expect(ids[0]).toBe('studio');expect(ids).toContain('copy');expect(ids).not.toContain('video');
+   for(const id of ['acoustic','live','remix','UC_ED'])expect(ids).toContain(id);
+  });
+  it('retains official titles, missing artwork, channel aliases, and playlists',()=>{
+   const rows:SearchResult[]=[result('cover','Cover Me'),{...result('alias'),artists:[{id:'UC_TOPIC',name:'Ed Sheeran - Topic'}]}, {...result('legacy','Perfect'),musicVideoType:undefined,album:{id:'album',title:'Divide'}},{type:'artist',id:'UC_ED',name:'Ed Sheeran'},{type:'playlist',id:'mix',title:'Ed Sheeran hits'}];
+   expect(cleanSongResults(rows,'Ed Sheeran').map(r=>r.id)).toEqual(expect.arrayContaining(['cover','alias','legacy','mix']));
+  });
+  it('uses song-filter provenance for sparse metadata but rejects user videos',()=>{
+   const sparse={...result('sparse'),musicVideoType:undefined};
+   expect(cleanSongResults([sparse],'',new Set(['sparse']))).toHaveLength(1);
+   expect(cleanSongResults([{...sparse,musicVideoType:'MUSIC_VIDEO_TYPE_UGC'}],'',new Set(['sparse']))).toHaveLength(0);
+  });
  it('removes duplicates without merging different official versions',()=>{
   expect(cleanSongResults([result('one'),result('two'),result('three','Shape of You (Acoustic)')]).map(r=>r.id)).toEqual(['one','three']);
  });
@@ -37,7 +48,7 @@ describe('music quality and import boundaries',()=>{
  });
  it('uses an overnight greeting and validates Cine song links',()=>{
   expect(homeGreeting(0)).toBe('Welcome back');expect(homeGreeting(4)).toBe('Welcome back');expect(homeGreeting(5)).toBe('Good morning');expect(homeGreeting(15)).toBe('Good afternoon');
-  expect(songLink('xTvyyoF_LZY')).toBe('cinemusic://song/xTvyyoF_LZY');expect(()=>songLink('../bad')).toThrow();
+  expect(songLink('xTvyyoF_LZY')).toBe('https://cinemusic.web.app/song/xTvyyoF_LZY');expect(()=>songLink('../bad')).toThrow();
  });
  it('recognizes decisive swipes without treating taps, diagonals or slow drags as navigation',()=>{
   const start={x:100,y:100,at:0};expect(swipeDirection(start,{x:20,y:105,at:200})).toBe('left');expect(swipeDirection(start,{x:105,y:200,at:200})).toBe('down');expect(swipeDirection(start,{x:110,y:105,at:100})).toBeNull();expect(swipeDirection(start,{x:200,y:200,at:200})).toBeNull();expect(swipeDirection(start,{x:20,y:100,at:2000})).toBeNull();

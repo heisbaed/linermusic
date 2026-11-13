@@ -2,6 +2,7 @@ import { searchCatalog } from '@/shared/media/innertube/innertubeSearch';
 import { toSquareArtworkUrl } from '@/shared/media/innertube/innertubeThumbnail';
 import type { SearchResult } from '@/shared/contracts/catalog';
 import type { SavedArtist } from './AppContext';
+import { isOnline } from './network';
 import { normalizeCountry } from './musicPreferences';
 
 export interface RegionalArtist extends SavedArtist { country: string; mbid: string; matchMethod: 'unique-name'; fetchedAt: number }
@@ -71,7 +72,7 @@ export async function getRegionalArtists(code: string, signal: AbortSignal): Pro
   if (!country) throw new Error('Choose your listening country first.');
   const saved = cached(country);
   if (saved && !saved.stale && saved.artists.length) return saved;
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) { if (saved?.artists.length) return { ...saved, stale: true }; throw new Error('Connect to discover artists for this region.'); }
+  if (typeof navigator !== 'undefined' && isOnline() === false) { if (saved?.artists.length) return { ...saved, stale: true }; throw new Error('Connect to discover artists for this region.'); }
   try {
     const candidates = await countryCandidates(country, signal);
     const artists: RegionalArtist[] = [];

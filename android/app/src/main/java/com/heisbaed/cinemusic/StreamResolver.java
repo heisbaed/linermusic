@@ -28,14 +28,20 @@ final class StreamResolver {
         final long deadline;
         CachedStream(String url, long remainingMs) { this.url = url; this.deadline = System.nanoTime() + remainingMs * 1_000_000; }
     }
-    static synchronized void invalidate(String videoId) { streams.remove(videoId); }
-    private static synchronized String cachedStream(String videoId) {
-        CachedStream stream = streams.get(videoId);
+    static synchronized void invalidate(String videoId) {
+        streams.keySet().removeIf(key -> key.equals(videoId) || key.startsWith(videoId + ":"));
+    }
+    private static String cacheKey(String videoId, String quality) {
+        return "auto".equals(quality) ? videoId : videoId + ":" + quality;
+    }
+    private static synchronized String cachedStream(String videoId, String quality) {
+        String key = cacheKey(videoId, quality);
+        CachedStream stream = streams.get(key);
         if (stream == null) return null;
-        if (stream.deadline <= System.nanoTime()) { streams.remove(videoId); return null; }
+        if (stream.deadline <= System.nanoTime()) { streams.remove(key); return null; }
         return stream.url;
     }
-    private static synchronized void cacheStream(String videoId, String url) {
+    private static synchronized void cacheStream(String videoId, String quality, String url) {
         // Reuse only a successfully probed, unexpired URL. Keep URLs in memory,
         // for at most two minutes, and leave a full minute before source expiry.
         try {
@@ -46,7 +52,7 @@ final class StreamResolver {
                 long nowSeconds = System.currentTimeMillis() / 1000;
                 if (expiresSeconds <= nowSeconds + 60) return;
                 long remaining = Math.min(120, expiresSeconds - nowSeconds - 60) * 1000;
-                streams.put(videoId, new CachedStream(url, remaining));
+                streams.put(cacheKey(videoId, quality), new CachedStream(url, remaining));
                 while (streams.size() > 8) streams.remove(streams.keySet().iterator().next());
                 return;
             }
@@ -81,7 +87,7 @@ final class StreamResolver {
             try {
                 connected.accept(connection); check();
                 int remaining = (int)Math.max(1, (deadline - System.nanoTime()) / 1_000_000);
-                connection.setConnectTimeout(Math.min(5000, remaining)); connection.setReadTimeout(Math.min(6000, remaining));
+                connection.setConnectTimeout(Math.min(8000, remaining)); connection.setReadTimeout(Math.min(12000, remaining));
                 connection.setRequestProperty("User-Agent", agent);
                 // This resolver must never inherit source-account cookies or Cine credentials.
                 connection.setRequestProperty("Cookie", "");
@@ -106,13 +112,17 @@ final class StreamResolver {
     }
 
     static String resolve(String videoId) throws Exception {
-        return resolve(videoId, () -> false, connection -> {});
+        return resolve(videoId, "auto", () -> false, connection -> {});
     }
     static String resolve(String videoId, BooleanSupplier cancelled, Consumer<HttpURLConnection> connected) throws Exception {
+        return resolve(videoId, "auto", cancelled, connected);
+    }
+    static String resolve(String videoId, String quality, BooleanSupplier cancelled, Consumer<HttpURLConnection> connected) throws Exception {
         if (videoId == null || !videoId.matches("[a-zA-Z0-9_-]{11}")) throw new IOException("Unsupported track");
+        final String resolvedQuality = normalizeQuality(quality);
         Request request = new Request(cancelled, connected);
         request.check();
-        String cached = cachedStream(videoId);
+        String cached = cachedStream(videoId, resolvedQuality);
         if (cached != null) { request.check(); return cached; }
         String visitor = visitorData(request, false);
         List<String> failures = new ArrayList<>();
@@ -150,7 +160,7 @@ final class StreamResolver {
                         if ((format.optJSONArray("drmFamilies") != null && format.optJSONArray("drmFamilies").length() > 0) || !format.optString("drmTrackType").isEmpty()) { protectedAudio = true; continue; }
                         if (mediaUrl(format.optString("url"))) candidates.add(format);
                     }
-                    candidates.sort(Comparator.comparingInt(format -> preference(format.optInt("itag"))));
+                    candidates.sort(Comparator.comparingInt(format -> preference(format.optInt("itag"), resolvedQuality)));
                     if (candidates.isEmpty() && protectedAudio) throw new SourceFailure("YouTube returned only DRM-protected audio. It is unavailable here.", false, true);
                     if (candidates.isEmpty()) throw new IOException(ciphered ? "YouTube returned signature-ciphered audio, not a usable direct stream" : "YouTube returned no direct public audio formats");
                     List<String> rejected = new ArrayList<>();
@@ -160,7 +170,7 @@ final class StreamResolver {
                             String url = candidate.getString("url");
                             probe(url, request);
                             request.check();
-                            cacheStream(videoId, url);
+                            cacheStream(videoId, resolvedQuality, url);
                             return url;
                         } catch (Exception error) { request.check(); rejected.add("itag " + candidate.optInt("itag") + ": " + safe(error.getMessage())); }
                     }
@@ -265,8 +275,16 @@ final class StreamResolver {
         try { URL url = new URL(value); return MainActivity.allowedNetworkUrl(value) && url.getHost().toLowerCase(Locale.ROOT).endsWith(".googlevideo.com") && url.getPath().equals("/videoplayback"); }
         catch (Exception error) { return false; }
     }
-    private static int preference(int itag) {
-        switch (itag) { case 140: return 0; case 139: return 1; case 251: return 2; case 250: return 3; case 249: return 4; default: return 5; }
+    private static String normalizeQuality(String quality) {
+        return "low".equals(quality) || "normal".equals(quality) || "high".equals(quality) ? quality : "auto";
+    }
+    private static int preference(int itag, String quality) {
+        switch (quality) {
+            case "low": switch (itag) { case 139: return 0; case 249: return 1; case 250: return 2; case 140: return 3; case 251: return 4; default: return 5; }
+            case "normal": switch (itag) { case 140: return 0; case 251: return 1; case 250: return 2; case 139: return 3; case 249: return 4; default: return 5; }
+            case "high": switch (itag) { case 251: return 0; case 140: return 1; case 250: return 2; case 249: return 3; case 139: return 4; default: return 5; }
+            default: switch (itag) { case 140: return 0; case 139: return 1; case 251: return 2; case 250: return 3; case 249: return 4; default: return 5; }
+        }
     }
     private static String sourceReason(JSONObject status) {
         String reason = status.optString("reason");

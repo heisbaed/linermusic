@@ -1,0 +1,5 @@
+# AgentPlat packages this default favicon directly from source without LFS hydration.
+favicon.png -filter -diff -merge -text
+
+assets/cine-music-logo.png -filter -diff -merge
+og-image.png -filter -diff -merge

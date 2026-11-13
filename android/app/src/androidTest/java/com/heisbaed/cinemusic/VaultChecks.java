@@ -27,6 +27,7 @@ public class VaultChecks extends Instrumentation {
         Bundle result = new Bundle();
         try {
             Context context = getTargetContext(); OfflineVault vault = new OfflineVault(context);
+            test("Update sources and same-version APK rejection", () -> UpdateChecks.verify(context));
             test("Firebase network hosts are exact and external actions are validated", () -> {
                 MainActivity.configureNetworkHosts(context);
                 check(MainActivity.allowedNetworkUrl("https://identitytoolkit.googleapis.com/v1/accounts:lookup"), "Firebase identity host blocked");

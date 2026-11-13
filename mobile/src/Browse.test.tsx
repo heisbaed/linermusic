@@ -19,10 +19,10 @@ function app(): AppState {
   const data = library();
   return {
     account: { library: data, ready: true, user: null, setLibrary: vi.fn(), signIn: vi.fn(), signOut: vi.fn(), syncStatus: '', retrySync: vi.fn(), updateProfile: vi.fn(), suspendSync: vi.fn(async () => () => {}) },
-    playback: { player: { track: null, status: 'idle', positionMs: 0, durationMs: 0 }, queue: [], context: 'Test', shuffle: false, repeat: 'off', play: vi.fn(), playAll: vi.fn(), toggle: vi.fn(), next: vi.fn(), previous: vi.fn(), seek: vi.fn(), setShuffle: vi.fn(), setRepeat: vi.fn(), setQueue: vi.fn() },
-    theme: 'default', setTheme: vi.fn(), updatePrefs: vi.fn(), prefs: { autoplay: false, wifiOnly: true, reducedMotion: 'system', haptics: false, privateListening: false, equalizerOn: false, eqBands: [0, 0, 0, 0, 0], eqPreset: 'Flat' },
+    playback: { player: { track: null, status: 'idle', positionMs: 0, durationMs: 0 }, queue: [], context: 'Test', shuffle: 'off', repeat: 'off', play: vi.fn(), playAll: vi.fn(), toggle: vi.fn(), next: vi.fn(), previous: vi.fn(), seek: vi.fn(), setShuffle: vi.fn(), cycleShuffle: vi.fn(), setRepeat: vi.fn(), setQueue: vi.fn(), playerLyrics: null },
+    theme: 'default', setTheme: vi.fn(), updatePrefs: vi.fn(), prefs: { autoplay: false, wifiOnly: true, reducedMotion: 'system', haptics: false, privateListening: false, equalizerOn: false, eqBands: [0, 0, 0, 0, 0], eqPreset: 'Flat', audioQuality: 'auto', gapless: true, crossfadeSeconds: 0 },
     tab: 'home', goTab: vi.fn(), openRoute: vi.fn(), back: vi.fn(), openPlayer: vi.fn(), openMenu: vi.fn(), openUtility: vi.fn(), toast: vi.fn(), online: false,
-    downloads: [], jobs: [], download: vi.fn(), removeDownload: vi.fn(), refreshDownloads: vi.fn(), toggleFavorite: vi.fn(), isFavorite: id => data.favorites.some(song => song.id === id), addToPlaylist: null, setAddToPlaylist: vi.fn(),
+    downloads: [], jobs: [], download: vi.fn(), removeDownload: vi.fn(), refreshDownloads: vi.fn(), toggleFavorite: vi.fn(), isFavorite: id => data.favorites.some(song => song.id === id), addToPlaylist: null, setAddToPlaylist: vi.fn(), checkForUpdates: vi.fn(),
   };
 }
 function render(screen: ReactNode, state = app()) { return renderToStaticMarkup(<AppContext.Provider value={state}>{screen}</AppContext.Provider>); }
@@ -67,7 +67,7 @@ describe('browse initial and offline states', () => {
     expect(html).not.toContain('viewBox="0 0 220 150"');
     for (const filter of ['All', 'Songs', 'Artists', 'Albums']) expect(html).toContain(`>${filter}</button>`);
     expect(html).not.toContain('browse-result-artist');
-    expect(html).toContain('Browse genres');
+    expect(html).toContain('Browse all');
   });
   it('counts actual saved albums and artists instead of inferring them from songs', () => {
     const state = app();
@@ -77,12 +77,14 @@ describe('browse initial and offline states', () => {
     expect(html).toContain('0 artists');
     expect(html).toContain('My private mix');
     expect(html).toContain('Create playlist');
+    expect(html).toContain('Back up playlists');
   });
   it('exposes favorites search, play all, shuffle and saved heart controls', () => {
     const html = render(<CollectionScreen collection="favorites" />);
     expect(html).toContain('Search favorites');
     expect(html).toContain('Play all');
     expect(html).toContain('Shuffle');
+    expect(html).toContain('Download songs from Liked Songs');
     expect(html).toContain('Remove First fixture from Favorites');
   });
   it('shows active downloads separately without counting them as completed', () => {
@@ -112,6 +114,7 @@ describe('browse initial and offline states', () => {
     expect(html).toContain('Private playlist');
     expect(html).toContain('Edit songs');
     expect(html).toContain('Delete playlist');
+    expect(html).toContain('>Export</button>');
     expect(state.playback.playAll).not.toHaveBeenCalled();
   });
   it('does not show a stale playlist when the requested ID is absent', () => {

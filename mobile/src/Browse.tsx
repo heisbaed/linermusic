@@ -9,8 +9,9 @@ import type { Playlist, Song } from './types';
 import { searchMusicCatalog } from './musicSearch';
 import { figmaArtwork } from './figmaAssets';
 import { mergePlaylistSongDraft } from './playlistDraft';
-import { formatTime } from './library';
+import { formatTime, playlistBackupFileName, playlistBackupText, playlistIsDownloaded } from './library';
 import './browse.css';
+import { SongRadio } from './SongRadio';
 
 type CatalogType = 'artist' | 'album' | 'playlist';
 type CatalogDetails = AlbumDetails | ArtistDetails | CatalogPlaylistDetails;
@@ -124,7 +125,7 @@ function Genres({ onSearch }: { onSearch: (query: string) => void }) {
     const art = artwork[genre.name], cover = art?.cover;
     const visible = Boolean(cover && failed[genre.name] !== cover && loaded[genre.name] === cover);
     return <button className="browse-genre" data-artwork={visible ? 'ready' : 'pending'} data-artwork-artist={art?.artist} key={genre.name} onClick={() => onSearch(genre.name)} aria-label={`Search ${genre.name} music`}>
-      {cover && failed[genre.name] !== cover && <img className="browse-genre-image" src={cover} alt="" loading="lazy" decoding="async" onLoad={() => setLoaded(old => ({ ...old, [genre.name]: cover }))} onError={() => setFailed(old => ({ ...old, [genre.name]: cover }))} />}
+      {cover && failed[genre.name] !== cover && <img className="browse-genre-image" src={cover} alt="" decoding="async" onLoad={() => setLoaded(old => ({ ...old, [genre.name]: cover }))} onError={() => setFailed(old => ({ ...old, [genre.name]: cover }))} />}
       <span>{genre.name}</span><Icon name="chevron_right" size={18} />
     </button>;
   })}</div>;
@@ -165,10 +166,12 @@ export { HomeFeed as HomeScreen } from "./HomeFeed";
 
 const filters: { id: SearchType; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'track', label: 'Songs' }, { id: 'artist', label: 'Artists' }, { id: 'album', label: 'Albums' },
+  { id: 'playlist', label: 'Playlists' },
 ];
 
 export function SearchScreen() {
   const app = useApp();
+  const [radioSong, setRadioSong] = useState<Song | null>(null);
   const appRef = useRef(app);
   appRef.current = app;
   const [query, setQuery] = useState('');
@@ -177,16 +180,18 @@ export function SearchScreen() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const request = useRef<AbortController | null>(null);
   const sequence = useRef(0);
-  const runRef = useRef<(text: string, type?: SearchType) => void>(() => {});
+  const runRef = useRef<(text: string, type?: SearchType, save?: boolean) => void>(() => {});
   useEffect(() => {
     const onSearch = (event: Event) => {
       const text = (event as CustomEvent<{ query: string }>).detail?.query;
       if (text) runRef.current(text, 'all');
     };
     window.addEventListener('cine:browse-search', onSearch);
-    return () => { window.removeEventListener('cine:browse-search', onSearch); request.current?.abort(); };
+    return () => { window.removeEventListener('cine:browse-search', onSearch); request.current?.abort(); if (debounce.current) clearTimeout(debounce.current); };
   }, []);
 
   function remember(entry: SearchHistory) {
@@ -194,7 +199,8 @@ export function SearchScreen() {
       entry.id ? !(item.type === entry.type && item.id === entry.id) : item.id || item.query.toLocaleLowerCase() !== entry.query.toLocaleLowerCase())].slice(0, 20) }));
   }
 
-  async function run(text = query, type: SearchType = filter, force = false) {
+  async function run(text = query, type: SearchType = filter, force = false, save = true) {
+    if (debounce.current) clearTimeout(debounce.current);
     const value = text.trim();
     request.current?.abort();
     const ticket = ++sequence.current;
@@ -205,7 +211,7 @@ export function SearchScreen() {
     setSubmitted(value);
     setLoading(false);
     if (!value) return;
-    remember({ query: value });
+    if (save) remember({ query: value });
     const key = `${type}:${value.toLocaleLowerCase()}`;
     const cached = searchCache.get(key);
     if (cached && !force) { setResults(cached); return; }
@@ -216,7 +222,7 @@ export function SearchScreen() {
     try {
       const found = await searchMusicCatalog(value, type, abort.signal);
       if (abort.signal.aborted || ticket !== sequence.current) return;
-      searchCache.set(key, found);
+      if (found.length) searchCache.set(key, found);
       if (searchCache.size > 30) searchCache.delete(searchCache.keys().next().value!);
       setResults(found);
     } catch (reason) {
@@ -225,9 +231,10 @@ export function SearchScreen() {
       if (!abort.signal.aborted && ticket === sequence.current) setLoading(false);
     }
   }
-  runRef.current = (text, type) => { void run(text, type); };
+  runRef.current = (text, type, save = true) => { void run(text, type, false, save); };
 
   function changeQuery(value: string) {
+    if (debounce.current) clearTimeout(debounce.current);
     request.current?.abort();
     sequence.current++;
     setQuery(value);
@@ -236,6 +243,7 @@ export function SearchScreen() {
     setError('');
     setLoading(false);
     if (!value) setFilter('all');
+    if (value.trim()) debounce.current = setTimeout(() => runRef.current(value, filter, false), 350);
   }
 
   function open(item: CatalogItem) {
@@ -251,24 +259,30 @@ export function SearchScreen() {
   const playlists = results.filter((item): item is PlaylistItem => item.type === 'playlist');
   const target = app.account.library.playlists.find(playlist => playlist.id === app.addToPlaylist);
   const history = app.account.library.history;
+  const topResult = filter === 'all' ? results[0] : undefined;
+  const shownSongs = filter === 'all' ? songs.slice(0, 5) : songs;
+  const seeAll = (type: SearchType, length: number, limit: number) => filter === 'all' && length > limit
+    ? <button className="text-button" onClick={() => { void run(submitted, type); }}>See all</button> : undefined;
   return <section className="screen browse-search">
-    <h1 className="page-title">Search</h1>
-    <SearchField value={query} onChange={changeQuery} onSubmit={() => { void run(); }} placeholder="Artists, albums, playlists" label="Search music" />
+    <h1 className="page-title">Search</h1>{radioSong && <SongRadio song={radioSong} onClose={() => setRadioSong(null)} />}
+    <div className="browse-search-input"><SearchField value={query} onChange={changeQuery} onSubmit={() => { void run(); }} placeholder="Songs, artists, albums, playlists" label="Search music" /></div>
     {target && <div className="browse-context" role="status"><span>Adding to <strong>{target.name}</strong></span><button className="text-button" onClick={() => { app.setAddToPlaylist(null); app.openRoute({ kind: 'playlist', id: target.id }); }}>Done</button></div>}
     <div className="filter-tabs browse-search-filters" aria-label="Search type">{filters.map(tab => <button key={tab.id}
       className={filter === tab.id ? 'selected' : ''} aria-pressed={filter === tab.id}
-      onClick={() => { setFilter(tab.id); if (submitted) void run(submitted, tab.id); }}>{tab.label}</button>)}</div>
+      onClick={() => { setFilter(tab.id); if (query.trim()) void run(query, tab.id); }}>{tab.label}</button>)}</div>
     {!submitted && <>
       {!!history.length && <section className="browse-history"><SectionHeading title="Recent searches" action={<button className="text-button" onClick={() => app.account.setLibrary(library => ({ ...library, history: [] }))}>Clear</button>} />
-        {history.slice(0, 3).map((entry, index) => <div className="browse-history-row" key={`${entry.type || 'query'}:${entry.id || entry.query}:${index}`}>
+        {history.slice(0, showHistory ? 20 : 3).map((entry, index) => <div className="browse-history-row" key={`${entry.type || 'query'}:${entry.id || entry.query}:${index}`}>
           <button onClick={() => entry.type && entry.id ? app.openRoute({ kind: 'catalog', type: entry.type, id: entry.id }) : void run(entry.query, 'all')}>
             {entry.id ? <Cover kind={entry.type} className={entry.type === 'artist' ? 'browse-round' : ''} song={{ title: entry.title || entry.query, cover: entry.cover }} /> : <span className="browse-history-icon"><Icon name="search" size={21} /></span>}
             <span className="row-copy"><strong>{entry.title || entry.query}</strong><small>{entry.subtitle || (entry.type ? entry.type[0].toUpperCase() + entry.type.slice(1) : 'Search')}</small></span>
           </button><Action icon="close" label={`Remove ${entry.title || entry.query} from search history`} onClick={() => app.account.setLibrary(library => ({ ...library, history: library.history.filter(item => item !== entry) }))} />
         </div>)}
+        {history.length > 3 && <button className="text-button" onClick={() => setShowHistory(value => !value)}>{showHistory ? 'Show less' : 'Show all recent searches'}</button>}
       </section>}
       {!!query.trim() && <button className="browse-submit-hint" onClick={() => { void run(); }}><Icon name="search" size={19} /><span>Search for <strong>{query.trim()}</strong></span><Icon name="chevron_right" size={18} /></button>}
-      <SectionHeading title="Browse genres" /><Genres onSearch={text => { void run(text, 'all'); }} />
+      {!!app.account.library.recent.length && <section className="search-radios"><SectionHeading title="Made from your music" /><div className="art-shelf">{app.account.library.recent.slice(0, 6).map(song => <button className="shelf-item" key={song.id} onClick={() => setRadioSong(song)}><Cover song={song} /><strong>{song.title} Radio</strong><small>{song.artist}</small></button>)}</div></section>}
+      <SectionHeading title="Browse all" /><Genres onSearch={text => { void run(text, 'all'); }} />
       <p className="browse-footnote">Find the artists, albums, and playlists that move you.</p>
     </>}
     {loading && <Loading>Searching for {submitted}...</Loading>}
@@ -276,18 +290,23 @@ export function SearchScreen() {
     {!!submitted && !loading && !error && !results.length && <Notice title={`No results for “${submitted}”`} icon="search">Try a different spelling, a song title, or an artist's name.</Notice>}
     {!loading && !error && !!results.length && <div className="browse-results" aria-live="polite">
       <p className="browse-result-label">Results for <strong>{submitted}</strong></p>
-      {!!artists.length && <section><SectionHeading title={artists.length === 1 ? 'Artist' : 'Artists'} />{artists.map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
-      {!!songs.length && <section><SectionHeading title="Songs" />{target ? <div className="song-list">{songs.map(song => {
+      {topResult && !target && <section><SectionHeading title="Top result" /><div className="browse-top-result">{topResult.type === 'track'
+        ? <SongRows songs={[songFrom(topResult)]} singleTrack context={`Search: ${submitted}`} onPlay={() => remember({ query: submitted })} />
+        : <CatalogRow item={topResult} onOpen={open} />}</div></section>}
+      {!!songs.length && <section><SectionHeading title="Songs" action={seeAll('track', songs.length, 5)} />{target ? <div className="song-list">{shownSongs.map(song => {
         const added = target.songs.some(item => item.id === song.id);
         return <div className="song-row browse-add-result" key={song.id}><button className="song-main" onClick={() => void app.playback.play(song, [song], `Search: ${submitted}`)} aria-label={`Preview ${song.title} by ${song.artist}`}><Cover song={song} /><span className="row-copy"><strong>{song.title}</strong><small>{song.artist}</small></span></button>
           <Action icon={added ? 'check' : 'plus'} label={added ? `${song.title} is in ${target.name}` : `Add ${song.title} to ${target.name}`} active={added} disabled={added} onClick={() => {
+            const keepOffline = playlistIsDownloaded(target, app.downloads, app.jobs);
             app.account.setLibrary(library => ({ ...library, playlists: library.playlists.map(playlist => playlist.id === target.id && !playlist.songs.some(item => item.id === song.id) ? { ...playlist, songs: [...playlist.songs, song] } : playlist) }));
+            if (keepOffline) app.download(song);
             app.toast(`Added to ${target.name}.`);
           }} />
         </div>;
-      })}</div> : <SongRows songs={songs} singleTrack context={`Search: ${submitted}`} />}</section>}
-      {!!albums.length && <section><SectionHeading title="Albums" />{albums.map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
-      {!!playlists.length && <section><SectionHeading title="Playlists" />{playlists.map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
+      })}</div> : <SongRows songs={shownSongs} singleTrack context={`Search: ${submitted}`} onPlay={() => remember({ query: submitted })} />}</section>}
+      {!!artists.length && <section><SectionHeading title={artists.length === 1 ? 'Artist' : 'Artists'} action={seeAll('artist', artists.length, 3)} />{(filter === 'all' ? artists.slice(0, 3) : artists).map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
+      {!!albums.length && <section><SectionHeading title="Albums" action={seeAll('album', albums.length, 3)} />{(filter === 'all' ? albums.slice(0, 3) : albums).map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
+      {!!playlists.length && <section><SectionHeading title="Playlists" action={seeAll('playlist', playlists.length, 3)} />{(filter === 'all' ? playlists.slice(0, 3) : playlists).map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
     </div>}
   </section>;
 }
@@ -306,7 +325,10 @@ export function LibraryScreen() {
   ];
   return <section className="screen browse-library">
     <h1 className="page-title">Your Library</h1>
-    <button className="text-button library-import-link" onClick={()=>app.openRoute({kind:'playlist-import'})}><Icon name="plus" size={16}/>Import playlist</button>
+    <div className="library-transfer-links">
+      <button className="text-button library-import-link" onClick={()=>app.openRoute({kind:'playlist-import'})}><Icon name="plus" size={16}/>Import playlist</button>
+      <PlaylistExportButton playlists={library.playlists} label="Back up playlists" />
+    </div>
     <article className="library-feature">
       <Cover large song={{ cover: featured?.cover || figmaArtwork.midnight }} />
       <div className="library-feature-copy"><small>{current.track ? 'NOW PLAYING' : featured ? 'PLAY IT AGAIN' : 'YOUR MUSIC'}</small><strong>{featured?.title || 'Make yourself at home'}</strong><span>{featured?.artist || 'Save songs and build your first playlist.'}</span></div>
@@ -327,10 +349,10 @@ export function LibraryScreen() {
   </section>;
 }
 
-function PlayButtons({ songs, context }: { songs: Song[]; context: string }) {
+function PlayButtons({ songs, context, download }: { songs: Song[]; context: string; download?: ReactNode }) {
   const app = useApp();
   return <div className="browse-play-buttons"><button className="primary-button" disabled={!songs.length} onClick={() => app.playback.playAll(songs, false, context)}><Icon name="play" size={19} />Play all</button>
-    <button className="secondary-button" disabled={!songs.length} onClick={() => app.playback.playAll(songs, true, context)}><Icon name="shuffle" size={20} />Shuffle</button></div>;
+    <button className="secondary-button" disabled={!songs.length} onClick={() => app.playback.playAll(songs, true, context)}><Icon name="shuffle" size={20} />Shuffle</button>{download}</div>;
 }
 
 function DownloadJobs({ query }: { query: string }) {
@@ -392,7 +414,7 @@ export function CollectionScreen({ collection }: { collection: Collection }) {
       <p className="browse-collection-summary">{count(localSongs.length)}{collection === 'downloads' && app.downloads.some(song => song.downloadBytes) ? ` · ${(app.downloads.reduce((sum, song) => sum + (song.downloadBytes || 0), 0) / 1_048_576).toFixed(1)} MB` : ''}</p>
       {collection === 'downloads' && <p className="browse-offline-caption"><Icon name="lock" size={14} />Completed songs, ready to play offline.</p>}
       <SearchField value={query} onChange={setQuery} placeholder={`Search ${collection}`} label={`Search ${collection}`} />
-      <PlayButtons songs={songs} context={title} />
+      <PlayButtons songs={songs} context={title} download={collection === 'favorites' ? <DownloadCollection songs={localSongs} title="Liked Songs" /> : undefined} />
       {collection === 'downloads' && <DownloadJobs query={query} />}
       {songs.length ? <>{collection === 'downloads' && !!app.jobs.length && <SectionHeading title="Ready offline" />}<SongRows songs={songs} context={title} showHearts={collection === 'favorites'} /></>
         : <Notice title={query.trim() ? 'No matching songs' : collection === 'favorites' ? 'Keep the songs you love' : 'Your offline listening starts here'} icon={collection === 'favorites' ? 'heart' : 'download'}
@@ -418,6 +440,23 @@ export function CollectionScreen({ collection }: { collection: Collection }) {
   </section>;
 }
 
+function PlaylistExportButton({ playlists, label }: { playlists: Playlist[]; label: string }) {
+  const app = useApp();
+  const [busy, setBusy] = useState(false);
+  async function exportPlaylists() {
+    if (!playlists.length || busy) return;
+    setBusy(true);
+    try {
+      const { saveTextFile } = await import('./native');
+      await saveTextFile(playlistBackupFileName(playlists), 'application/json', playlistBackupText(playlists));
+      app.toast(playlists.length === 1 ? 'Playlist exported.' : 'Playlist backup saved.');
+    } catch (error) {
+      if ((error as { name?: string } | null)?.name === 'AbortError') app.toast('Export cancelled.');
+      else app.toast(error instanceof Error ? error.message : 'The playlists could not be exported.');
+    } finally { setBusy(false); }
+  }
+  return <button className="text-button" disabled={busy || !playlists.length} onClick={() => void exportPlaylists()}>{busy ? 'Preparing backup...' : label}</button>;
+}
 function DownloadCollection({ songs, title }: { songs: Song[]; title: string }) {
   const app = useApp();
   const [confirm, setConfirm] = useState(false);
@@ -478,7 +517,7 @@ export function PlaylistScreen({ id }: { id: string }) {
       <span className="browse-private"><Icon name="lock" size={13} />Private playlist</span>
       {playlist.description && <p className="browse-description">{playlist.description}</p>}
     </div>
-    <div className="browse-detail-actions"><DownloadCollection songs={playlist.songs} title={playlist.name} /><button className="text-button" onClick={() => app.openRoute({ kind: 'playlist-form', id })}>Edit details</button><span className="browse-flex" />
+    <div className="browse-detail-actions"><DownloadCollection songs={playlist.songs} title={playlist.name} /><button className="text-button" onClick={() => app.openRoute({ kind: 'playlist-form', id })}>Edit details</button><PlaylistExportButton playlists={[playlist]} label="Export" /><span className="browse-flex" />
       <Action icon="shuffle" label={`Shuffle ${playlist.name}`} disabled={!playlist.songs.length} onClick={() => app.playback.playAll(playlist.songs, true, playlist.name)} />
       <button className="browse-round-play" aria-label={`Play ${playlist.name}`} disabled={!playlist.songs.length} onClick={() => app.playback.playAll(playlist.songs, false, playlist.name)}><Icon name="play" size={25} /></button>
     </div>

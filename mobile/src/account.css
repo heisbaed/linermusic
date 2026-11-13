@@ -98,3 +98,34 @@
 .auth-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--muted); font-size: .75rem; }
 .auth-divider::before, .auth-divider::after { flex: 1; height: 1px; background: var(--divider); content: ''; }
 @media (max-width: 350px) { .appearance-preview { padding: 12px; } .appearance-mini > div { gap: 2px; } .auth-artwork { width: 180px; margin-bottom: 24px; } }
+
+/* Android TV auth optimizations */
+@media (min-width: 960px) and (min-height: 540px) {
+  .account-auth {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 60px;
+    font-size: 18px;
+  }
+  .account-auth h1 {
+    font-size: 2.5rem;
+  }
+  .account-field > input, .account-field > select, .account-field > textarea {
+    min-height: 64px;
+    font-size: 1.125rem;
+  }
+  .account-primary, .account-secondary {
+    min-height: 64px;
+    font-size: 1.125rem;
+  }
+  .account-text {
+    min-height: 56px;
+    font-size: 1rem;
+  }
+  .auth-artwork {
+    width: min(40vw, 280px);
+  }
+  .google-signin {
+    min-height: 64px;
+  }
+}

@@ -1,0 +1,2 @@
+/* Legacy TV base kept minimal; tv-redesign.css owns the TV visual system. */
+html.is-tv, body.is-tv { background: #08070c; }

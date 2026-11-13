@@ -185,3 +185,6 @@ export const figmaAssets: Record<string, { logo: string; icons: Record<string, s
   }
 };
 export const figmaArtwork = { midnight: "/figma/c0942.png", northbound: "/figma/162f4.png", solstice: "/figma/05df4.png" };
+
+// Pink glass uses dark artwork and icon assets for readable contrast.
+figmaAssets.default = figmaAssets.light;

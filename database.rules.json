@@ -4,8 +4,14 @@
     ".write": false,
     "users": {
       "$uid": {
-        ".read": "auth != null && auth.uid === $uid && auth.token.email_verified === true",
-        ".write": "auth != null && auth.uid === $uid && auth.token.email_verified === true"
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "tvPairings": {
+      "$code": {
+        ".read": true,
+        ".write": true
       }
     }
   }

@@ -39,6 +39,34 @@
 .browse-genre>svg:last-child{flex:none;margin-bottom:2px;opacity:.8}
 .browse-genre:active{filter:brightness(1.13);transform:scale(.98)}
 .browse-search .page-title{margin-bottom:21px}
+.browse-search-input{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:10px;padding:8px 0;background:var(--bg)}
+.browse-search-input .search-field{flex:1;min-width:0;margin:0}
+.cine-app .browse-search-input .search-field{min-height:54px;padding:0 8px 0 16px;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 3px 12px #00000008}
+.cine-app .browse-search-input .search-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 14%,transparent)}
+.browse-search-input .search-field input{font-size:16px;min-width:0}
+.browse-search .browse-search-filters button{min-height:40px;border-radius:24px}
+.browse-search .browse-results .song-row,.browse-search .browse-results .browse-catalog-row{background:transparent;border:0;border-radius:0;box-shadow:none;backdrop-filter:none}
+.browse-search .browse-results .song-row{min-height:68px;padding-block:5px}
+.browse-search .browse-results .browse-catalog-row{min-height:76px;padding-block:8px}
+.browse-search .browse-results .cover{border-radius:9px}
+.browse-search .browse-top-result{border:1px solid var(--line);background:var(--surface);box-shadow:none}
+.search-radios .art-shelf{display:flex;gap:14px;overflow-x:auto;padding:4px 0 12px;scroll-snap-type:x proximity;scrollbar-width:none}
+.search-radios .shelf-item{display:flex;flex:0 0 128px;min-width:0;flex-direction:column;gap:5px;padding:0;border:0;background:transparent;text-align:left;scroll-snap-align:start}
+.search-radios .shelf-item .cover{width:128px;height:128px;border-radius:14px}
+.search-radios .shelf-item strong{display:-webkit-box;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:13px;line-height:1.4}
+.search-radios .shelf-item small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12px}
+.radio-content{flex:1;min-height:0;overflow:auto;padding:0 8px 24px}
+.radio-hero{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 0;text-align:center}
+.radio-hero>.cover{width:min(58vw,240px);height:auto;aspect-ratio:1;border-radius:18px;margin-bottom:12px}
+.radio-hero h1{margin:0;font-size:26px;line-height:1.2}
+.radio-hero p{margin:0;color:var(--muted);font-size:14px}
+.radio-content .collection-actions{display:flex;justify-content:center;gap:12px;margin-bottom:24px}
+.radio-content h2{font-size:20px}
+.browse-search-input>.text-button{flex:none;min-height:48px}
+.browse-top-result{padding:10px 14px;border-radius:24px}
+.browse-top-result .song-row,.browse-top-result .browse-catalog-row{border-bottom:0}
+.browse-top-result .cover{width:64px;height:64px}
+.browse-top-result .song-duration{display:none}
 .browse-search .browse-search-filters{gap:8px;overflow:auto;margin:17px 0 10px;padding-bottom:3px;scrollbar-width:none}
 .browse-search-filters button{min-width:58px;min-height:48px;padding:0 16px;font-size:13px}
 .browse-history .section-heading{margin-top:22px}
@@ -65,6 +93,8 @@
 .browse-catalog-row>.row-copy{gap:6px}
 .browse-catalog-row>.row-copy strong{font-size:15px}
 .browse-library>.page-title{margin-bottom:18px}
+.library-transfer-links{display:flex;align-items:center;justify-content:flex-end;gap:18px;flex-wrap:wrap;margin:-8px 0 16px}
+.library-transfer-links .library-import-link{margin:0}
 .browse-library-links{margin:0 0 23px}
 .browse-library-links .browse-destination{display:flex;gap:16px;min-height:79px;padding:10px 3px;border-bottom:0;border-radius:0}
 .browse-destination-icon{display:grid;flex:none!important;place-items:center;width:42px!important;height:48px;color:var(--browse-purple)}
@@ -81,6 +111,7 @@
 .browse-offline-caption{display:flex;align-items:center;gap:6px;margin:-4px 0 20px;color:var(--muted);font-size:12px}
 .browse-play-buttons{display:flex;gap:10px;margin:21px 0 17px}
 .browse-play-buttons>button{flex:1;min-width:0}
+.browse-play-buttons>.icon-action{flex:0 0 48px;width:48px;height:48px;color:var(--accent)}
 .browse-sort{position:relative;display:flex;align-items:center;gap:6px;min-height:50px;margin:4px 0 10px;color:var(--muted);font-size:12px}
 .browse-sort select{max-width:calc(100% - 56px);min-height:48px;padding:8px 21px 8px 4px;border:0;border-radius:7px;appearance:none;background:transparent;color:var(--text);font:inherit;font-size:13px}
 .browse-sort select option{background:var(--surface);color:var(--text)}

@@ -6,6 +6,7 @@ import type { MusicTaste } from './musicPreferences';
 export type Theme = 'default' | 'dark' | 'green' | 'light';
 export type Tab = 'home' | 'search' | 'explore' | 'library';
 export type Collection = 'favorites' | 'downloads' | 'playlists' | 'albums' | 'artists';
+export type ShuffleMode = 'off' | 'on' | 'smart';
 export type Utility = 'sound' | 'devices' | 'timer';
 export type Route =
   | { kind: 'collection'; collection: Collection }
@@ -14,6 +15,11 @@ export type Route =
   | { kind: 'playlist-form'; id?: string; initialSong?: Song }
   | { kind: 'playlist-import' }
   | { kind: 'account'; page: string };
+
+export const TV_THEMES: { id: Theme; name: string; description: string; background: string; surface: string; accent: string }[] = [
+  { id: 'default', name: 'Pink glass', description: 'Liquid pink glass with rose highlights.', background: '#FFF3F7', surface: '#FFFAFD', accent: '#A82D65' },
+  { id: 'green', name: 'Dark green', description: 'Deep forest glass with luminous green accents.', background: '#071F19', surface: '#12392E', accent: '#CBF595' },
+];
 
 export interface SavedArtist { id: string; name: string; cover?: string }
 export interface SavedAlbum { id: string; title: string; artist: string; cover?: string }
@@ -50,6 +56,9 @@ export interface Preferences {
   equalizerOn: boolean;
   eqBands: number[];
   eqPreset: string;
+  audioQuality: 'auto' | 'low' | 'normal' | 'high';
+  gapless: boolean;
+  crossfadeSeconds: number;
 }
 export interface DownloadJob {
   id: string;
@@ -62,7 +71,7 @@ export interface PlaybackController {
   player: PlayerState;
   queue: Song[];
   context: string;
-  shuffle: boolean;
+  shuffle: ShuffleMode;
   repeat: 'off' | 'all' | 'one';
   play: (song: Song, list?: Song[], context?: string) => Promise<void>;
   playAll: (songs: Song[], random?: boolean, context?: string) => void;
@@ -70,9 +79,12 @@ export interface PlaybackController {
   next: () => void;
   previous: () => void;
   seek: (ms: number) => void;
-  setShuffle: (value: boolean) => void;
+  setShuffle: (value: ShuffleMode) => void;
+  cycleShuffle: () => void;
   setRepeat: (value: 'off' | 'all' | 'one') => void;
   setQueue: (value: Song[] | ((songs: Song[]) => Song[])) => void;
+  playerLyrics: { text: string } | null;
+  setPlayerLyrics?: (lyrics: { text: string } | null) => void;
 }
 export interface AppState {
   account: AccountState;
@@ -99,14 +111,19 @@ export interface AppState {
   isFavorite: (id: string) => boolean;
   addToPlaylist: string | null;
   setAddToPlaylist: (id: string | null) => void;
+  checkForUpdates: () => void;
 }
 
 export const THEMES: { id: Theme; name: string; description: string; background: string; surface: string; accent: string }[] = [
-  { id: 'default', name: 'Dark blue', description: 'Deep midnight surfaces, rose accents, and cinematic contrast.', background: '#0C142A', surface: '#172440', accent: '#EDB4C5' },
+  { id: 'default', name: 'Pink glass', description: 'Soft pink, luminous white glass, and rose accents.', background: '#FFF3F7', surface: '#FFFAFD', accent: '#A82D65' },
   { id: 'green', name: 'Dark green', description: 'Forest-inspired depth with deep green surfaces and lime highlights.', background: '#071F19', surface: '#12392E', accent: '#CBF595' },
   { id: 'light', name: 'Smoke white', description: 'Light, airy surfaces with soft charcoal and olive accents.', background: '#F2F0EC', surface: '#FFFFFF', accent: '#555F48' },
   { id: 'dark', name: 'Dark', description: 'Minimal charcoal surfaces with soft silver accents.', background: '#101112', surface: '#202224', accent: '#DADCD6' },
 ];
+
+export function tvThemeId(value: unknown): Theme {
+  return value === 'green' ? 'green' : 'default';
+}
 
 export const AppContext = createContext<AppState | null>(null);
 export function useApp(): AppState {

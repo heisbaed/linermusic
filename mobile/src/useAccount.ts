@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type SetStateAction } from 'react';
 import type { AccountState, LibraryData, Profile } from './AppContext';
 import type { Playlist, Song } from './types';
+import { isOnline } from './network';
 import { FirebaseError, firebaseFetch, freshCineUser, getFirebaseDatabaseUrl, loadCineUser, storeCineUser, updateCineDisplayName, type CineUser } from './FirebaseAuth';
 import { loadSaved, save } from './library';
 import { normalizeTaste } from './musicPreferences';
@@ -98,7 +99,7 @@ export function useAccount(): AccountState {
   function initialSession(user: CineUser | null) {
     const owner = keyFor(user), library = readLibrary(owner);
     const cached = loadSaved<unknown>('library-v3:' + owner, null);
-    return { user, owner, library, ready: !user || library.taste.completed || (!navigator.onLine && record(cached)) };
+    return { user, owner, library, ready: !user || library.taste.completed || (!isOnline() && record(cached)) };
   }
   const [session, setSession] = useState(() => initialSession(loadCineUser()));
   const [syncStatus, setSyncStatus] = useState(session.user ? 'Opening your saved library...' : 'Saved on this device');
@@ -185,7 +186,7 @@ export function useAccount(): AccountState {
       return `${await getFirebaseDatabaseUrl()}/users/${encodeURIComponent(fresh.localId)}/library.json?auth=${encodeURIComponent(fresh.idToken)}`;
     }
     async function write() {
-      if (suspended.current || writing || reading || !initialized || !valid() || !navigator.onLine || !Object.keys(pending.current).length) return;
+      if (suspended.current || writing || reading || !initialized || !valid() || !isOnline() || !Object.keys(pending.current).length) return;
       writing = true; writeFailed = false;
       const patch = { ...pending.current };
       const revision = remoteRevision;
@@ -211,7 +212,7 @@ export function useAccount(): AccountState {
       if (suspended.current || writing || reading) return;
       const generation = ++connection;
       source?.close(); source = null;
-      if (!navigator.onLine) { status('Offline. Changes are saved on this device.'); return; }
+      if (!isOnline()) { status('Offline. Changes are saved on this device.'); return; }
       reading = true;
       try {
         const url = await databaseUrl();

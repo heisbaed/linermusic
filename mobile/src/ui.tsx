@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Icon, type IconName } from './Icons';
 import { figmaAssets } from './figmaAssets';
-import { THEMES, useApp } from './AppContext';
+import { THEMES, TV_THEMES, useApp } from './AppContext';
 import { formatTime } from './library';
+import { isTvEnvironment } from './spatialNav';
 import type { Song } from './types';
 import albumDark from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_placeholder_album_dark.svg';
 import albumLight from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_placeholder_album_light.svg';
@@ -23,18 +24,19 @@ export function Brand({ compact = false }: { compact?: boolean }) {
 export function ThemeEdition({ changeLabel = false }: { changeLabel?: boolean }) {
   const app = useApp();
   const [open, setOpen] = useState(false);
-  const selected = THEMES.find(item => item.id === app.theme)!;
+  const isTv = isTvEnvironment();
+  const themes = isTv ? TV_THEMES : THEMES;
+  const selected = themes.find(item => item.id === app.theme) || themes[0];
   return <><button type="button" className="theme-edition" aria-label={`Change theme, currently ${selected.name}`} onClick={() => setOpen(true)}>{changeLabel && <i />}{selected.name}{changeLabel && <span>Change theme</span>}</button>
-    {open && <Sheet title="Choose your look" onClose={() => setOpen(false)}><div className="theme-picker" role="radiogroup" aria-label="App theme">{THEMES.map(item => <button type="button" role="radio" aria-checked={app.theme === item.id} key={item.id} onClick={() => { app.setTheme(item.id); setOpen(false); }}><img src={figmaAssets[item.id].logo} alt="" /><span><strong>{item.name}</strong><small>{item.description}</small></span>{app.theme === item.id && <Icon name="check" size={18} />}</button>)}</div></Sheet>}
-  </>;
-}
+    {open && <Sheet title="Choose your look" onClose={() => setOpen(false)}><div className="theme-picker" role="radiogroup" aria-label="App theme">{themes.map(item => <button type="button" role="radio" aria-checked={app.theme === item.id} key={item.id} onClick={() => { app.setTheme(item.id); setOpen(false); }}><img src={figmaAssets[item.id].logo} alt="" /><span><strong>{item.name}</strong><small>{item.description}</small></span>{app.theme === item.id && <Icon name="check" size={18} />}</button>)}</div></Sheet>}
+  </>; }
 
 export function Cover({ song, large = false, kind = 'album', className = '' }: {
   song?: Partial<Song> | null; large?: boolean; kind?: 'album' | 'artist' | 'playlist' | 'song'; className?: string;
 }) {
   const { theme } = useApp();
   const [failed, setFailed] = useState('');
-  const light = theme === 'light';
+  const light = theme === 'light' || theme === 'default';
   const placeholder = kind === 'artist' ? (light ? artistLight : artistDark) : kind === 'playlist' ? (light ? playlistLight : playlistDark) : light ? albumLight : albumDark;
   const src = song?.cover && failed !== song.cover ? song.cover : placeholder;
   return <span className={`cover ${large ? 'cover-large' : ''} ${kind === 'artist' ? 'cover-round' : ''} ${className}`}>
@@ -45,7 +47,7 @@ export function Cover({ song, large = false, kind = 'album', className = '' }: {
 export function Action({ icon, label, onClick, active = false, disabled = false, className = '' }: {
   icon: IconName; label: string; onClick: () => void; active?: boolean; disabled?: boolean; className?: string;
 }) {
-  return <button type="button" className={`icon-action ${active ? 'active' : ''} ${className}`} aria-label={label} title={label} aria-pressed={['heart', 'shuffle', 'repeat', 'repeat_one'].includes(icon) ? active : undefined} disabled={disabled} onClick={onClick}>
+  return <button type="button" data-control={icon} className={`icon-action ${active ? 'active' : ''} ${className}`} aria-label={label} title={label} aria-pressed={['heart', 'shuffle', 'sparkles', 'repeat', 'repeat_one'].includes(icon) ? active : undefined} disabled={disabled} onClick={onClick}>
     <Icon name={icon} filled={icon === 'heart' && active} />
   </button>;
 }

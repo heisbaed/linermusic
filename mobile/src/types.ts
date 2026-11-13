@@ -68,6 +68,14 @@ export interface NativeApi {
   openMediaOutputPanel(): void;
   openExternal(url: string): void;
   share(text: string): void;
+  saveTextFile?(requestId: string, fileName: string, mimeType: string, text: string): void;
+  getAppShareLink?(): string;
+  getSongShareLink?(songId: string): string;
+  isAppInstalled?(): boolean;
+  checkForUpdates?(): void;
+  setCrossfade?(enabled: boolean, durationSeconds: number): void;
+  setGapless?(enabled: boolean): void;
+  isTv?(): boolean;
 }
 declare global {
   interface Window {

@@ -1,15 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { control, isAndroid, playNative, snapshot, subscribe, setQueue as sendQueue } from './native';
+import { isOnline } from './network';
 import { loadSaved, save } from './library';
 import { resolveStream } from './catalog';
 import { innertubeCatalog } from '@/shared/media/innertube/innertubeCatalog';
-import type { PlaybackController, Preferences } from './AppContext';
+import type { PlaybackController, Preferences, ShuffleMode } from './AppContext';
 import type { PlayerState, Song } from './types';
 import { relatedSongs } from './catalogQuality';
 
 function uniqueSongs(songs: Song[]): Song[] {
   const ids = new Set<string>();
   return songs.filter(song => song && typeof song.id === 'string' && !ids.has(song.id) && Boolean(ids.add(song.id)));
+}
+function savedShuffle(value: unknown): ShuffleMode {
+  if (value === 'smart' || value === 'on' || value === 'off') return value;
+  return value === true ? 'on' : 'off';
+}
+function songFromTrack(track: { id: string; title: string; artists: { id?: string; name: string }[]; album?: { id: string }; cover?: { url: string }; durationMs: number }): Song {
+  return { id: track.id, title: track.title, artist: track.artists.map(artist => artist.name).join(', '), artistId: track.artists[0]?.id, albumId: track.album?.id, cover: track.cover?.url, durationMs: track.durationMs };
 }
 
 export function usePlayback({ downloads, prefs, onRecent, toast }: {
@@ -18,16 +26,27 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
   const [initial] = useState(snapshot);
   const [player, setPlayer] = useState<PlayerState>(initial);
   const [queue, setLocalQueue] = useState<Song[]>(() => uniqueSongs(initial.track ? initial.queue || [initial.track] : loadSaved<Song[]>('queue', [])));
-  const [shuffle, setLocalShuffle] = useState(initial.track ? Boolean(initial.shuffle) : loadSaved('shuffle', false));
+  const [shuffle, setLocalShuffle] = useState<ShuffleMode>(() => {
+    const saved = savedShuffle(loadSaved('shuffle', 'off'));
+    if (!initial.track) return saved;
+    return initial.shuffle ? (saved === 'smart' ? 'smart' : 'on') : 'off';
+  });
   const [repeat, setLocalRepeat] = useState<'off' | 'all' | 'one'>(initial.track ? initial.repeat || 'off' : loadSaved('repeat', 'off'));
   const [context, setContext] = useState(() => loadSaved('playback-context', 'Music'));
-  const live = useRef({ player, queue, shuffle, repeat, context, downloads, prefs, onRecent, toast });
-  live.current = { player, queue, shuffle, repeat, context, downloads, prefs, onRecent, toast };
+  const [playerLyrics, setPlayerLyricsState] = useState<{ text: string } | null>(null);
+  const live = useRef({ player, queue, shuffle, repeat, context, downloads, prefs, onRecent, toast, playerLyrics });
+  live.current = { player, queue, shuffle, repeat, context, downloads, prefs, onRecent, toast, playerLyrics };
   const resolving = useRef<AbortController | null>(null);
   const playedId = useRef('');
   const heard = useRef<Song[]>([]);
+  const radioBusy = useRef(false);
+  const radioAttempt = useRef({id:'',at:0});
   const autoplayTask = useRef<ReturnType<typeof setTimeout> | undefined>();
   const autoplayController = useRef<AbortController | null>(null);
+  const smartController = useRef<AbortController | null>(null);
+  const smartBusy = useRef(false);
+  const smartSeed = useRef('');
+  const smartAdded = useRef<Set<string>>(new Set());
 
   useEffect(() => { save('queue', queue); }, [queue]);
   useEffect(() => { save('shuffle', shuffle); }, [shuffle]);
@@ -40,12 +59,20 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
         setPlayer(state);
         live.current.player = state;
         if (state.track && Array.isArray(state.queue)) { setLocalQueue(state.queue); live.current.queue = state.queue; }
-        if (state.track && typeof state.shuffle === 'boolean') { setLocalShuffle(state.shuffle); live.current.shuffle = state.shuffle; }
+        if (state.track && typeof state.shuffle === 'boolean') {
+          const next: ShuffleMode = state.shuffle ? (live.current.shuffle === 'smart' ? 'smart' : 'on') : 'off';
+          setLocalShuffle(next); live.current.shuffle = next;
+        }
         if (state.track && state.repeat) { setLocalRepeat(state.repeat); live.current.repeat = state.repeat; }
         if (state.status === 'playing' && state.track && playedId.current !== state.track.id) {
           playedId.current = state.track.id;
-          heard.current = [state.track,...heard.current.filter(s=>s.id!==state.track!.id)].slice(0,50);
+          heard.current = [state.track,...heard.current.filter(s=>s.id!==state.track!.id)];
           live.current.onRecent(state.track);
+        }
+        if (state.status === 'playing' && state.track) {
+          const remaining = live.current.queue.length - live.current.queue.findIndex(song=>song.id===state.track?.id);
+          if (live.current.shuffle === 'smart' && !smartAdded.current.size && !smartBusy.current) void addSmartSongs(state.track);
+          if (live.current.shuffle === 'smart' || remaining <= 4) void prepareRelated(state.track);
         }
         if (state.status === 'error') live.current.toast(state.error || 'Playback could not start. Check your connection and try again.');
         clearTimeout(autoplayTask.current);
@@ -61,7 +88,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
       if (event.type === 'playerError') live.current.toast(String(event.data.message || 'Playback is unavailable.'));
     });
     window.CineAndroid?.ready?.();
-    return () => { unsubscribe(); clearTimeout(autoplayTask.current); resolving.current?.abort(); autoplayController.current?.abort(); };
+    return () => { unsubscribe(); clearTimeout(autoplayTask.current); resolving.current?.abort(); autoplayController.current?.abort(); smartController.current?.abort(); };
   }, []);
 
   async function play(song: Song, songs = live.current.queue, from = live.current.context) {
@@ -70,7 +97,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
     const controller = new AbortController();
     resolving.current = controller;
     const local = live.current.downloads.find(item => item.id === song.id);
-    if (!navigator.onLine && !local) { live.current.toast('This song needs a connection. Your completed downloads are available offline.'); return; }
+    if (!isOnline() && !local) { live.current.toast('This song needs a connection. Your completed downloads are available offline.'); return; }
     const track = local ? { ...song, ...local } : song;
     const items = uniqueSongs(songs.some(item => item.id === song.id) ? songs : [...songs, song]);
     setLocalQueue(items); setContext(from);
@@ -79,7 +106,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
     try {
       const url = isAndroid || local ? undefined : await resolveStream(track.id, controller.signal);
       if (controller.signal.aborted) return;
-      playNative(track, url, items, live.current.shuffle, live.current.repeat);
+      playNative(track, url, items, live.current.shuffle !== 'off', live.current.repeat, live.current.prefs.audioQuality, live.current.prefs.gapless, live.current.prefs.crossfadeSeconds);
       if(items.length===1 && live.current.prefs.autoplay) void prepareRelated(track);
     } catch (error) {
       if (controller.signal.aborted) return;
@@ -90,25 +117,48 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
   }
 
   async function prepareRelated(seed:Song){
+    const current=live.current, smartActive=current.shuffle==='smart';
+    if(radioBusy.current||(!current.prefs.autoplay&&!smartActive)||!isOnline()||(current.repeat!=='off'&&!smartActive)||(radioAttempt.current.id===seed.id&&Date.now()-radioAttempt.current.at<30000))return;
+    radioBusy.current=true;radioAttempt.current={id:seed.id,at:Date.now()};
     const controller=new AbortController();autoplayController.current=controller;
     try{
-      const result=await innertubeCatalog.getRadio(seed.id,{signal:controller.signal,k:25});
-      if(controller.signal.aborted||!live.current.prefs.autoplay||live.current.queue.length!==1||live.current.queue[0]?.id!==seed.id)return;
-      const added=relatedSongs(result.items,[seed,...heard.current]).slice(0,15).map(track=>({id:track.id,title:track.title,artist:track.artists.map(a=>a.name).join(', '),artistId:track.artists[0]?.id,albumId:track.album?.id,cover:track.cover?.url,durationMs:track.durationMs}));
-      if(added.length)setQueue([seed,...added]);
-    }catch{ /* Keep the selected song available if related music cannot load. */ }
+      const seeds=[seed,...heard.current.filter(song=>song.id!==seed.id).slice(0,2)];
+      for(const candidate of seeds){
+        const result=await innertubeCatalog.getRadio(candidate.id,{signal:controller.signal,k:50});
+        if(controller.signal.aborted||(!live.current.prefs.autoplay&&live.current.shuffle!=='smart'))return;
+        const added=relatedSongs(result.items,[seed,...heard.current,...live.current.queue]).slice(0,25).map(songFromTrack);
+        if(!added.length)continue;
+        if(live.current.shuffle==='smart')added.forEach(song=>smartAdded.current.add(song.id));
+        if(live.current.player.status==='ended')await play(added[0],added,'Autoplay');
+        else setQueue([...live.current.queue,...added]);
+        break;
+      }
+    }catch{ /* Leave existing music playable if the provider is unavailable. */ }
+    finally{radioBusy.current=false;}
   }
-
-  async function appendRadio() {
-    const current = live.current;
-    if (!current.prefs.autoplay || !navigator.onLine || !current.player.track || current.player.status !== 'ended' || current.repeat !== 'off' || current.player.sleepEndOfSong || current.player.sleepDeadline) return;
-    const controller = new AbortController(); autoplayController.current = controller;
-    try {
-      const { items: tracks } = await innertubeCatalog.getRadio(current.player.track.id, { signal: controller.signal, k: 20 });
-      if (controller.signal.aborted || live.current.player.status !== 'ended') return;
-      const songs: Song[] = relatedSongs(tracks,[current.player.track,...heard.current,...current.queue]).slice(0, 20).map(track => ({ id: track.id, title: track.title, artist: track.artists.map(artist => artist.name).join(', '), artistId: track.artists[0]?.id, albumId: track.album?.id, cover: track.cover?.url, durationMs: track.durationMs }));
-      if (songs.length) await play(songs[0], songs, 'Autoplay');
-    } catch { /* Autoplay failure leaves the completed queue available to replay. */ }
+  async function addSmartSongs(seed:Song){
+    const current=live.current;
+    if(current.shuffle!=='smart'||smartBusy.current||!isOnline()||(smartSeed.current===seed.id&&smartAdded.current.size))return;
+    smartBusy.current=true;smartSeed.current=seed.id;
+    const controller=new AbortController();smartController.current=controller;
+    try{
+      const result=await innertubeCatalog.getRadio(seed.id,{signal:controller.signal,k:50});
+      if(controller.signal.aborted||live.current.shuffle!=='smart')return;
+      const added=relatedSongs(result.items,[seed,...heard.current,...live.current.queue]).slice(0,20).map(songFromTrack);
+      if(!added.length){live.current.toast('No smart recommendations were available for this song.');return;}
+      added.forEach(song=>smartAdded.current.add(song.id));
+      setQueue([...live.current.queue,...added]);
+      live.current.toast(`Smart shuffle added ${added.length} similar songs.`);
+    }catch{
+      if(!controller.signal.aborted&&live.current.shuffle==='smart'){applyShuffle('on');live.current.toast('Smart shuffle is unavailable. Normal shuffle is on.');}
+    }finally{
+      smartBusy.current=false;
+      if(smartController.current===controller)smartController.current=null;
+    }
+  }
+  async function appendRadio(){
+    const current=live.current;
+    if(current.player.status==='ended'&&current.player.track&&!current.player.sleepEndOfSong&&!current.player.sleepDeadline)await prepareRelated(current.player.track);
   }
 
   async function browserAdvance(direction: number, ended = false) {
@@ -119,7 +169,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
     if (ended && mode === 'one') { control('seek', 0); control('resume'); return; }
     const at = items.findIndex(item => item.id === state.track?.id);
     let to = at + direction;
-    if (direction > 0 && random && items.length > 1) { const choices = items.filter(item => item.id !== state.track?.id); to = items.indexOf(choices[Math.floor(Math.random() * choices.length)]); }
+    if (direction > 0 && random !== 'off' && items.length > 1) { const choices = items.filter(item => item.id !== state.track?.id && !heard.current.some(song=>song.id===item.id)); to = choices.length ? items.indexOf(choices[Math.floor(Math.random() * choices.length)]) : items.length; }
     if (to >= items.length && mode === 'all') to = 0;
     if (to >= 0 && to < items.length) await play(items[to], items);
     else if (!ended) live.current.toast('End of queue. Choose another song or turn on Repeat All.');
@@ -128,10 +178,32 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
   function setQueue(value: Song[] | ((songs: Song[]) => Song[])) {
     const items = uniqueSongs(typeof value === 'function' ? value(live.current.queue) : value);
     setLocalQueue(items); live.current.queue = items;
-    sendQueue(items, live.current.shuffle, live.current.repeat);
+    sendQueue(items, live.current.shuffle !== 'off', live.current.repeat);
   }
-  function setShuffle(value: boolean) { setLocalShuffle(value); live.current.shuffle = value; sendQueue(live.current.queue, value, live.current.repeat); }
-  function setRepeat(value: 'off' | 'all' | 'one') { setLocalRepeat(value); live.current.repeat = value; sendQueue(live.current.queue, live.current.shuffle, value); }
+  function setShuffle(value: ShuffleMode) { applyShuffle(value); }
+  function applyShuffle(value: ShuffleMode) {
+    const current = live.current;
+    let items = current.queue;
+    if (current.shuffle === 'smart' && value !== 'smart') {
+      smartController.current?.abort();
+      smartController.current = null;
+      const added = smartAdded.current;
+      smartAdded.current = new Set();
+      if (added.size) {
+        items = uniqueSongs(items.filter(song => !added.has(song.id) || song.id === current.player.track?.id));
+        setLocalQueue(items); current.queue = items;
+      }
+    }
+    setLocalShuffle(value); current.shuffle = value;
+    sendQueue(items, value !== 'off', current.repeat);
+    if (value === 'smart') {
+      const seed = current.player.track || items[0];
+      if (seed) void addSmartSongs(seed);
+      else current.toast('Start a song to add smart recommendations.');
+    }
+  }
+  function cycleShuffle() { applyShuffle(live.current.shuffle === 'off' ? 'on' : live.current.shuffle === 'on' ? 'smart' : 'off'); }
+  function setRepeat(value: 'off' | 'all' | 'one') { setLocalRepeat(value); live.current.repeat = value; sendQueue(live.current.queue, live.current.shuffle !== 'off', value); }
   function toggle() {
     const { player: state } = live.current;
     if (!state.track) return;
@@ -140,9 +212,10 @@ export function usePlayback({ downloads, prefs, onRecent, toast }: {
   }
   function playAll(songs: Song[], random = false, from = 'Music') {
     if (!songs.length) return;
-    setShuffle(random);
+    setShuffle(random ? 'on' : 'off');
     const first = random ? songs[Math.floor(Math.random() * songs.length)] : songs[0];
     void play(first, songs, from);
   }
-  return { player, queue, context, shuffle, repeat, play, playAll, toggle, next: () => { if (isAndroid) control('next'); else void browserAdvance(1); }, previous: () => { if (isAndroid) control('previous'); else void browserAdvance(-1); }, seek: ms => control('seek', Math.max(0, Math.min(live.current.player.durationMs, ms))), setShuffle, setRepeat, setQueue };
+  function setPlayerLyrics(lyrics: { text: string } | null) { setPlayerLyricsState(lyrics); live.current.playerLyrics = lyrics; }
+  return { player, queue, context, shuffle, repeat, play, playAll, toggle, next: () => { if (isAndroid) control('next'); else void browserAdvance(1); }, previous: () => { if (isAndroid) control('previous'); else void browserAdvance(-1); }, seek: ms => control('seek', Math.max(0, Math.min(live.current.player.durationMs, ms))), setShuffle, cycleShuffle, setRepeat, setQueue, playerLyrics, setPlayerLyrics };
 }

@@ -89,7 +89,14 @@ function resolveVideoId(renderer: JsonRecord, titleRun: JsonRecord | undefined):
 
 function fallbackArtistFromColumn(renderer: JsonRecord): TrackArtist {
   const runs = getRuns(columnText(renderer, "flexColumns", "musicResponsiveListItemFlexColumnRenderer", 1));
-  const first = runs.find((run) => typeof run.text === "string" && run.text.trim() && run.text.trim() !== "•");
+  const separator = /^[•·|\-–—]+$/u;
+  const label = /^(song|video|single|album|ep|playlist|artist|episode|upload|auto-generated)$/i;
+  const first = runs.find((run) => {
+    const text = typeof run.text === "string" ? run.text.trim() : "";
+    if (!text || separator.test(text) || label.test(text)) return false;
+    if (parseDurationMs(text) !== undefined || /\b(?:views?|plays?|monthly|subscribers?)\b/i.test(text)) return false;
+    return true;
+  });
   const name = typeof first?.text === "string" ? first.text.trim() : "Unknown Artist";
   return { id: "unknown", name };
 }

@@ -15,6 +15,7 @@ public class DownloadService extends Service {
     static volatile DownloadService instance;
     private static final Map<String, Job> JOBS = new LinkedHashMap<>();
     private static boolean loaded;
+    // One active transfer at a time so a bulk download does not saturate the connection.
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean closed;
     private int lastStartId;
@@ -129,18 +130,30 @@ public class DownloadService extends Service {
         startForeground(2, notification("Preparing your download", 0));
         try {
             JSONObject track = new JSONObject(intent.getStringExtra("track")); String id = track.getString("id");
+            boolean resume = intent.getBooleanExtra("resume", false);
             Job job;
             synchronized (DownloadService.class) {
                 jobs(this); Job existing = JOBS.get(id);
-                if (existing != null && !"failed".equals(existing.status) && (!intent.getBooleanExtra("resume", false) || !"paused".equals(existing.status))) {
-                    publishJob(this, existing); finishIfIdle(); return START_NOT_STICKY;
+                if (existing != null && "downloading".equals(existing.status)) {
+                    // Already in flight; republish and leave it alone.
+                    publishJob(this, existing); return START_NOT_STICKY;
                 }
-                job = new Job(track); JOBS.put(id, job); persist(this);
+                if (existing != null && (resume || "failed".equals(existing.status))) {
+                    job = existing; // resume / retry: reuse the existing job
+                } else if (existing != null) {
+                    job = existing; // queued or paused — keep it; drainQueue will start it when idle
+                } else {
+                    job = new Job(track); JOBS.put(id, job);
+                }
+                if (!"downloading".equals(job.status)) { job.status = "queued"; job.error = ""; }
+                persist(this);
             }
-            if (wifiOnly(this) && !isWifiConnected(this)) { cancel(this, id, true, "Wi-Fi-only downloads are enabled. Connect to Wi-Fi and resume."); finishIfIdle(); return START_NOT_STICKY; }
-            publishJob(this, job); inFlight++;
-            worker.execute(() -> download(job));
-        } catch (Exception error) { finishIfIdle(); }
+            if (wifiOnly(this) && !isWifiConnected(this)) {
+                synchronized (DownloadService.class) { if (JOBS.get(id) == job) cancel(this, id, true, "Wi-Fi-only downloads are enabled. Connect to Wi-Fi and resume."); }
+                drainQueue(); return START_NOT_STICKY;
+            }
+            drainQueue(); // picks the oldest queued job and starts it if the service is idle
+        } catch (Exception error) { drainQueue(); }
         return START_NOT_STICKY;
     }
     private void download(Job job) {
@@ -154,9 +167,17 @@ public class DownloadService extends Service {
             if (wifiOnly(this) && !isWifiConnected(this)) { cancel(this, job.id, true, "Connect to Wi-Fi and resume."); return; }
             if (!new URL(url).getHost().endsWith(".googlevideo.com")) throw new IOException("Unsupported audio address");
             JSONObject track = new JSONObject(job.track.toString()); track.put("offline", true);
+            long existingLength = 0;
             try (AudioDownloadStream input = new AudioDownloadStream(url, () -> closed || job.stopped, connection -> job.connection = connection)) {
                 long total = input.length();
-                synchronized (DownloadService.class) { if (job.stopped) return; job.status = "downloading"; job.totalBytes = total; job.progress = 0; persist(this); }
+                synchronized (DownloadService.class) {
+                    if (job.stopped) return;
+                    job.status = "downloading";
+                    job.totalBytes = total;
+                    job.progress = 0;
+                    job.bytes = 0;
+                    persist(this);
+                }
                 publishJob(this, job);
                 vault.store(track, input, total, (read, length) -> {
                     if (closed || job.stopped) throw new InterruptedIOException("Download stopped");
@@ -164,10 +185,10 @@ public class DownloadService extends Service {
                     synchronized (DownloadService.class) {
                         if (job.stopped) throw new InterruptedIOException("Download stopped");
                         job.bytes = read;
-                        if (now - job.lastProgress < 500) return;
+                        if (now - job.lastProgress < 200) return;
                         job.lastProgress = now; job.progress = length > 0 ? (int)Math.min(99, read * 100 / length) : -1;
                     }
-                    if (wifiOnly(this) && !isWifiConnected(this)) { cancel(this, job.id, true, "Connect to Wi-Fi and resume."); throw new InterruptedIOException("Wi-Fi disconnected"); }
+                    if (wifiOnly(this) && !isWifiConnected(this)) { cancel(this, job.id, true, "Wi-Fi disconnected"); throw new InterruptedIOException("Wi-Fi disconnected"); }
                     publishJob(this, job);
                     ((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).notify(2, notification(track.optString("title"), job.progress));
                 }, DownloadService.class, () -> {
@@ -185,10 +206,36 @@ public class DownloadService extends Service {
             publishJob(this, job); Events.send(this, "downloadError", Events.json("id", job.id, "message", job.error));
         } finally {
             if (job.connection != null) job.connection.disconnect(); job.connection = null;
-            handler.post(() -> { inFlight--; finishIfIdle(); });
+            handler.post(() -> { inFlight--; drainQueue(); });
         }
     }
-    private void finishIfIdle() { if (inFlight <= 0) { stopForeground(STOP_FOREGROUND_REMOVE); stopSelfResult(lastStartId); } }
+    /**
+     * When a transfer finishes (or the service is asked to start while another is in flight),
+     * Pick the oldest explicitly queued job. Paused/failed jobs require Resume/Retry.
+     * If nothing is pending, stop the service so it does not keep the device awake.
+     */
+    private void drainQueue() {
+        final Job next;
+        synchronized (DownloadService.class) {
+            if (inFlight > 0) return; // a transfer is already running; wait for it to finish
+            Job candidateFound = null;
+            for (Job candidate : JOBS.values()) {
+                if ("queued".equals(candidate.status)) {
+                    candidateFound = candidate; candidate.stopped = false; candidate.status = "downloading"; break;
+                }
+            }
+            if (candidateFound == null) {
+                stopForeground(STOP_FOREGROUND_REMOVE);
+                stopSelfResult(lastStartId);
+                return;
+            }
+            next = candidateFound;
+            persist(this);
+            inFlight++;
+            publishJob(this, next);
+        }
+        worker.execute(() -> download(next));
+    }
     private Notification notification(String title, int percent) {
         PendingIntent open = PendingIntent.getActivity(this, 1, new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         return new Notification.Builder(this, "downloads").setSmallIcon(R.drawable.ic_cine_notification).setContentTitle("Saving in Cine music")

@@ -1,6 +1,6 @@
 <resources>
-  <color name="cine_midnight">#061126</color>
-  <color name="cine_icon_background">#071127</color>
+  <color name="cine_midnight">#04100A</color>
+  <color name="cine_icon_background">#04100A</color>
   <color name="cine_cyan">#00D9F2</color>
   <color name="cine_blue">#2477FF</color>
   <color name="cine_violet">#8143FF</color>
@@ -9,4 +9,6 @@
   <color name="cine_ink">#101B33</color>
   <color name="cine_background">#F6F7FC</color>
   <color name="cine_on_background">#101B33</color>
+  <color name="cine_pink">#0B3B24</color>
+  <color name="cine_pink_dark">#064E3B</color>
 </resources>

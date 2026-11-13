@@ -160,3 +160,76 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 @media (prefers-reduced-motion: reduce) { .cine-app:not([data-reduced-motion=false]) *, .cine-app:not([data-reduced-motion=false]) *::before, .cine-app:not([data-reduced-motion=false]) *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
 @media (max-width: 350px) { .app-header { gap: 8px; } .brand-logo { width: 142px; } .filter-tabs { gap: 8px; } .filter-tabs button { padding: 0 15px; } .song-duration { display: none; } .fullscreen-sheet { padding-left: 24px; padding-right: 24px; } }
 @media (min-width: 600px) { .screen { --gutter: 32px; } .app-header { padding-left: 32px; padding-right: 32px; } .shelf-item { flex-basis: 28%; } }
+
+/* Android TV optimizations */
+@media (min-width: 960px) and (min-height: 540px) {
+  .screen {
+    --gutter: 48px;
+    font-size: 18px;
+  }
+  .app-header {
+    padding-left: 48px;
+    padding-right: 48px;
+    min-height: 80px;
+  }
+  .brand-logo {
+    width: 200px;
+    height: 54px;
+  }
+  .shelf h2 {
+    font-size: 1.8rem;
+  }
+  .shelf-item {
+    flex-basis: 22%;
+    min-width: 200px;
+  }
+  .row-item {
+    min-height: 72px;
+  }
+  .cover {
+    width: 64px;
+    height: 64px;
+  }
+  .cover.large {
+    width: 320px;
+    height: 320px;
+  }
+  .full-player-body {
+    padding: 60px 80px 40px;
+  }
+  .player-control-card {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .transport {
+    gap: 32px;
+  }
+  .large-play {
+    width: 80px;
+    height: 80px;
+  }
+  .lyrics-lines {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .lyric-line {
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.4;
+  }
+  .queue-content, .menu-actions {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+/* TV focus improvements for D-pad navigation */
+button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid var(--accent, #00d9f2) !important;
+  outline-offset: 4px !important;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent) !important;
+}
+
+/* Ensure focusable elements are keyboard/D-pad accessible */
+button, a, [role="button"], [tabindex]:not([tabindex="-1"]) {
+  min-height: 48px;
+}

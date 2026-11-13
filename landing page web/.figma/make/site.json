@@ -1,0 +1,14 @@
+{
+  "title": "Cine music — Android APK",
+  "description": "Discover Cine music for Android, explore the playback experience, and download the official APK release.",
+  "language": "en",
+  "robots": {
+    "index": true
+  },
+  "icons": {
+    "icon": "/favicon.png"
+  },
+  "openGraph": {
+    "image": "https://cinemusic.web.app/og-image.png"
+  }
+}

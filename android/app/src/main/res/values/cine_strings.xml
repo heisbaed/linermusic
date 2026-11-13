@@ -1,1 +1,4 @@
-<resources><string name="cine_app_name">Cine music</string></resources>
+<resources>
+    <string name="cine_app_name">Cine music</string>
+    <string name="widget_description">Control music playback from your home screen</string>
+</resources>

@@ -25,6 +25,29 @@ export function snapshot(): PlayerState {
   }
   return { ...playerState, queue: [...(playerState.queue ?? [])] };
 }
+export function saveTextFile(fileName: string, mimeType: string, text: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const bridge = window.CineAndroid;
+    if (!bridge?.saveTextFile) { reject(new Error('Saving files is supported in the Android app.')); return; }
+    const id = crypto.randomUUID();
+    let finished = false;
+    const cleanup = () => { finished = true; clearTimeout(timer); unsubscribe(); };
+    const timer = window.setTimeout(() => {
+      if (finished) return;
+      cleanup();
+      reject(new Error('The file picker timed out. Try saving again.'));
+    }, 300_000);
+    const unsubscribe = subscribe(event => {
+      if (event.type !== 'fileSave' || event.data.id !== id) return;
+      cleanup();
+      if (event.data.cancelled) { reject(new DOMException('File save cancelled', 'AbortError')); return; }
+      if (event.data.error) { reject(new Error(String(event.data.error))); return; }
+      resolve();
+    });
+    try { bridge.saveTextFile(id, fileName, mimeType, text); }
+    catch (error) { cleanup(); reject(error instanceof Error ? error : new Error('The file picker could not be opened.')); }
+  });
+}
 export function subscribe(listener: (event: Envelope) => void) {
   listeners.add(listener);
   stateEvents.set('player', { type: 'player', data: { ...snapshot() } });
@@ -89,8 +112,8 @@ function resumePreview() {
   try { void previewAudio?.play().catch(error => previewError(error, generation)); }
   catch (error) { previewError(error, generation); }
 }
-export function playNative(song: Song, url?: string, queue: Song[] = [], shuffle = false, repeat: 'off' | 'all' | 'one' = 'off') {
-  if (window.CineAndroid) { window.CineAndroid.play(JSON.stringify({ ...song, url, queue, shuffle, repeat })); return; }
+export function playNative(song: Song, url?: string, queue: Song[] = [], shuffle = false, repeat: 'off' | 'all' | 'one' = 'off', quality: 'auto' | 'low' | 'normal' | 'high' = 'auto', gapless = true, crossfadeSeconds = 0) {
+  if (window.CineAndroid) { window.CineAndroid.play(JSON.stringify({ ...song, url, queue, shuffle, repeat, quality, gapless, crossfadeSeconds })); return; }
   if (!url) throw new Error('Offline playback is available in the Android app.');
   if (!previewAudio) {
     previewAudio = new Audio();
@@ -111,6 +134,24 @@ export function playNative(song: Song, url?: string, queue: Song[] = [], shuffle
   previewAudio.src = url;
   previewEvent('loading');
   resumePreview();
+}
+
+export function getAppShareLink(): string {
+  return window.CineAndroid?.getAppShareLink?.() ?? 'https://cinemusic.web.app/download';
+}
+
+export function getSongShareLink(songId: string): string {
+  if (!songId || !/^[a-zA-Z0-9_-]{11}$/.test(songId)) return '';
+  return window.CineAndroid?.getSongShareLink?.(songId) ?? `https://cinemusic.web.app/song/${songId}`;
+}
+
+export function setCrossfade(enabled: boolean, durationSeconds: number = 5) {
+  if (window.CineAndroid) {
+    window.CineAndroid.control('setcrossfade', enabled ? durationSeconds : 0);
+  }
+}
+export function setGapless(enabled: boolean) {
+  if (window.CineAndroid) window.CineAndroid.control('setgapless', enabled ? 1 : 0);
 }
 export function control(action: string, value = 0) {
   if (window.CineAndroid) { window.CineAndroid.control(action, value); return; }

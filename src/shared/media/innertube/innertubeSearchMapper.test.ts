@@ -77,6 +77,21 @@ describe("innertube search mapper", () => {
     expect(result).toMatchObject({ id: "eVTXPUF4Oz4", artists: [{ id: "unknown", name: "Linkin Park" }], durationMs: 219_000 });
   });
 
+  it("skips result type labels when falling back to a plain row artist", () => {
+    const result = mapInnertubeSearchResult({
+      musicResponsiveListItemRenderer: {
+        playlistItemData: { videoId: "xTvyyoF_LZY" },
+        flexColumns: [
+          { musicResponsiveListItemFlexColumnRenderer: { text: { runs: [{ text: "Shape of You" }] } } },
+          { musicResponsiveListItemFlexColumnRenderer: { text: { runs: [
+            { text: "Song" }, { text: " • " }, { text: "Ed Sheeran" }, { text: " • " }, { text: "3:21" },
+          ] } } },
+        ],
+      },
+    });
+    expect(result).toMatchObject({ id: "xTvyyoF_LZY", artists: [{ id: "unknown", name: "Ed Sheeran" }], durationMs: 201_000 });
+  });
+
   it("maps a song row with artist, album, duration and a 512px square cover", () => {
     expect(mapInnertubeSearchResult(songRow)).toEqual({
       type: "track",

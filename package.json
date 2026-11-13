@@ -110,6 +110,7 @@
     "@braccato/core": "^1.4.0",
     "@braccato/parsers": "^0.2.1",
     "@mingcute/react": "^1.4.1",
+    "@openrouter/sdk": "^1.5.60",
     "@solar-icons/react": "^1.1.1",
     "@tanstack/react-virtual": "^3.13.23",
     "@xhayper/discord-rpc": "^1.5.1",
@@ -139,7 +140,7 @@
     "@types/tar": "^7.0.87",
     "@vitejs/plugin-react": "^6.0.5",
     "electron": "^44.0.0",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "^25.1.0",
     "eslint": "^9",
     "jsdom": "^30.0.1",
     "tailwindcss": "^4",
@@ -149,5 +150,8 @@
     "vite-plugin-electron": "^1.1.1",
     "vite-plugin-electron-renderer": "^1.0.0",
     "vitest": "^4.1.9"
+  },
+  "allowScripts": {
+    "@openrouter/sdk@1.5.60": true
   }
 }

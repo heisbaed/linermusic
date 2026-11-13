@@ -25,16 +25,24 @@ final class CinePlayer {
     private MediaPlayer.OnInfoListener info;
     private MediaPlayer.OnSeekCompleteListener seeked;
     private boolean ready;
+    private boolean playWhenReady = true;
+    private float volume = 1f;
 
-    void setAudioAttributes(AudioAttributes attributes) { local.setAudioAttributes(attributes); }
-    void setWakeMode(Context context, int mode) { local.setWakeMode(context, mode); }
-    void setOnPreparedListener(MediaPlayer.OnPreparedListener listener) { prepared=listener; local.setOnPreparedListener(listener); }
-    void setOnCompletionListener(MediaPlayer.OnCompletionListener listener) { completed=listener; local.setOnCompletionListener(listener); }
-    void setOnErrorListener(MediaPlayer.OnErrorListener listener) { failed=listener; local.setOnErrorListener(listener); }
-    void setOnInfoListener(MediaPlayer.OnInfoListener listener) { info=listener; local.setOnInfoListener(listener); }
-    void setOnSeekCompleteListener(MediaPlayer.OnSeekCompleteListener listener) { seeked=listener; local.setOnSeekCompleteListener(listener); }
-    void addOnRoutingChangedListener(AudioRouting.OnRoutingChangedListener listener, Handler handler) { local.addOnRoutingChangedListener(listener,handler); }
-    void setDataSource(MediaDataSource source) throws IOException { local.setDataSource(source); }
+    void setAudioAttributes(AudioAttributes attributes) { if (local != null) local.setAudioAttributes(attributes); }
+    void setWakeMode(Context context, int mode) { if (local != null) local.setWakeMode(context, mode); }
+    void setOnPreparedListener(MediaPlayer.OnPreparedListener listener) { prepared=listener; if (local != null) local.setOnPreparedListener(listener); }
+    void setOnCompletionListener(MediaPlayer.OnCompletionListener listener) { completed=listener; if (local != null) local.setOnCompletionListener(listener); }
+    void setOnErrorListener(MediaPlayer.OnErrorListener listener) { failed=listener; if (local != null) local.setOnErrorListener(listener); }
+    void setOnInfoListener(MediaPlayer.OnInfoListener listener) { info=listener; if (local != null) local.setOnInfoListener(listener); }
+    void setOnSeekCompleteListener(MediaPlayer.OnSeekCompleteListener listener) { seeked=listener; if (local != null) local.setOnSeekCompleteListener(listener); }
+    void addOnRoutingChangedListener(AudioRouting.OnRoutingChangedListener listener, Handler handler) { if (local != null) local.addOnRoutingChangedListener(listener,handler); }
+    void setDataSource(MediaDataSource source) throws IOException {
+        if (local == null) {
+            if (stream != null) throw new IOException("Player is already streaming");
+            local = new MediaPlayer();
+        }
+        local.setDataSource(source);
+    }
     void setDataSource(Context context, Uri uri, Map<String,String> headers) throws IOException {
         if (!MainActivity.allowedNetworkUrl(uri.toString()) || uri.getHost()==null || !uri.getHost().endsWith(".googlevideo.com")) throw new IOException("Unsupported audio address");
         local.release(); local=null;
@@ -48,6 +56,8 @@ final class CinePlayer {
         stream.setAudioAttributes(new androidx.media3.common.AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),false);
         stream.setWakeMode(C.WAKE_MODE_NETWORK);
+        stream.setPlayWhenReady(playWhenReady);
+        stream.setVolume(volume);
         stream.addListener(new Player.Listener() {
             @Override public void onPlaybackStateChanged(int state) {
                 if(state==Player.STATE_READY) {
@@ -67,14 +77,15 @@ final class CinePlayer {
         stream.setMediaSource(new ProgressiveMediaSource.Factory(http).createMediaSource(MediaItem.fromUri(uri)));
     }
     void prepareAsync() { if(stream!=null)stream.prepare(); else local.prepareAsync(); }
-    void start() { if(stream!=null)stream.play(); else local.start(); }
-    void pause() { if(stream!=null)stream.pause(); else if(local!=null)local.pause(); }
+    void setPlayWhenReady(boolean value) { playWhenReady=value; if(stream!=null)stream.setPlayWhenReady(value); }
+    void start() { playWhenReady=true; if(stream!=null)stream.play(); else local.start(); }
+    void pause() { playWhenReady=false; if(stream!=null)stream.pause(); else if(local!=null)local.pause(); }
     boolean isPlaying() { return stream!=null?stream.isPlaying():local!=null&&local.isPlaying(); }
     long getCurrentPosition() { return stream!=null?stream.getCurrentPosition():local.getCurrentPosition(); }
     long getDuration() { return stream!=null?Math.max(0,stream.getDuration()):local.getDuration(); }
     int getAudioSessionId() { return stream!=null?stream.getAudioSessionId():local.getAudioSessionId(); }
     AudioDeviceInfo getRoutedDevice() { return local==null?null:local.getRoutedDevice(); }
     void seekTo(long position,int mode) { if(stream!=null)stream.seekTo(position); else local.seekTo(position,mode); }
-    void setVolume(float left,float right) { if(stream!=null)stream.setVolume(Math.min(left,right)); else if(local!=null)local.setVolume(left,right); }
+    void setVolume(float left,float right) { volume=Math.max(0f,Math.min(1f,Math.min(left,right))); if(stream!=null)stream.setVolume(volume); else if(local!=null)local.setVolume(volume,volume); }
     void release() { if(stream!=null){stream.release();stream=null;} if(local!=null){local.release();local=null;} }
 }

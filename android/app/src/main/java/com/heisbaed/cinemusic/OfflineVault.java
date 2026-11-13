@@ -51,7 +51,7 @@ final class OfflineVault {
         try {
             try (FileOutputStream output = new FileOutputStream(partial)) {
                 output.write(cipher.getIV().length); output.write(cipher.getIV());
-                byte[] buffer = new byte[32 * 1024]; long read = 0; int count;
+                byte[] buffer = new byte[64 * 1024]; long read = 0; int count;
                 while ((count = input.read(buffer)) != -1) {
                     if (Thread.currentThread().isInterrupted()) throw new InterruptedIOException("Download cancelled");
                     read += count;
@@ -92,14 +92,31 @@ final class OfflineVault {
     }
     synchronized JSONArray list() {
         JSONArray result = new JSONArray(); File[] files = directory.listFiles((dir, name) -> name.endsWith(".json"));
+        long totalStorage = 0;
         if (files != null) for (File file : files) {
             try {
                 JSONObject track = new JSONObject(new String(java.nio.file.Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8));
                 if (contains(track.getString("id"))) {
-                    track.put("storageBytes", audio(track.getString("id")).length() + file.length());
+                    long audioSize = audio(track.getString("id")).length();
+                    long metadataSize = file.length();
+                    long storageBytes = audioSize + metadataSize;
+                    totalStorage += storageBytes;
+                    track.put("storageBytes", storageBytes);
+                    track.put("audioBytes", audioSize);
                     result.put(track);
                 }
             } catch (Exception ignored) { /* A damaged metadata file must not hide the rest of the library. */ }
+        }
+        // Add storage summary as first element if there are downloads
+        if (result.length() > 0) {
+            try {
+                JSONObject summary = new JSONObject();
+                summary.put("totalTracks", result.length());
+                summary.put("totalStorageBytes", totalStorage);
+                summary.put("maxStorageBytes", MAX_BYTES);
+                summary.put("usedPercent", totalStorage * 100 / MAX_BYTES);
+                result.put(0, summary);
+            } catch (Exception ignored) {}
         }
         return result;
     }

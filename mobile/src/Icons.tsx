@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import { AppContext } from './AppContext';
 import { figmaAssets } from './figmaAssets';
-export type IconName = 'home' | 'search' | 'explore' | 'library' | 'download' | 'account' | 'check' | 'play' | 'pause' | 'next' | 'previous' | 'heart' | 'close' | 'back' | 'queue' | 'plus' | 'shuffle' | 'repeat' | 'repeat_one' | 'settings' | 'music' | 'trash' | 'wifi' | 'lyrics' | 'more' | 'chevron_down' | 'lock' | 'headphones' | 'chevron_up' | 'chevron_right' | 'album' | 'artist' | 'playlist' | 'equalizer' | 'timer' | 'share' | 'bell' | 'info' | 'edit' | 'logout' | 'eye' | 'drag' | 'sort' | 'arrow_right' | 'refresh' | 'mail' | 'shield' | 'eye_off' | 'tag' | 'camera' | 'folder';
+export type IconName = 'home' | 'search' | 'explore' | 'library' | 'download' | 'account' | 'check' | 'play' | 'pause' | 'next' | 'previous' | 'heart' | 'close' | 'back' | 'queue' | 'plus' | 'shuffle' | 'sparkles' | 'repeat' | 'repeat_one' | 'settings' | 'music' | 'trash' | 'wifi' | 'lyrics' | 'more' | 'chevron_down' | 'lock' | 'headphones' | 'chevron_up' | 'chevron_right' | 'album' | 'artist' | 'playlist' | 'equalizer' | 'timer' | 'share' | 'bell' | 'info' | 'edit' | 'logout' | 'eye' | 'drag' | 'sort' | 'arrow_right' | 'refresh' | 'mail' | 'shield' | 'eye_off' | 'tag' | 'camera' | 'folder';
 const paths: Partial<Record<IconName, React.ReactNode>> = {
   home: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" /></>,
   search: <><circle cx="10.5" cy="10.5" r="7" /><path d="m16 16 5 5" /></>,
@@ -19,6 +19,7 @@ const paths: Partial<Record<IconName, React.ReactNode>> = {
   queue: <><path d="M4 5h16M4 10h16M4 15h7M4 20h7" /><path d="m16 14 5 3-5 3z" /></>,
   plus: <path d="M12 4v16M4 12h16" />,
   shuffle: <><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3-2 5-5m2-3c2-3 3-4 5-4h3m-4-4 4 4-4 4" /></>,
+  sparkles: <><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7z" /><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></>,
   repeat: <><path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3" /></>,
   repeat_one: <><path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3" /><path d="M12 10v5m-1.5-3.5L12 10l1.5 1.5" /></>,
   settings: <><circle cx="12" cy="12" r="3" /><path d="m9 3-1 3-3 1v3l-2 2 2 2v3l3 1 1 3h6l1-3 3-1v-3l2-2-2-2V7l-3-1-1-3z" /></>,

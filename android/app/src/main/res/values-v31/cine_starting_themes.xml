@@ -1,13 +1,16 @@
 <resources>
+    <!-- Android requires a starting window. Keep it a plain, matching canvas;
+         index.html owns the single, full-sized branded splash. -->
     <style name="Theme.CineMusic.Starting" parent="AppTheme">
-        <item name="android:windowBackground">@color/cine_midnight</item>
+        <item name="android:windowBackground">@drawable/cine_pre_splash</item>
         <item name="android:windowSplashScreenBackground">@color/cine_midnight</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/avd_cine_splash</item>
-        <item name="android:windowSplashScreenAnimationDuration">840</item>
-        <item name="android:windowSplashScreenBrandingImage">@drawable/cine_splash_branding_white</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_cine_splash_motion</item>
+        <item name="android:windowSplashScreenBrandingImage">@android:color/transparent</item>
+        <item name="android:windowSplashScreenAnimationDuration">@android:integer/config_mediumAnimTime</item>
     </style>
-    <style name="CineSplashBlue" parent="Theme.CineMusic.Starting"><item name="android:windowSplashScreenBackground">#0c142a</item></style>
-    <style name="CineSplashGreen" parent="Theme.CineMusic.Starting"><item name="android:windowSplashScreenBackground">#071f19</item></style>
-    <style name="CineSplashLight" parent="Theme.CineMusic.Starting"><item name="android:windowSplashScreenBackground">#f2f0ec</item><item name="android:windowSplashScreenBrandingImage">@drawable/cine_splash_branding_dark</item></style>
-    <style name="CineSplashDark" parent="Theme.CineMusic.Starting"><item name="android:windowSplashScreenBackground">#101112</item></style>
+    <style name="CineSplashBlue" parent="Theme.CineMusic.Starting" />
+    <style name="CineSplashGreen" parent="Theme.CineMusic.Starting" />
+    <style name="CineSplashLight" parent="Theme.CineMusic.Starting" />
+    <style name="CineSplashDark" parent="Theme.CineMusic.Starting" />
+    <style name="CineSplashPink" parent="Theme.CineMusic.Starting" />
 </resources>

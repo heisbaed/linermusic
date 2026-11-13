@@ -1,0 +1,8 @@
+{
+  "version": "0.1.2",
+  "versionCode": 3,
+  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.2/Cine-Music-0.1.2.apk",
+  "fileSize": 12152894,
+  "sha256": "5b428edf4c3ff0e0b8737b226e2311e19bb1245bcc239897ceb6b66b50bb7720",
+  "releaseNotes": "Restored lyrics follow scrolling and controls, fixed search visibility, repaired persistent download queues and audio focus, and added verified in-app APK updates."
+}

@@ -1,4 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Dark green background -->
     <item android:drawable="@color/cine_midnight" />
-    <item android:drawable="@drawable/ic_cine_splash" android:gravity="center" />
+    
+    <!-- Large green orb -->
+    <item
+        android:gravity="center"
+        android:width="220dp"
+        android:height="220dp">
+        <shape android:shape="oval">
+            <solid android:color="@color/cine_pink" />
+        </shape>
+    </item>
+    
+    <!-- Cine icon prominently displayed -->
+    <item
+        android:gravity="center"
+        android:width="130dp"
+        android:height="130dp">
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/cine_icon" />
+    </item>
 </layer-list>

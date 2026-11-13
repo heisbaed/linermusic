@@ -80,6 +80,7 @@ export function installFixture() {
           for (const stream of streams) if (stream.owner() === owner) stream.emit('patch', { path: '/', data: body });
         }
       }
+      else if (options.url.includes('/youtubei/v1/next')) data = { contents: { singleColumnMusicWatchNextResultsRenderer: { playlistPanelRenderer: { contents: songs.map(song => ({ playlistPanelVideoRenderer: { videoId: song.id, title: { simpleText: song.title }, navigationEndpoint: { watchEndpoint: { watchEndpointMusicSupportedConfigs: { watchEndpointMusicConfig: { musicVideoType: 'MUSIC_VIDEO_TYPE_ATV' } } } }, longBylineText: { runs: [run(song.artist, song.artistId, 'ARTIST')] }, lengthText: { simpleText: '3:12' }, thumbnail: { thumbnails: [{ url: song.cover, width: 320, height: 320 }] } } })) } } } };
       else if (options.url.includes('accounts:signInWithPassword')) data = { ...user(fixture.loginId), expiresIn: '3600' };
       else if (options.url.includes('accounts:lookup')) { const id = String(body.idToken).replace('fixture-token-', ''); data = { users: [user(id, id !== 'ui-unverified-user')] }; }
       else if (options.url.includes('accounts:signUp')) data = { localId: 'ui-signup-user', email: body.email, idToken: 'fixture-id-token', refreshToken: 'fixture-refresh-token', expiresIn: '3600' };
