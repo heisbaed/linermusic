@@ -39,18 +39,18 @@
 .browse-genre>svg:last-child{flex:none;margin-bottom:2px;opacity:.8}
 .browse-genre:active{filter:brightness(1.13);transform:scale(.98)}
 .browse-search .page-title{margin-bottom:21px}
-.browse-search-input{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:10px;padding:8px 0;background:var(--bg)}
+.browse-search-input{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:10px;padding:8px 0;background:transparent;border-radius:18px}
 .browse-search-input .search-field{flex:1;min-width:0;margin:0}
 .cine-app .browse-search-input .search-field{min-height:54px;padding:0 8px 0 16px;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 3px 12px #00000008}
 .cine-app .browse-search-input .search-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 14%,transparent)}
-.browse-search-input .search-field input{font-size:16px;min-width:0}
+.browse-search-input .search-field input{font-size:16px;min-width:0;appearance:none;-webkit-appearance:none;outline:0;border:0;border-radius:0;box-shadow:none;background:transparent}
 .browse-search .browse-search-filters button{min-height:40px;border-radius:24px}
 .browse-search .browse-results .song-row,.browse-search .browse-results .browse-catalog-row{background:transparent;border:0;border-radius:0;box-shadow:none;backdrop-filter:none}
 .browse-search .browse-results .song-row{min-height:68px;padding-block:5px}
 .browse-search .browse-results .browse-catalog-row{min-height:76px;padding-block:8px}
 .browse-search .browse-results .cover{border-radius:9px}
 .browse-search .browse-top-result{border:1px solid var(--line);background:var(--surface);box-shadow:none}
-.search-radios .art-shelf{display:flex;gap:14px;overflow-x:auto;padding:4px 0 12px;scroll-snap-type:x proximity;scrollbar-width:none}
+.search-radios .art-shelf{display:flex;gap:14px;overflow-x:auto;margin-inline:0;padding:4px 0 12px;scroll-snap-type:x proximity;scrollbar-width:none}
 .search-radios .shelf-item{display:flex;flex:0 0 128px;min-width:0;flex-direction:column;gap:5px;padding:0;border:0;background:transparent;text-align:left;scroll-snap-align:start}
 .search-radios .shelf-item .cover{width:128px;height:128px;border-radius:14px}
 .search-radios .shelf-item strong{display:-webkit-box;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:13px;line-height:1.4}

@@ -29,8 +29,8 @@ android {
         applicationId 'com.heisbaed.cinemusic'
         minSdk 26
         targetSdk 36
-        versionCode providers.gradleProperty('cineVersionCode').map { it.toInteger() }.getOrElse(3)
-        versionName '0.1.2'
+        versionCode providers.gradleProperty('cineVersionCode').map { it.toInteger() }.getOrElse(4)
+        versionName '0.1.3'
         testInstrumentationRunner 'com.heisbaed.cinemusic.VaultChecks'
     }
     compileOptions {
