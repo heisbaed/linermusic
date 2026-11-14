@@ -42,6 +42,16 @@ await page.cdp('Emulation.setDeviceMetricsOverride',{width:402,height:874,device
 
 try {
  await navigate();
+ await check('Autocomplete completes a partial query and preserves recent history',async()=>{
+  await click('.tab-bar button:nth-child(2)');await input('.browse-search input','Quiet');
+  await wait("!!document.querySelector('.search-suggestion')");
+  const queryHistory=await evaluate("window.__cineUi.library().history.length");
+  await click('.search-suggestion>button:first-child');
+  await wait("!!document.querySelector('.browse-search .song-row')&&!document.querySelector('.search-suggestions')");
+  assert(await evaluate("document.querySelector('.browse-search input').value.toLowerCase().includes('quiet')"),'Suggestion did not submit');
+  assert(await evaluate("window.__cineUi.library().history.length")>=queryHistory,'Search history lost');
+  await click('.browse-search .search-field button[aria-label^="Clear"]');
+ });
  await check('Search input accepts text, stays visible during scroll, submits typed results',async()=>{
   await click('.tab-bar button:nth-child(2)');
   await input('.browse-search input','Quiet motion');
@@ -70,6 +80,9 @@ try {
   const buttons=await evaluate("[...document.querySelectorAll('.browse-destination')].map(e=>e.textContent)");
   assert(buttons.length>=5,'Library destinations missing');
   await click('.browse-destination');await layout();await shot('audit-favorites');await back();
+  await click('.browse-download-destination');await textClick('Resume all');
+  assert(await evaluate("JSON.parse(window.CineAndroid.downloadJobs()).every(job=>!['paused','failed'].includes(job.status))"),'Resume all left paused/failed jobs behind');
+  await back();
  });
  await check('Player opens lyrics, scrolls current line, respects manual browsing, and returns',async()=>{
   await click('.mini-open');await wait("!!document.querySelector('.player-control-card')");

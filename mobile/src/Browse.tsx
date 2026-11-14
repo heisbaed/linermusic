@@ -12,6 +12,7 @@ import { mergePlaylistSongDraft } from './playlistDraft';
 import { formatTime, playlistBackupFileName, playlistBackupText, playlistIsDownloaded } from './library';
 import './browse.css';
 import { SongRadio } from './SongRadio';
+import { suggestMusic, mergeSuggestions } from './searchSuggestions';
 
 type CatalogType = 'artist' | 'album' | 'playlist';
 type CatalogDetails = AlbumDetails | ArtistDetails | CatalogPlaylistDetails;
@@ -178,6 +179,9 @@ export function SearchScreen() {
   const [submitted, setSubmitted] = useState('');
   const [filter, setFilter] = useState<SearchType>('all');
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [resultsFor, setResultsFor] = useState('');
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showHistory, setShowHistory] = useState(false);
@@ -185,6 +189,12 @@ export function SearchScreen() {
   const request = useRef<AbortController | null>(null);
   const sequence = useRef(0);
   const runRef = useRef<(text: string, type?: SearchType, save?: boolean) => void>(() => {});
+  useEffect(() => {
+    const abort = new AbortController(); setSuggestions([]);
+    if (query.trim().length < 2 || !app.online) return;
+    const timer = setTimeout(() => { void suggestMusic(query, abort.signal).then(rows => { if (!abort.signal.aborted) setSuggestions(rows); }).catch(() => {}); }, 180);
+    return () => { clearTimeout(timer); abort.abort(); };
+  }, [query, app.online]);
   useEffect(() => {
     const onSearch = (event: Event) => {
       const text = (event as CustomEvent<{ query: string }>).detail?.query;
@@ -206,25 +216,29 @@ export function SearchScreen() {
     const ticket = ++sequence.current;
     setQuery(text);
     setFilter(type);
+    if (type !== filter) setResults(rows => rows.filter(item => type === 'all' || item.type === type));
     setError('');
-    setResults([]);
     setSubmitted(value);
     setLoading(false);
-    if (!value) return;
-    if (save) remember({ query: value });
+    if (!value) { setResults([]); setResultsFor(''); return; }
+    if (save) { remember({ query: value }); setSuggestionsOpen(false); }
     const key = `${type}:${value.toLocaleLowerCase()}`;
     const cached = searchCache.get(key);
-    if (cached && !force) { setResults(cached); return; }
+    if (cached && !force) { setResults(cached); setResultsFor(value); return; }
     if (!appRef.current.online) { setError('You are offline. Connect to search the music catalog.'); return; }
     const abort = new AbortController();
     request.current = abort;
     setLoading(true);
     try {
-      const found = await searchMusicCatalog(value, type, abort.signal);
+      const found = await searchMusicCatalog(value, type, abort.signal, partial => {
+        if (abort.signal.aborted || ticket !== sequence.current || !partial.length) return;
+        setResults(partial); setResultsFor(value);
+      });
       if (abort.signal.aborted || ticket !== sequence.current) return;
       if (found.length) searchCache.set(key, found);
       if (searchCache.size > 30) searchCache.delete(searchCache.keys().next().value!);
       setResults(found);
+      setResultsFor(value);
     } catch (reason) {
       if (!abort.signal.aborted && ticket === sequence.current) setError(message(reason));
     } finally {
@@ -238,20 +252,23 @@ export function SearchScreen() {
     request.current?.abort();
     sequence.current++;
     setQuery(value);
-    setSubmitted('');
-    setResults([]);
+    setSubmitted(value.trim());
+    setSuggestionsOpen(Boolean(value.trim()));
+    if (!value.trim()) { setResults([]); setResultsFor(''); }
     setError('');
-    setLoading(false);
+    setLoading(Boolean(value.trim()));
     if (!value) setFilter('all');
-    if (value.trim()) debounce.current = setTimeout(() => runRef.current(value, filter, false), 350);
+    if (value.trim()) debounce.current = setTimeout(() => runRef.current(value, filter, false), 250);
   }
 
   function open(item: CatalogItem) {
+    (document.activeElement as HTMLElement)?.blur(); setSuggestionsOpen(false);
     const title = item.type === 'artist' ? item.name : item.title;
     const subtitle = item.type === 'album' ? item.artists.map(artist => artist.name).join(', ') : item.type === 'playlist' ? item.author : 'Artist';
-    remember({ query: submitted || title, id: item.id, type: item.type, title, subtitle, cover: item.cover?.url });
+    remember({ query: resultsFor || submitted || title, id: item.id, type: item.type, title, subtitle, cover: item.cover?.url });
     app.openRoute({ kind: 'catalog', type: item.type, id: item.id });
   }
+  function rememberPlay() { (document.activeElement as HTMLElement)?.blur(); setSuggestionsOpen(false); remember({ query: resultsFor || submitted }); }
 
   const songs = results.filter((item): item is Extract<SearchResult, { type: 'track' }> => item.type === 'track').map(songFrom);
   const artists = results.filter((item): item is Extract<SearchResult, { type: 'artist' }> => item.type === 'artist');
@@ -259,6 +276,7 @@ export function SearchScreen() {
   const playlists = results.filter((item): item is PlaylistItem => item.type === 'playlist');
   const target = app.account.library.playlists.find(playlist => playlist.id === app.addToPlaylist);
   const history = app.account.library.history;
+  const suggestedQueries = mergeSuggestions(query, suggestions, history.map(entry => entry.title || entry.query));
   const topResult = filter === 'all' ? results[0] : undefined;
   const shownSongs = filter === 'all' ? songs.slice(0, 5) : songs;
   const seeAll = (type: SearchType, length: number, limit: number) => filter === 'all' && length > limit
@@ -266,6 +284,7 @@ export function SearchScreen() {
   return <section className="screen browse-search">
     <h1 className="page-title">Search</h1>{radioSong && <SongRadio song={radioSong} onClose={() => setRadioSong(null)} />}
     <div className="browse-search-input"><SearchField value={query} onChange={changeQuery} onSubmit={() => { void run(); }} placeholder="Songs, artists, albums, playlists" label="Search music" /></div>
+    {!!query.trim() && suggestionsOpen && !!suggestedQueries.length && <div className="search-suggestions" aria-label="Search suggestions">{suggestedQueries.map(text => <div className="search-suggestion" key={text}><button onClick={() => { (document.activeElement as HTMLElement)?.blur(); void run(text, filter); }}><Icon name="search" size={19}/><span>{text}</span></button><button aria-label={`Use suggestion ${text}`} onClick={() => changeQuery(text)}><Icon name="chevron_up" size={18}/></button></div>)}</div>}
     {target && <div className="browse-context" role="status"><span>Adding to <strong>{target.name}</strong></span><button className="text-button" onClick={() => { app.setAddToPlaylist(null); app.openRoute({ kind: 'playlist', id: target.id }); }}>Done</button></div>}
     <div className="filter-tabs browse-search-filters" aria-label="Search type">{filters.map(tab => <button key={tab.id}
       className={filter === tab.id ? 'selected' : ''} aria-pressed={filter === tab.id}
@@ -288,10 +307,10 @@ export function SearchScreen() {
     {loading && <Loading>Searching for {submitted}...</Loading>}
     {!!error && !loading && <Notice title="Search could not connect" icon="wifi" action={<button className="secondary-button" onClick={() => { void run(submitted, filter, true); }}>Try again</button>}>{error}</Notice>}
     {!!submitted && !loading && !error && !results.length && <Notice title={`No results for “${submitted}”`} icon="search">Try a different spelling, a song title, or an artist's name.</Notice>}
-    {!loading && !error && !!results.length && <div className="browse-results" aria-live="polite">
-      <p className="browse-result-label">Results for <strong>{submitted}</strong></p>
+    {!!results.length && <div className="browse-results" aria-live="polite" aria-busy={loading}>
+      <p className="browse-result-label">Results for <strong>{resultsFor}</strong>{loading && ' · Updating'}</p>
       {topResult && !target && <section><SectionHeading title="Top result" /><div className="browse-top-result">{topResult.type === 'track'
-        ? <SongRows songs={[songFrom(topResult)]} singleTrack context={`Search: ${submitted}`} onPlay={() => remember({ query: submitted })} />
+        ? <SongRows songs={[songFrom(topResult)]} singleTrack context={`Search: ${resultsFor}`} onPlay={rememberPlay} />
         : <CatalogRow item={topResult} onOpen={open} />}</div></section>}
       {!!songs.length && <section><SectionHeading title="Songs" action={seeAll('track', songs.length, 5)} />{target ? <div className="song-list">{shownSongs.map(song => {
         const added = target.songs.some(item => item.id === song.id);
@@ -303,7 +322,7 @@ export function SearchScreen() {
             app.toast(`Added to ${target.name}.`);
           }} />
         </div>;
-      })}</div> : <SongRows songs={shownSongs} singleTrack context={`Search: ${submitted}`} onPlay={() => remember({ query: submitted })} />}</section>}
+      })}</div> : <SongRows songs={shownSongs} singleTrack context={`Search: ${resultsFor}`} onPlay={rememberPlay} />}</section>}
       {!!artists.length && <section><SectionHeading title={artists.length === 1 ? 'Artist' : 'Artists'} action={seeAll('artist', artists.length, 3)} />{(filter === 'all' ? artists.slice(0, 3) : artists).map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
       {!!albums.length && <section><SectionHeading title="Albums" action={seeAll('album', albums.length, 3)} />{(filter === 'all' ? albums.slice(0, 3) : albums).map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
       {!!playlists.length && <section><SectionHeading title="Playlists" action={seeAll('playlist', playlists.length, 3)} />{(filter === 'all' ? playlists.slice(0, 3) : playlists).map(item => <CatalogRow item={item} key={item.id} onOpen={open} />)}</section>}
@@ -366,7 +385,19 @@ function DownloadJobs({ query }: { query: string }) {
     try { method.call(native, id); app.refreshDownloads(); }
     catch (reason) { app.toast(message(reason)); }
   }
-  return <section className="browse-download-jobs"><SectionHeading title="In progress" />
+  function resumeAll() {
+    if (!native?.resumeDownload) return;
+    if (!app.online) { app.toast('Connect to the internet to resume downloads.'); return; }
+    if (app.prefs.wifiOnly && !native.isWifiConnected()) { app.toast('Downloads are set to Wi-Fi only. Connect to Wi-Fi to resume.'); return; }
+    const pending = app.jobs.filter(job => ['paused', 'failed'].includes(job.status) && !app.downloads.some(song => song.id === job.id));
+    let resumed = 0;
+    try { for (const job of pending) { native.resumeDownload(job.id); resumed++; } }
+    catch (reason) { app.toast(message(reason)); }
+    app.refreshDownloads();
+    if (resumed) app.toast(`Resuming ${resumed} downloads.`);
+  }
+  const resumable = app.jobs.some(job => ['paused', 'failed'].includes(job.status) && !app.downloads.some(song => song.id === job.id));
+  return <section className="browse-download-jobs"><SectionHeading title="In progress" action={resumable ? <button className="text-button" disabled={!native?.resumeDownload} onClick={resumeAll}>Resume all</button> : undefined} />
     {jobs.map(job => {
       const progress = Math.max(0, Math.min(99, Number.isFinite(job.progress) ? job.progress : 0));
       const label = job.status === 'queued' ? (app.prefs.wifiOnly ? 'Queued · Waiting for Wi-Fi or a free slot' : 'Queued')

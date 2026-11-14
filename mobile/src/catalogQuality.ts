@@ -21,6 +21,16 @@ const artistKey = (text: string) => searchText(text.replace(/\s*-\s*Topic$/i, ''
 const searchTitle = (text: string) => searchText(text.replace(/\b(?:official\s+(?:music\s+)?(?:audio|video|visuali[sz]er)|lyric(?:s|\s+video)?)\b/gi, ''));
 const versions = /\b(acoustic|live|remix|instrumental|slowed|sped|nightcore|karaoke|reverb)\b/g;
 
+export function tokenMatch(token: string, word: string): number {
+  if (word === token) return 8;
+  if (word.startsWith(token)) return 6;
+  if (token.length < 4 || Math.abs(token.length-word.length)>1) return 0;
+  // Bounded edit distance covers a missing/wrong character without matching unrelated short names.
+  let row = Array.from({length:word.length+1},(_,i)=>i);
+  for(let i=1;i<=token.length;i++) { const next=[i]; for(let j=1;j<=word.length;j++) next[j]=Math.min(next[j-1]+1,row[j]+1,row[j-1]+Number(token[i-1]!==word[j-1])); row=next; }
+  return row[word.length]<=1 ? 3 : 0;
+}
+
 export function cleanSongResults(items: SearchResult[], query = '', songIds: ReadonlySet<string> = new Set()): SearchResult[] {
   const normalizedQuery = searchText(query), tokens = normalizedQuery.split(' ').filter(Boolean);
   const artistMatches = items.filter((item): item is Extract<SearchResult, { type: 'artist' }> =>
@@ -31,10 +41,12 @@ export function cleanSongResults(items: SearchResult[], query = '', songIds: Rea
     const title = item.type === 'artist' ? artistKey(item.name) : searchTitle(item.title);
     const artists = item.type === 'track' || item.type === 'album' ? item.artists : [];
     const text = `${title} ${artists.map(artist => artistKey(artist.name)).join(' ')} ${item.type === 'playlist' ? searchText(item.author || '') : ''}`;
-    const matched = tokens.filter(token => text.includes(token)).length;
+    const words = text.split(' ').filter(Boolean);
+    const matches = tokens.map(token => Math.max(0,...words.map(word => tokenMatch(token, word))));
+    const matched = matches.filter(Boolean).length;
     const preferred = artists.some(artist => preferredIds.has(artist.id) || preferredNames.has(artistKey(artist.name)));
     const alternate = (title.match(versions) || []).some(version => !tokens.includes(version));
-    return matched * 6 + (tokens.length && matched === tokens.length ? 12 : 0)
+    return matches.reduce((a,b)=>a+b,0) + (tokens.length && matched === tokens.length ? 12 : 0)
       + (normalizedQuery && title === normalizedQuery ? 24 : 0) + (preferred ? 5 : 0)
       - (alternate ? 8 : 0) + (item.type === 'track' && item.musicVideoType === 'MUSIC_VIDEO_TYPE_ATV' ? 2 : 0);
   }

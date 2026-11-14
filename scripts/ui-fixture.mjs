@@ -64,7 +64,8 @@ export function installFixture() {
     request(id, encoded) {
       const options = JSON.parse(encoded), body = JSON.parse(options.body || '{}'); fixture.requests.push({ url: options.url, body });
       let data = {}, status = 200;
-      if (options.url.includes('/youtubei/v1/search')) { data = searchBody(body.query || ''); if (fixture.failSearch || /fixture failure/i.test(body.query || '')) status = 503; }
+      if (options.url.includes('/music/get_search_suggestions')) data = {contents:[{searchSuggestionRenderer:{suggestion:{runs:[{text:body.input+' music'}]}}}]};
+      else if (options.url.includes('/youtubei/v1/search')) { data = searchBody(body.query || ''); if (fixture.failSearch || /fixture failure/i.test(body.query || '')) status = 503; }
       else if (options.url.includes('/youtubei/v1/browse')) data = browseBody(body.browseId);
       else if (options.url.startsWith('https://musicbrainz.org/ws/2/artist/')) {
         if (fixture.failRegional) status = 503;

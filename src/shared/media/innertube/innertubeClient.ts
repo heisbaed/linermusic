@@ -1,6 +1,6 @@
 import { getCachedClientVisitorData, getClientVisitorData } from "@/shared/api/visitorSession";
 
-export type InnertubeEndpoint = "search" | "browse" | "next" | "player";
+export type InnertubeEndpoint = "search" | "browse" | "next" | "player" | "music/get_search_suggestions";
 
 export interface InnertubeProfile {
   clientName: string;
