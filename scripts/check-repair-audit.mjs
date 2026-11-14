@@ -49,6 +49,11 @@ try {
   await evaluate("document.querySelector('.browse-search').scrollTop=600");
   const geometry=await evaluate("(()=>{const e=document.querySelector('.browse-search input'),r=e.getBoundingClientRect();return {value:e.value,y:r.y,h:r.height}})()");
   assert(geometry.value==='Quiet motion'&&geometry.y>=0&&geometry.h>=40,'Search input lost state or moved out of view');
+  assert(await evaluate("getComputedStyle(document.querySelector('.browse-search-input')).backgroundColor==='rgba(0, 0, 0, 0)'"),'Search sticky wrapper paints a rectangular box');
+  await page.cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+  await evaluate("document.querySelector('.browse-search input').focus()");
+  await page.cdp('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+  assert(await evaluate("getComputedStyle(document.querySelector('.browse-search input')).outlineStyle==='none'"),'TV focus rectangle leaked onto the phone search input');
   await shot('audit-search');await layout();
   await click('.browse-search .search-field button[aria-label^="Clear"]');
   await wait("!!document.querySelector('.search-radios .shelf-item')");

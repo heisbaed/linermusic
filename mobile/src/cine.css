@@ -223,7 +223,7 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 }
 
 /* TV focus improvements for D-pad navigation */
-button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+.is-tv button:focus-visible, .is-tv a:focus-visible, .is-tv input:focus-visible, .is-tv [tabindex]:focus-visible {
   outline: 3px solid var(--accent, #00d9f2) !important;
   outline-offset: 4px !important;
   box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent) !important;
