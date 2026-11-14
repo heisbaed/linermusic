@@ -30,9 +30,9 @@ type Page = "home" | "experience" | "download" | "song" | "pair";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 const APK_URL =
-  "https://github.com/heisbaed/linermusic/releases/download/v0.1.2/Cine-Music-0.1.2.apk";
+  "https://github.com/heisbaed/linermusic/releases/download/v0.1.3/Cine-Music-0.1.3.apk";
 
-const APK_SHA256 = "5b428edf4c3ff0e0b8737b226e2311e19bb1245bcc239897ceb6b66b50bb7720";
+const APK_SHA256 = "4e56b92242b5ca3b1e9902a9669f81f4be6e59909a2a64fd96828bb4bb8001cf";
 function usePerformanceMode() {
   const [liteMode, setLiteMode] = useState(false);
 
@@ -667,7 +667,7 @@ function HomePage({ navigate }: { navigate: (page: Page, section?: string) => vo
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <span /> Android APK v0.1.2 · Available now
+            <span /> Android APK v0.1.3 · Available now
           </motion.div>
         </div>
         <StaticPhoneShowcase />
@@ -954,9 +954,9 @@ function ExperiencePage({ navigate }: { navigate: (page: Page, section?: string)
 const faqs = [
   [
     "Can I download Cine music right now?",
-    "Yes. Cine music v0.1.2 is available from the official GitHub release linked on this page. The current file is a debug-signed testing build.",
+    "Yes. Cine music v0.1.3 is available from the official GitHub release linked on this page. The current file is a debug-signed testing build.",
   ],
-  ["Which Android versions will be supported?", "Cine music v0.1.2 requires Android 8.0 or newer."],
+  ["Which Android versions will be supported?", "Cine music v0.1.3 requires Android 8.0 or newer."],
   [
     "What is an APK?",
     "An APK is an Android application package. It allows an app to be installed directly after you review its source, compatibility and permissions.",
@@ -1040,13 +1040,13 @@ function DownloadPage() {
               </span>
             </div>
             <p>
-              Cine music v0.1.2 brings streaming, background playback, offline downloads, search,
+              Cine music v0.1.3 brings streaming, background playback, offline downloads, search,
               playlists, synced lyrics, a refreshed dark-green identity and cloud sync to Android 8.0 and newer.
             </p>
             <a className="button primary download-ready" href={APK_URL}>
               <Download /> Download Cine music
             </a>
-            <span className="availability">v0.1.2 · 12.32 MB · Android 8.0+</span>
+            <span className="availability">v0.1.3 · 12.15 MB · Android 8.0+</span>
           </div>
           <div className="package-info">
             <div className="info-heading">
@@ -1056,11 +1056,11 @@ function DownloadPage() {
             <dl>
               <div>
                 <dt>Version</dt>
-                <dd>0.1.2</dd>
+                <dd>0.1.3</dd>
               </div>
               <div>
                 <dt>File size</dt>
-                <dd>12.32 MB</dd>
+                <dd>12.15 MB</dd>
               </div>
               <div>
                 <dt>Android</dt>
@@ -1092,7 +1092,7 @@ function DownloadPage() {
 
       <section className="release-highlights section-shell">
         <motion.div {...reveal} className="section-heading">
-          <span className="kicker">WHAT’S IN V0.1.2</span>
+          <span className="kicker">WHAT’S IN V0.1.3</span>
           <h2>
             Ready for your
             <br />
@@ -1215,7 +1215,7 @@ function Footer({ navigate }: { navigate: (page: Page, section?: string) => void
         <span>Cine music. Hear beyond the ordinary.</span>
         <span>Developed by Osborne's Digital Solutions · <a href="mailto:osbornesecards@gmail.com">osbornesecards@gmail.com</a></span>
 
-        <span>Android APK v0.1.2 · Available now</span>
+        <span>Android APK v0.1.3 · Available now</span>
       </div>
     </footer>
   );
@@ -1228,7 +1228,7 @@ function MobileAction() {
         <span className="live-dot" />
         <p>
           <strong>Cine music for Android</strong>
-          <small>v0.1.2 · 12.32 MB</small>
+          <small>v0.1.3 · 12.15 MB</small>
         </p>
       </div>
       <a href={APK_URL}>
