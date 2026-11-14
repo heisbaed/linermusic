@@ -1,152 +1,58 @@
-# CineMusic Feature Updates
+# Cine music — current checkpoint, 14 November 2026
 
-## Phase 1 playback fixes — 2026-11-08
+## Final update — supersedes the earlier device and release checkpoint below
 
-- [x] Replaced the dead Bluetooth broadcast receiver with `AudioDeviceCallback` route monitoring in `PlaybackService`.
-  - Pauses when a Bluetooth A2DP/SCO/LE audio output is removed while playback is active.
-  - Records the pending resume and resumes after a Bluetooth output is added again.
-  - Explicit pause, stop, track change, sleep fade, error, and manual resume clear the pending resume.
-- [x] Removed unused Bluetooth manifest permissions and `BluetoothConnectionReceiver.java`; route monitoring needs no Bluetooth permission.
-- [x] Added a 3-second volume fade-out for time-based sleep timers and restored volume on cancel/resume/stop.
-- [x] Fixed playback notifications so pause/resume updates the action icon and foreground state.
-- [x] Fixed widget play/pause to send `pause` while playing or loading instead of always sending `resume`.
-- [x] Fixed widget cover loading so it re-renders the full widget instead of replacing it with a cover-only view.
-- [x] Removed duplicate `super.onReceive` widget dispatch.
-- [x] Updated account and sleep-timer copy to reflect supported Bluetooth resume and sleep fade.
-- [x] 86 mobile tests pass; `tsc --noEmit`, Vite production build, and offline `assembleDebug` pass.
-- [x] Device verification: background playback continues after Home with `PlaybackState.STATE_PLAYING`; service remains foreground; sleep timer faded and paused after the requested interval; `cinemusic://song/dQw4w9WgXcQ` opened and played “Never Gonna Give You Up”; share links resolve to `https://cinemusic.web.app/song/<id>` and `/download`.
-- [ ] Physical Bluetooth disconnect/reconnect verification still needs a paired audio device. Widget placement/control verification still needs a home-screen widget instance.
+- Final published release: **v0.1.4**, versionCode **5**, `releases/Cine-Music-0.1.4.apk`, 12,152,918 bytes.
+- SHA-256: `36759e2f8a9782cdc09a2faa7beea74a2d896d2225e7b1e493c2a61073b35b0c`.
+- Source branch: `release/0.1.4`. Website and OTA manifest target 0.1.4. Intermediate 0.1.2/0.1.3 packages remain historical releases.
+- **Installed final APK on the physical phone** with `adb install -r`; verified versionCode 5 and versionName 0.1.4. App data was preserved and the existing signed-in library rendered.
+- Reproduced the search box twice: sticky wrapper painted a square background, and a global `!important` TV focus rule drew a rectangular outline only when the Android keyboard opened. Removed wrapper fill, disabled native input decoration, and scoped TV focus styling to `.is-tv`.
+- **Actual keyboard-open screenshot inspected**, `.device-test/phone-search-keyboard-final.png`: rounded field, no inner rectangle. Native input method confirmed visible. Added a rendered focus regression assertion.
+- Latest rendered fixture audit passes seven feature groups, including radio queue and selected heart/repeat states in four themes. Unit suite: 90 passed. Cloud sync: six race checks passed. Native phone instrumentation: eight checks passed.
+- Final live phone search for `Muziki Darassa` returned six visible song rows; opening Start song radio loaded **39 actual related tracks** with state ready. Captures: `.device-test/phone-live-search.png`, `.device-test/phone-live-radio.png`. This was real phone/catalog data, not fixture content.
+- OTA download was observed complete and integrity-verified, and Android's installation screen opened. That system installer remained on Installing during the test; final installation was completed with ADB. **Do not claim a completed permission-return/end-to-end OTA installation test.** The implemented updater still requires Android/user installation confirmation.
+- Full APK OTA is implemented; a separate JavaScript hot-update channel is not implemented. No exhaustive Google/Bluetooth/all-TV-device/all-source verification is claimed.
 
-## Phase 2 playback engine — 2026-11-08
+The remaining sections describe the earlier 0.1.2 checkpoint and are retained for traceability.
 
-- [x] Fixed widgets not appearing after placement: added `initialLayout`/`initialKeyguardLayout`, `widgetCategory`, removed the invalid 15-second `updatePeriodMillis`, compacted the layout for a 3x2 home-screen cell, switched periodic refreshes to broadcast updates, and draw the widget even if artwork loading cannot start.
-- [x] Added streamed audio-quality preference: Auto, Low, Normal, High. The resolver now prefers low-bandwidth, balanced, or highest available audio itags and keeps quality-specific URL caches.
-- [x] Added gapless preloading: while a track is near its end, the next queue item is resolved and prepared in a second `CinePlayer`; completion swaps to the prepared player immediately.
-- [x] Added crossfade from 0–12 seconds: the prepared track starts at zero volume shortly before the outgoing track ends, both volumes ramp across the overlap, then the outgoing player is released.
-- [x] Preloaded players stay muted and do not auto-start while preparing; volume and play-state settings now survive `CinePlayer` switching from local to ExoPlayer.
-- [x] Transition handling cancels safely on pause, stop, seek/manual track change, sleep timer, queue change, playback error, and service destruction. Equalizer state moves to the incoming player.
-- [x] Wired Gapless, Crossfade, and Streaming quality controls into Audio & playback, with live native setting updates and persisted preferences.
-- [x] 86 mobile tests pass; `tsc --noEmit`, Vite production build, and offline `assembleDebug` pass.
-- [ ] Device verification pending: the test device disconnected before install. Reinstall and verify widget placement, gapless/crossfade transitions, and quality selection.
+## Published artifacts
 
-## Summary of Changes
+- Latest release: https://github.com/heisbaed/linermusic/releases/tag/v0.1.2
+- APK: `releases/Cine-Music-0.1.2.apk`, 12,152,894 bytes, versionCode 3.
+- SHA-256: `5b428edf4c3ff0e0b8737b226e2311e19bb1245bcc239897ceb6b66b50bb7720`.
+- Website and OTA manifest deployed to https://cinemusic.web.app and `/ota/manifest.json`.
+- Source published on `release/0.1.2`, commit `fcf9413c9ddb828b7ddde9674996fbbdaccd1627`.
+- Local master also contains the repair commits. Direct master push was refused because the old unpublished website commits contain Git LFS objects disallowed on the public fork. A clean worktree `.release-source` publishes the complete source with the two small original PNGs as ordinary Git files.
 
-This update adds several requested features to CineMusic:
+## Implemented repairs and additions
 
-### 1. OTA Updates Channel
-- Created `OTAUpdateService.java` - Background service that checks for app updates
-- Created `OTAUpdateReceiver.java` - Broadcast receiver for update triggers
-- Updates are checked on app start and every 12 hours
-- On Wi-Fi, updates are automatically downloaded
-- Shows dialog to user when update is available
-- Downloads APK to cache directory
-- Requests unknown sources permission if needed
-- Uses FileProvider for secure APK installation
-- Notification shown during download with progress
+- Fixed missing lyrics scroll-container ref, follow-scroll coordinates, viewport-clipped transport controls, legacy string cache migration, shared lyric state reset, request timeouts, and rejection of unrelated fallback lyrics.
+- Sticky rounded Search field; flatter typed result lists; recent searches, genre browsing, and personalized song-radio discovery tiles.
+- Start song radio from song menus or Search's recent-listening shelf. Uses actual catalog radio recommendations, deduplicates recordings, displays loading/error/empty states, and starts a real playback queue.
+- Heart, shuffle and repeat use clearly distinct selected surfaces in each theme; Repeat All dot and Repeat One badge.
+- Removed competing JavaScript download queue/unbounded retries. Android owns persistent download jobs; paused/failed jobs wait for explicit Resume/Retry.
+- Restored permanent audio focus handling and proper native Stop cleanup.
+- Replaced broken service-context updater dialog with a foreground review activity and foreground download service. Verifies bounded size, SHA-256, app identity, increasing versionCode, and matching signing certificate. Supports Android 8+, FileProvider installer, and resuming after unknown-app permission return.
+- Updates are full APK OTA downloads, initiated from Help & about > Check for updates. No separate JavaScript hot-update channel is implemented.
 
-**New files:**
-- `android/app/src/main/java/com/heisbaed/cinemusic/OTAUpdateService.java`
-- `android/app/src/main/java/com/heisbaed/cinemusic/OTAUpdateReceiver.java`
-- `android/app/src/main/res/xml/file_paths.xml`
+## Verification actually completed
 
-### 2. Home Screen Widgets
-- Created `MusicWidgetProvider.java` - AppWidgetProvider for music control widget
-- Created `MusicWidgetService.java` - Background service for widget updates
-- Widget shows current track info (title, artist)
-- Play/pause, next, previous, and stop controls
-- Progress bar showing current playback position
-- Updates every 15 seconds
-- Resizable widget (min 250dp x 110dp)
+- 90 unit tests passed; mobile TypeScript/Vite and offline Android APK builds passed.
+- Seven rendered fixture checks: Search typing/scrolling, radio queue, Library destinations, lyrics seek/manual browsing/follow, four themes and selected controls, profile/settings routes, 320 dp layout. `.device-test/design-review/audit-report.json`, screenshots alongside.
+- Six isolated cloud-sync race checks passed against the Vite test harness (port 5179). `.device-test/cloud-ui-report.json`.
+- Eight checks passed on Galaxy S10+ `R58M34PT7SN`: trusted update source validation, same-version APK rejection, exact backend host validation, AES-GCM private storage, tamper rejection, interrupted download cleanup, deduplication, cancellation boundary, and native offline playback surviving Activity closure.
+- Bounded public-source probe returned valid audio samples; does not prove every catalog recording is playable.
 
-**New files:**
-- `android/app/src/main/java/com/heisbaed/cinemusic/MusicWidgetProvider.java`
-- `android/app/src/main/java/com/heisbaed/cinemusic/MusicWidgetService.java`
-- `android/app/src/main/res/layout/widget_music_control.xml`
-- `android/app/src/main/res/drawable/widget_background.xml`
-- `android/app/src/main/res/drawable/widget_progress.xml`
-- `android/app/src/main/res/drawable/playing_indicator.xml`
-- `android/app/src/main/res/xml/widget_info.xml`
+## Current physical-device work — do not claim complete
 
-### 3. Enhanced Song Sharing
-- Updated `songLinks.ts` with universal link support
-- Songs now share via `https://cinemusic.web.app/song/ID` (web) or `cinemusic://song/ID` (native)
-- Share text includes:
-  - Song title and artist
-  - Duration
-  - Direct song link
-  - App download link for recipients without the app
-- `getShareText()` function creates rich share text
-- `appShareLink()` provides direct app download link
+- The phone has a temporary updater test build named 0.1.2 but versionCode **2**. Final published APK has versionCode **3** and includes new Search/radio/selected-control styling.
+- An OTA download was observed progressing but no completed APK remained after disconnection. Phone reconnected; the final installer-permission-return and final focused Search screenshot are still being checked.
+- User says the search field still has a rectangular box bug. Old physical screenshot `.device-test/phone-search-focused.png` shows the underlined old input and old placeholder; that screenshot is not the published final screen. Inspect the actual final APK on phone before claiming this complaint resolved.
+- Phone was in Facebook on reconnection; avoid unrelated interaction. `scripts/open-phone-updates.mjs` opens the updater through the app bridge. `scripts/check-phone-search.mjs` focuses Search and captures its actual geometry/style without exposing account tokens.
+- Don't clear app data. Preserve authentication, library, saved songs and downloads.
 
-**Updated files:**
-- `mobile/src/songLinks.ts`
-- `mobile/src/Player.tsx`
-- `mobile/src/CineApp.tsx`
+## Honest limits
 
-### 4. App Sharing Link
-- Added deep link support for `https://cinemusic.web.app/song/*`
-- Added `getAppShareLink()` and `getSongShareLink()` to native bridge
-- When recipient has no app, they're directed to download page
-- Deep links properly handle both cinemusic:// and https:// schemes
+Google account selection, every Bluetooth/output device, every TV remote and every real catalog song have not been exhaustively verified. Fixture tests are isolated and not production data. Existing release remains debug-signed to preserve update compatibility with previously distributed builds.
 
-**Updated files:**
-- `android/app/src/main/java/com/heisbaed/cinemusic/MainActivity.java`
-
-### 5. Bluetooth Auto-Resume/Stop
-- Implemented in `PlaybackService.java` with `AudioDeviceCallback` output-route monitoring
-- Pauses playback when a Bluetooth audio output disconnects
-- Resumes playback when a Bluetooth output reconnects after a disconnect during playback
-- Uses the Android audio route without requesting Bluetooth permissions
-
-**Updated files:**
-- `android/app/src/main/java/com/heisbaed/cinemusic/PlaybackService.java`
-
-### 6. Background Playback (Music continues when app closed)
-- Updated `PlaybackService.java`:
-  - Changed to `START_STICKY` so service persists after app closes
-  - Don't stop foreground service on stop command - keeps notification for background playback
-  - Bluetooth pause/resume commands handled via broadcasts
-  - Audio focus loss no longer pauses playback (for background listening)
-
-**Updated files:**
-- `android/app/src/main/java/com/heisbaed/cinemusic/PlaybackService.java`
-
-### 7. Download Speed Optimization
-- Changed from single-thread to multi-thread executor (based on CPU cores)
-- Increased buffer size to 64KB for faster downloads
-- More frequent progress updates (every 200ms instead of 500ms)
-- Better connection handling
-
-**Updated files:**
-- `android/app/src/main/java/com/heisbaed/cinemusic/DownloadService.java`
-
-### Android Permissions Added
-- RECEIVE_BOOT_COMPLETED
-- REQUEST_INSTALL_PACKAGES
-
-### Android Components Added
-- OTAUpdateService
-- OTAUpdateReceiver
-- MusicWidgetProvider
-- MusicWidgetService
-- FileProvider for APK installation
-
-## Testing Notes
-
-1. **OTA Updates**: Need to host a manifest.json at `https://cinemusic.web.app/ota/manifest.json` with:
-   ```json
-   {
-     "version": "0.1.2",
-     "downloadUrl": "https://example.com/app.apk",
-     "fileSize": 12345678,
-     "releaseNotes": "Bug fixes and improvements"
-   }
-   ```
-
-2. **Widgets**: Add widget from home screen long-press > Widgets > Cine music
-
-3. **Bluetooth**: Pair Bluetooth device, play music, disconnect Bluetooth - music should pause. Reconnect - music should resume.
-
-4. **Sharing**: Use the share button in the player. The shared text includes both the song link and app download link.
-
-5. **Background Playback**: Start playing music, close the app. Music should continue playing. Check notification drawer for playback controls.
+Old historical notes were preserved in `PROGRESS-before-2026-11-14.md`.
