@@ -2,6 +2,20 @@ import type { SearchResult, Track } from '@/shared/contracts';
 import type { Song } from './types';
 
 const edits = /\b(slowed|sped[ -]?up|speed[ -]?up|nightcore|reverb|8d|bass[ -]?boosted|karaoke|tribute|ringtone|tiktok|fan[ -]?made|cover|parody|originally performed|made famous|no guide melody|dj mix|non[ -]?stop)\b/i;
+const uploadLabel = /^(?:official(?:\s+music)?\s+(?:video|audio|visuali[sz]er)|(?:official\s+)?lyric(?:s|\s+video)|music\s+video)(?:\s*(?:hd|hq|4k|1080p|720p))?$/i;
+
+export function displaySongTitle(title: string, artist = ''): string {
+  let clean = title.replace(/\(([^()]*)\)|\[([^\[\]]*)\]/g, (whole, round: string, square: string) =>
+    uploadLabel.test((round || square).trim()) ? '' : whole);
+  clean = clean.replace(/\s*(?:[-–—|]\s*)?(?:official(?:\s+music)?\s+(?:video|audio|visuali[sz]er)|official\s+lyric(?:s|\s+video))\s*(?:hd|hq|4k|1080p|720p)?\s*$/i, '');
+  const prefix = artist.split(',')[0].trim();
+  if (prefix && clean.toLocaleLowerCase().startsWith(prefix.toLocaleLowerCase())) {
+    const remainder = clean.slice(prefix.length);
+    if (/^\s*[-–—|]\s*\S/.test(remainder)) clean = remainder.replace(/^\s*[-–—|]\s*/, '');
+  }
+  return clean.replace(/\s+/g, ' ').replace(/\s*[-–—|]\s*$/, '').trim() || title;
+}
+
 export const isEditedUpload = (title: string) => edits.test(title);
 export const recordingTitle = (title: string) => title.toLocaleLowerCase()
   .replace(/\([^)]*\)|\[[^\]]*\]/g,' ').replace(/\b(official|audio|video|lyrics?|remastered|remaster)\b/g,' ')
@@ -10,7 +24,7 @@ export const recordingTitle = (title: string) => title.toLocaleLowerCase()
 export function isCatalogAudio(track: Track, fromSongs = false): boolean {
   // Source classification is stronger evidence than words such as "Cover" in
   // a real song title. Artwork shape and artist-channel IDs are not guarantees.
-  if (track.musicVideoType) return ['MUSIC_VIDEO_TYPE_ATV','MUSIC_VIDEO_TYPE_OMV'].includes(track.musicVideoType);
+  if (track.musicVideoType) return ['MUSIC_VIDEO_TYPE_ATV','MUSIC_VIDEO_TYPE_OMV','MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC'].includes(track.musicVideoType);
   if (fromSongs) return true;
   return !isEditedUpload(track.title) && Boolean(track.album?.id && track.artists.some(artist => artist.name && artist.name !== 'Unknown Artist'));
 }
@@ -46,9 +60,11 @@ export function cleanSongResults(items: SearchResult[], query = '', songIds: Rea
     const matched = matches.filter(Boolean).length;
     const preferred = artists.some(artist => preferredIds.has(artist.id) || preferredNames.has(artistKey(artist.name)));
     const alternate = (title.match(versions) || []).some(version => !tokens.includes(version));
+    const backingTrack = /\b(instrumental|karaoke|beat|beats|backing track|free praise beat)\b/.test(title)
+      && !/\b(instrumental|karaoke|beat|beats|backing)\b/.test(normalizedQuery);
     return matches.reduce((a,b)=>a+b,0) + (tokens.length && matched === tokens.length ? 12 : 0)
-      + (normalizedQuery && title === normalizedQuery ? 24 : 0) + (preferred ? 5 : 0)
-      - (alternate ? 8 : 0) + (item.type === 'track' && item.musicVideoType === 'MUSIC_VIDEO_TYPE_ATV' ? 2 : 0);
+      + (normalizedQuery && title === normalizedQuery ? 24 : 0) + (preferred ? 18 : 0)
+      - (alternate ? 8 : 0) - (backingTrack ? 32 : 0) + (item.type === 'track' && item.musicVideoType === 'MUSIC_VIDEO_TYPE_ATV' ? 2 : 0);
   }
   const seenIds = new Set<string>(), recordings = new Set<string>();
   return items.filter(item => item.type !== 'track' || isCatalogAudio(item, songIds.has(item.id)))

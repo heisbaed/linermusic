@@ -1,6 +1,6 @@
 {
   "name": "cine-music-mobile",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "qrcode-generator": "1.4.4",
     "react": "https://registry.npmjs.org/react/-/react-18.3.1.tgz",
     "react-dom": "https://registry.npmjs.org/react-dom/-/react-dom-18.3.1.tgz"
   },

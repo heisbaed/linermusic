@@ -32,8 +32,10 @@ final class OfflineVault {
     }
     private String filename(String id) throws Exception {
         byte[] digest = MessageDigest.getInstance("SHA-256").digest(id.getBytes(StandardCharsets.UTF_8));
-        StringBuilder result = new StringBuilder(); for (byte b : digest) result.append(String.format("%02x", b & 255));
-        return result.toString();
+        char[] result = new char[digest.length * 2];
+        char[] hex = "0123456789abcdef".toCharArray();
+        for (int index = 0; index < digest.length; index++) { result[index * 2] = hex[(digest[index] & 255) >>> 4]; result[index * 2 + 1] = hex[digest[index] & 15]; }
+        return new String(result);
     }
     private File audio(String id) throws Exception { return new File(directory, filename(id) + ".cine"); }
     private File metadata(String id) throws Exception { return new File(directory, filename(id) + ".json"); }
@@ -92,7 +94,6 @@ final class OfflineVault {
     }
     synchronized JSONArray list() {
         JSONArray result = new JSONArray(); File[] files = directory.listFiles((dir, name) -> name.endsWith(".json"));
-        long totalStorage = 0;
         if (files != null) for (File file : files) {
             try {
                 JSONObject track = new JSONObject(new String(java.nio.file.Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8));
@@ -100,23 +101,11 @@ final class OfflineVault {
                     long audioSize = audio(track.getString("id")).length();
                     long metadataSize = file.length();
                     long storageBytes = audioSize + metadataSize;
-                    totalStorage += storageBytes;
                     track.put("storageBytes", storageBytes);
                     track.put("audioBytes", audioSize);
                     result.put(track);
                 }
             } catch (Exception ignored) { /* A damaged metadata file must not hide the rest of the library. */ }
-        }
-        // Add storage summary as first element if there are downloads
-        if (result.length() > 0) {
-            try {
-                JSONObject summary = new JSONObject();
-                summary.put("totalTracks", result.length());
-                summary.put("totalStorageBytes", totalStorage);
-                summary.put("maxStorageBytes", MAX_BYTES);
-                summary.put("usedPercent", totalStorage * 100 / MAX_BYTES);
-                result.put(0, summary);
-            } catch (Exception ignored) {}
         }
         return result;
     }

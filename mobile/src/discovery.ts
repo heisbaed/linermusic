@@ -4,6 +4,7 @@ import type { SearchAlbumItem } from '@/shared/contracts';
 import { searchRaw } from '@/shared/media/innertube/innertubeSearch';
 import { innertubeCatalog } from '@/shared/media/innertube/innertubeCatalog';
 import { isEditedUpload } from './catalogQuality';
+import { artistIdentity } from './smartFeatures';
 
 const cache=new Map<string,SearchAlbumItem[]>();
 const nameKey=(name:string)=>name.toLocaleLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
@@ -12,15 +13,6 @@ const seeds:Record<string,string[]>={
  rnb:['SZA','The Weeknd'],pop:['Dua Lipa','Ed Sheeran'],'hip-hop':['Kendrick Lamar','J. Cole'],gospel:['CeCe Winans','Mercy Chinwo'],
  reggae:['Bob Marley & The Wailers','Chronixx'],rock:['Coldplay','Linkin Park'],jazz:['Norah Jones','Gregory Porter'],
 };
-function artworkWorks(url:string,signal:AbortSignal):Promise<boolean>{
- return new Promise(resolve=>{
-  const image=new Image();let done=false;
-  const finish=(ok:boolean)=>{if(done)return;done=true;clearTimeout(timer);signal.removeEventListener('abort',cancel);image.onload=null;image.onerror=null;resolve(ok);};
-  const cancel=()=>finish(false);const timer=setTimeout(()=>finish(false),6000);
-  image.onload=()=>finish(image.naturalWidth>0);image.onerror=cancel;signal.addEventListener('abort',cancel,{once:true});
-  if(signal.aborted)finish(false);else image.src=url;
- });
-}
 export function useDiscovery(active:boolean, edition = Math.floor(Date.now() / 3_600_000)){
  const app=useApp();const {artists,taste}=app.account.library;
  const names=[...new Set(taste.genres.flatMap(g=>seeds[g]||[]))];
@@ -30,8 +22,8 @@ export function useDiscovery(active:boolean, edition = Math.floor(Date.now() / 3
   .map(song => ({ id: song.artistId!, name: song.artist.split(', ')[0] }));
  const pool = [...new Map([...artists, ...listening].map(artist => [artist.id, artist])).values()];
  const rotate = <T,>(values:T[]) => { const offset = values.length ? edition % values.length : 0; return [...values.slice(offset), ...values.slice(0,offset)]; };
- const selected = rotate(pool).slice(0,4);
- const seedNames = rotate(names).slice(0,2);
+ const selected = rotate(pool.filter(artist => !app.smart.hidden.artists.some(hidden => hidden.id === artist.id || artistIdentity(hidden.name) === artistIdentity(artist.name)))).slice(0,4);
+ const seedNames = rotate(names.filter(name => !app.smart.hidden.artists.some(hidden => artistIdentity(hidden.name) === artistIdentity(name)))).slice(0,2);
  const key=JSON.stringify([app.account.user?.localId, selected.map(a=>[a.id,a.name]), seedNames, edition]);
  const [feed,setFeed]=useState({key,items:cache.get(key)||[]});const [loading,setLoading]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0);
  useEffect(()=>{
@@ -60,8 +52,7 @@ export function useDiscovery(active:boolean, edition = Math.floor(Date.now() / 3
    const lists=releases.flatMap(r=>r.status==='fulfilled'?[r.value]:[]);
    const interleaved=Array.from({length:5},(_,i)=>lists.flatMap(list=>list[i]?[list[i]]:[])).flat();
    const unique=[...new Map(interleaved.map(a=>[a.id,a])).values()].sort((a,b)=>(b.year||0)-(a.year||0)).slice(0,20);
-   const checked=await Promise.all(unique.map(async album=>await artworkWorks(album.cover!.url,signal)?album:null));
-   const items=checked.filter((a):a is SearchAlbumItem=>a!==null);
+   const items=unique;
    if(signal.aborted)throw new DOMException('Cancelled','AbortError');
    if(!items.length)throw new Error('Artist releases could not load. Try again or choose artists in Music preferences.');
    if(cache.size>8)cache.clear();cache.set(key,items);return items;

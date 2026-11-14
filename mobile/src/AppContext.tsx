@@ -2,10 +2,11 @@ import { createContext, useContext, type Dispatch, type SetStateAction } from 'r
 import type { CineUser } from './FirebaseAuth';
 import type { PlayerState, Playlist, Song } from './types';
 import type { MusicTaste } from './musicPreferences';
+import type { useSmartFeatures } from './useSmartFeatures';
 
 export type Theme = 'default' | 'dark' | 'green' | 'light';
 export type Tab = 'home' | 'search' | 'explore' | 'library';
-export type Collection = 'favorites' | 'downloads' | 'playlists' | 'albums' | 'artists';
+export type Collection = 'favorites' | 'recent' | 'downloads' | 'playlists' | 'albums' | 'artists';
 export type ShuffleMode = 'off' | 'on' | 'smart';
 export type Utility = 'sound' | 'devices' | 'timer';
 export type Route =
@@ -17,8 +18,8 @@ export type Route =
   | { kind: 'account'; page: string };
 
 export const TV_THEMES: { id: Theme; name: string; description: string; background: string; surface: string; accent: string }[] = [
-  { id: 'default', name: 'Pink glass', description: 'Liquid pink glass with rose highlights.', background: '#FFF3F7', surface: '#FFFAFD', accent: '#A82D65' },
-  { id: 'green', name: 'Dark green', description: 'Deep forest glass with luminous green accents.', background: '#071F19', surface: '#12392E', accent: '#CBF595' },
+  { id: 'default', name: 'Pink Liquid Glass', description: 'Liquid pink glass with rose highlights.', background: '#FFF3F7', surface: '#FFFAFD', accent: '#A82D65' },
+  { id: 'dark', name: 'Dark cinema', description: 'Dark surfaces with rose highlights.', background: '#170F17', surface: '#3C2637', accent: '#FFA5CB' },
 ];
 
 export interface SavedArtist { id: string; name: string; cover?: string }
@@ -66,6 +67,9 @@ export interface DownloadJob {
   status: 'queued' | 'downloading' | 'paused' | 'failed';
   progress: number;
   error?: string;
+  bytes?: number;
+  totalBytes?: number;
+  bytesPerSecond?: number;
 }
 export interface PlaybackController {
   player: PlayerState;
@@ -73,7 +77,7 @@ export interface PlaybackController {
   context: string;
   shuffle: ShuffleMode;
   repeat: 'off' | 'all' | 'one';
-  play: (song: Song, list?: Song[], context?: string) => Promise<void>;
+  play: (song: Song, list?: Song[], context?: string, positionMs?: number) => Promise<void>;
   playAll: (songs: Song[], random?: boolean, context?: string) => void;
   toggle: () => void;
   next: () => void;
@@ -87,6 +91,7 @@ export interface PlaybackController {
   setPlayerLyrics?: (lyrics: { text: string } | null) => void;
 }
 export interface AppState {
+  smart: ReturnType<typeof useSmartFeatures>;
   account: AccountState;
   playback: PlaybackController;
   theme: Theme;
@@ -105,6 +110,7 @@ export interface AppState {
   downloads: Song[];
   jobs: DownloadJob[];
   download: (song: Song) => void;
+  downloadMany: (songs: Song[]) => Promise<void>;
   removeDownload: (id: string) => void;
   refreshDownloads: () => void;
   toggleFavorite: (song: Song) => void;
@@ -122,7 +128,7 @@ export const THEMES: { id: Theme; name: string; description: string; background:
 ];
 
 export function tvThemeId(value: unknown): Theme {
-  return value === 'green' ? 'green' : 'default';
+  return value === 'dark' ? 'dark' : 'default';
 }
 
 export const AppContext = createContext<AppState | null>(null);

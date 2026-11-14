@@ -55,7 +55,7 @@ final class AudioDownloadStream extends InputStream {
                 return;
             } catch (IOException error) {
                 check();
-                if (error instanceof InterruptedIOException) throw error;
+                if (error instanceof InterruptedIOException && !(error instanceof SocketTimeoutException)) throw error;
                 attempt++;
                 if (attempt >= MAX_RECONNECT_ATTEMPTS) {
                     throw new IOException("Download connection failed after " + attempt + " attempts: " + error.getMessage(), error);
@@ -156,7 +156,7 @@ final class AudioDownloadStream extends InputStream {
                 return read;
             } catch (IOException error) {
                 check();
-                if (error instanceof InterruptedIOException) throw error;
+                if (error instanceof InterruptedIOException && !(error instanceof SocketTimeoutException)) throw error;
 
                 retries++;
                 if (retries > MAX_RECONNECT_ATTEMPTS) {

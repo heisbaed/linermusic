@@ -1,6 +1,11 @@
+import './cine.css';
+import './design.css';
+import './liquid.css';
+import { consumePhoneTvLink, PhoneTvLink } from './TvAuth';
+import type { TvLink } from '@/shared/tvSession';
 import { useEffect, useRef, useState } from 'react';
 
-import { AppContext, THEMES, tvThemeId, useApp, type AppState, type Preferences, type Route, type Tab, type Theme, type Utility } from './AppContext';
+import { AppContext, THEMES, useApp, type AppState, type Preferences, type Route, type Tab, type Theme, type Utility } from './AppContext';
 
 import { Icon } from './Icons';
 
@@ -22,6 +27,7 @@ import { loadSaved, save, toggleFavorite } from './library';
 import { useAccount } from './useAccount';
 
 import { usePlayback } from './usePlayback';
+import { useSmartFeatures } from './useSmartFeatures';
 
 import { useDownloads } from './useDownloads';
 
@@ -30,14 +36,6 @@ import { HomeScreen, SearchScreen, LibraryScreen, CollectionScreen, CatalogScree
 import { AccountScreen } from './Account';
 
 import { FirebaseAuth } from './FirebaseAuth';
-import { isTvEnvironment } from './spatialNav';
-import { TvShell } from './TvLayout';
-import { TvHomeScreen } from './TvHomeScreen';
-import { TvSearchScreen } from './TvSearchScreen';
-import { TvExploreScreen } from './TvExploreScreen';
-import { TvLibraryScreen } from './TvLibraryScreen';
-import { TvCatalogScreen, TvPlaylistScreen, TvCollectionScreen, TvAccountScreen } from './TvRoutes';
-import { TvPlayer } from './TvPlayer';
 
 import { OnboardingScreen } from './Onboarding';
 
@@ -100,12 +98,11 @@ export default function CineApp() {
 
   const account = useAccount();
 
-  const isTv = isTvEnvironment();
+  const [tvLink, setTvLink] = useState<TvLink | null>(consumePhoneTvLink);
   const [theme, setThemeState] = useState<Theme>(() => {
-    if (isTv) return tvThemeId(loadSaved<Theme>('cine-tv-theme-v1', 'default'));
     const migrated = loadSaved('pink-default-v1', false); const value = migrated ? loadSaved<Theme>('cine-theme-v2', 'default') : 'default'; if (!migrated) { save('cine-theme-v2', 'default'); save('pink-default-v1', true); } return THEMES.some(item => item.id === value) ? value : 'default';
   });
-  const setTheme = (value: Theme) => setThemeState(isTv ? tvThemeId(value) : value);
+  const setTheme = (value: Theme) => setThemeState(value);
 
   const [prefs, setPrefs] = useState(initialPreferences);
 
@@ -133,7 +130,8 @@ export default function CineApp() {
 
   const downloads = useDownloads(prefs, toast);
 
-  const playback = usePlayback({ downloads: downloads.downloads, prefs, toast, onRecent: song => { if (account.user?.emailVerified && !prefs.privateListening) account.setLibrary(old => ({ ...old, recent: [song, ...old.recent.filter(item => item.id !== song.id)].slice(0, 40) })); } });
+  const playback = usePlayback({ downloads: downloads.downloads, prefs, toast, owner: account.user?.localId || '', favorites: account.library.favorites, recent: account.library.recent, onRecent: song => { if (account.user?.emailVerified && !prefs.privateListening) account.setLibrary(old => ({ ...old, recent: [song, ...old.recent.filter(item => item.id !== song.id)].slice(0, 40) })); } });
+  const smart = useSmartFeatures(account.user, prefs.privateListening, playback);
 
   const verified = account.user?.emailVerified === true;
 
@@ -158,6 +156,15 @@ export default function CineApp() {
   const reduced = prefs.reducedMotion === 'on' || (prefs.reducedMotion === 'system' && deviceReducedMotion);
 
   const songLinkTask=useRef<AbortController|null>(null);
+  useEffect(() => {
+    if (!canAccess) return;
+    const open = () => {
+      if (!playback.player.track || !window.CineAndroid?.consumePlayerOpen?.()) return;
+      setSheet(null); setLyricsOpen(false); setPlayerOpen(true);
+    };
+    open();
+    return subscribe(event => { if (event.type === 'openPlayer') open(); });
+  }, [canAccess, playback.player.track?.id]);
 
   useEffect(()=>{
 
@@ -264,7 +271,10 @@ export default function CineApp() {
 
     }
 
-    const unsubscribe = subscribe(event => { if (event.type === 'authLink') openAuth(); });
+    const unsubscribe = subscribe(event => {
+      if (event.type === 'authLink') openAuth();
+      if (event.type === 'tvLink') { const link = consumePhoneTvLink(); if (link) setTvLink(link); }
+    });
 
     window.addEventListener('cine:open-auth', openAuth);
 
@@ -341,15 +351,15 @@ export default function CineApp() {
   }, [account.user?.localId]);
 
   useEffect(() => {
-    save(isTv ? 'cine-tv-theme-v1' : 'cine-theme-v2', isTv ? tvThemeId(theme) : theme);
-    const themes = isTv ? [THEMES.find(x=>x.id==='default')!, THEMES.find(x=>x.id==='green')!] : THEMES;
+    save('cine-theme-v2', theme);
+    const themes = THEMES;
     const background = themes.find(item => item.id === theme)?.background || themes[0].background;
     document.body.style.backgroundColor = background;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', background);
-    window.CineAndroid?.setSystemBars(background, theme === 'light' || (isTv && theme === 'default'));
-  }, [theme, isTv]);
+    window.CineAndroid?.setSystemBars(background, theme === 'light');
+  }, [theme]);
 
-  useEffect(() => { save('preferences-v3', prefs); if(!isTv) if(!isTv) save('wifi-only-downloads', prefs.wifiOnly); }, [prefs,isTv]);
+  useEffect(() => { save('preferences-v3', prefs); save('wifi-only-downloads', prefs.wifiOnly); }, [prefs]);
 
   useEffect(() => { control('setgapless', prefs.gapless ? 1 : 0); control('setcrossfade', prefs.crossfadeSeconds); control('setquality', { auto: 0, low: 1, normal: 2, high: 3 }[prefs.audioQuality]); }, [prefs.gapless, prefs.crossfadeSeconds, prefs.audioQuality]);
 
@@ -369,9 +379,9 @@ export default function CineApp() {
 
   const app: AppState = {
 
-    account, playback, theme, setTheme, prefs, updatePrefs: patch => setPrefs(old => ({ ...old, ...patch })), tab, goTab, openRoute, back,
+    account, playback, smart, theme, setTheme, prefs, updatePrefs: patch => setPrefs(old => ({ ...old, ...patch })), tab, goTab, openRoute, back,
 
-    openPlayer: () => { if (isTv) { window.dispatchEvent(new Event('cine:tv-player-open')); return; } if (playback.player.track) { setLyricsOpen(false); setPlayerOpen(true); } },
+    openPlayer: () => { if (playback.player.track) { setLyricsOpen(false); setPlayerOpen(true); } },
 
     openMenu: song => setSheet({ kind: 'menu', song }), openUtility: utility => setSheet({ kind: utility }), toast, online, ...downloads,
 
@@ -385,14 +395,11 @@ export default function CineApp() {
 
   const profileName = account.library.profile.name || account.user?.displayName || 'Guest';
 
-  return <AppContext.Provider value={app}><PlayerLyricsSync /><div className={`cine-app ${isTv ? 'is-tv tv-layout' : ''}`} data-theme={theme} data-reduced-motion={reduced} data-native={Boolean(window.CineAndroid)}>
-    {!verified ? <main className={`screen account-screen auth-screen auth-gate ${isTv ? 'tv-auth-gate' : ''}`} aria-label="Sign in to Cine music"><FirebaseAuth initialUser={account.user} onClose={() => window.CineAndroid?.background()} onSuccess={user => { account.signIn(user); setRoutes([]); setTab('home'); setSheet(null); setPlayerOpen(false); setLyricsOpen(false); }} /></main>
+  return <AppContext.Provider value={app}><PlayerLyricsSync /><div className="cine-app" data-theme={theme} data-reduced-motion={reduced} data-native={Boolean(window.CineAndroid)}>
+    {!verified ? <main className="screen account-screen auth-screen auth-gate" aria-label="Sign in to Cine music"><FirebaseAuth initialUser={account.user} onClose={() => window.CineAndroid?.background()} onSuccess={user => { account.signIn(user); setRoutes([]); setTab('home'); setSheet(null); setPlayerOpen(false); setLyricsOpen(false); }} /></main>
+      : tvLink && account.user ? <PhoneTvLink key={tvLink.id} link={tvLink} user={account.user} onClose={() => setTvLink(null)} />
       : !account.ready ? <main className="screen account-hydration" aria-label="Opening account library"><Brand /><span className="spinner" aria-hidden="true" /><h1>Bringing your music home.</h1><p role="status">{account.syncStatus}</p><p>We are checking your saved preferences before opening Home. Your account stays signed in if the connection drops.</p><button className="account-primary" onClick={account.retrySync}>Retry connection</button><button className="text-button" onClick={account.signOut}>Use another account</button></main>
-      : !account.library.taste.completed ? <OnboardingScreen key={account.user!.localId} /> : isTv ? <>
-        <TvShell tab={tab} routes={routes} renderRoute={(route) => renderRoute(route, true)} onMenu={song => setSheet({ kind: 'menu', song })} />
-        <TvPlayer />
-        {sheet?.kind === 'queue' ? <QueueSheet onClose={() => setSheet(null)} /> : sheet?.kind === 'menu' ? <SongMenu song={sheet.song} lyrics={playback.playerLyrics ?? undefined} onClose={() => setSheet(null)} openUtility={utility => setSheet({ kind: utility })} /> : sheet && <UtilitySheet utility={sheet.kind} onClose={() => setSheet(null)} />}
-      </> : <>
+      : !account.library.taste.completed ? <OnboardingScreen key={account.user!.localId} /> : <>
     <div className="app-viewport" ref={viewport} aria-hidden={playerOpen || Boolean(sheet) ? true : undefined}>
       {!routes.length && <header className="app-header"><button className="brand-profile" aria-label="Open profile" onClick={() => openRoute({ kind: 'account', page: 'profile' })}><Brand /></button><div className="header-end">{!online && <button className="offline-tag" onClick={() => openRoute({ kind: 'account', page: 'offline' })}>Offline</button>}<ThemeEdition /></div></header>}
       <main className="app-main" aria-label="Music content">
@@ -414,14 +421,7 @@ export default function CineApp() {
 
 
 
-function renderRoute(route: Route, isTv = false) {
-  if (isTv) {
-    if (route.kind === 'collection') return <TvCollectionScreen collection={route.collection} />;
-    if (route.kind === 'catalog') return <TvCatalogScreen type={route.type} id={route.id} />;
-    if (route.kind === 'playlist') return <TvPlaylistScreen id={route.id} />;
-    if (route.kind === 'playlist-form' || route.kind === 'playlist-import') return <TvAccountScreen page="profile" />;
-    return <TvAccountScreen page={route.page} />;
-  }
+function renderRoute(route: Route) {
   if (route.kind === 'collection') return <CollectionScreen collection={route.collection} />;
   if (route.kind === 'catalog') return <CatalogScreen type={route.type} id={route.id} />;
   if (route.kind === 'playlist') return <PlaylistScreen id={route.id} />;

@@ -3,6 +3,7 @@ package com.heisbaed.cinemusic;
 import android.app.*;
 import android.content.*;
 import android.graphics.BitmapFactory;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.media.*;
 import android.media.audiofx.Equalizer;
@@ -41,6 +42,16 @@ public class PlaybackService extends Service {
     private JSONObject track;
     private String status = "idle";
     private String error = "";
+    private int recoveryAttempts;
+    private boolean tv;
+    private long lastTvPosition;
+    private Runnable tvRetry;
+    private Runnable tvStall;
+    private Bitmap artwork;
+    private String artworkAddress = "";
+    private String metadataKey = "";
+    private long lastWidgetUpdate;
+    private String lastWidgetState = "";
     private float crossfadeDuration = 0; // in seconds, 0 = disabled
     private boolean crossfadeEnabled = false;
     private boolean gaplessEnabled = true;
@@ -119,6 +130,9 @@ public class PlaybackService extends Service {
 
     @Override public void onCreate() {
         super.onCreate(); instance = this;
+        UiModeManager mode = (UiModeManager) getSystemService(UI_MODE_SERVICE);
+        tv = getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
+            || (mode != null && mode.getCurrentModeType() == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION);
         android.content.SharedPreferences audioPreferences = getSharedPreferences("cine_audio", MODE_PRIVATE);
         equalizerEnabled = audioPreferences.getBoolean("eq_enabled", false);
         try { JSONArray storedBands = new JSONArray(audioPreferences.getString("eq_bands", "[0,0,0,0,0]")); for (int i = 0; i < 5 && i < storedBands.length(); i++) equalizerBands[i] = Math.max(-12, Math.min(12, storedBands.getInt(i))); } catch (Exception ignored) {}
@@ -151,6 +165,8 @@ public class PlaybackService extends Service {
             @Override public void onSeekTo(long position) { command("seek", position); }
         });
         session.setActive(true);
+        session.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
+        session.setSessionActivity(PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class).putExtra("openPlayer", true), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         NotificationManager notifications = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         notifications.createNotificationChannel(new NotificationChannel("playback", "Music playback", NotificationManager.IMPORTANCE_LOW));
         IntentFilter filter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
@@ -187,6 +203,7 @@ public class PlaybackService extends Service {
             startForeground(1, notification());
             try {
                 JSONObject data = new JSONObject(intent.getStringExtra("track"));
+                recoveryAttempts = 0;
                 if (data.has("quality")) setAudioQuality(data.optString("quality", "auto"));
                 if (data.has("gapless")) setGapless(data.optBoolean("gapless", true));
                 if (data.has("crossfadeSeconds")) setCrossfade(data.optDouble("crossfadeSeconds", 0) > 0, (float)data.optDouble("crossfadeSeconds", 0));
@@ -207,6 +224,9 @@ public class PlaybackService extends Service {
         return START_STICKY;
     }
     private void load(JSONObject next) throws Exception {
+        cancelTvRecovery();
+        if (track == null || !track.optString("id").equals(next.optString("id")) || (tv && !next.optBoolean("tvRetry"))) recoveryAttempts = 0;
+        next.remove("tvRetry");
         cancelSleepFade();
         cancelCrossfade();
         cancelPreload();
@@ -214,6 +234,10 @@ public class PlaybackService extends Service {
         resumeAfterBluetoothDisconnect = false; lastRoutePauseAt = 0;
         if (sleepTrackId != null && !sleepTrackId.equals(next.optString("id"))) clearSleepTimer();
         track = next; error = ""; status = "loading"; prepared = false; playWhenReady = true; generation++;
+        final long resumePosition = Math.max(0, next.optLong("startPositionMs"));
+        if (tv) lastTvPosition = resumePosition;
+        next.remove("startPositionMs");
+        loadArtwork(next);
         loadStartedAt = SystemClock.elapsedRealtime(); sourceResolvedMs = 0; preparedMs = 0;
         cancelLoad();
         final int epoch = generation;
@@ -226,12 +250,15 @@ public class PlaybackService extends Service {
             if (epoch != generation) return;
             preparedMs = SystemClock.elapsedRealtime() - loadStartedAt;
             prepared = true; status = "paused";
+            if (tvStall != null) handler.removeCallbacks(tvStall);
+            if (resumePosition > 0) media.seekTo(Math.min(resumePosition, Math.max(0, media.getDuration() - 1000)), MediaPlayer.SEEK_CLOSEST);
             applyEqualizer();
             if (playWhenReady) command("resume", 0); else { publish(); updateNotification(); }
         });
         bindActiveCallbacks(media, epoch);
+        if (tv) watchTvBuffer(epoch, 22_000);
         publish(); updateNotification();
-        if (new OfflineVault(this).contains(next.getString("id"))) {
+        if (!tv && new OfflineVault(this).contains(next.getString("id"))) {
             next.put("offline", true);
             String id = next.getString("id");
             loadTask = loader.submit(() -> {
@@ -249,7 +276,7 @@ public class PlaybackService extends Service {
             loadTask = loader.submit(() -> {
                 try {
                     String url = next.optString("url");
-                    if (url.isEmpty()) url = StreamResolver.resolve(next.getString("id"), audioQuality, () -> epoch != generation || Thread.currentThread().isInterrupted(), connection -> {
+                    if (url.isEmpty()) url = StreamResolver.resolve(next.getString("id"), tv && recoveryAttempts > 0 ? "low" : audioQuality, () -> epoch != generation || Thread.currentThread().isInterrupted(), connection -> {
                         resolvingConnection.set(connection);
                         if (epoch != generation || Thread.currentThread().isInterrupted()) {
                             if (resolvingConnection.compareAndSet(connection, null)) connection.disconnect();
@@ -263,9 +290,9 @@ public class PlaybackService extends Service {
                         try {
                             Map<String, String> headers = new HashMap<>(); headers.put("User-Agent", "Mozilla/5.0"); headers.put("Referer", "https://music.youtube.com/");
                             media.setDataSource(this, android.net.Uri.parse(resolved), headers); media.prepareAsync();
-                        } catch (Exception error) { fail("Could not open this song. Please try again."); }
+                        } catch (Exception error) { if (tv) recoverStream(); else fail("Could not open this song. Please try again."); }
                     });
-                } catch (Exception error) { handler.post(() -> { if (epoch == generation) fail(error.getMessage() == null ? "This song is unavailable" : error.getMessage()); }); }
+                } catch (Exception error) { handler.post(() -> { if (epoch == generation) { if (tv) recoverStream(); else fail(error.getMessage() == null ? "This song is unavailable" : error.getMessage()); } }); }
                 finally { HttpURLConnection connection = resolvingConnection.getAndSet(null); if (connection != null) connection.disconnect(); }
             });
         }
@@ -274,11 +301,11 @@ public class PlaybackService extends Service {
         media.setOnCompletionListener(value -> { if (epoch == generation) completeCurrent(); });
         media.setOnSeekCompleteListener(value -> { if (epoch == generation) publish(); });
         media.addOnRoutingChangedListener(router -> { if (epoch == generation) publish(); }, handler);
-        media.setOnErrorListener((value, what, extra) -> { if (epoch == generation) fail("Playback failed. Try this track again or play a saved download."); return true; });
+        media.setOnErrorListener((value, what, extra) -> { if (epoch == generation) recoverStream(); return true; });
         media.setOnInfoListener((value, what, extra) -> {
             if (epoch != generation) return false;
-            if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) { status = playWhenReady ? "loading" : "paused"; publish(); }
-            if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) { status = isPlaying() ? "playing" : "paused"; publish(); }
+            if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) { status = playWhenReady ? "loading" : "paused"; if (tv && playWhenReady) watchTvBuffer(epoch, 14_000); publish(); }
+            if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) { if (tvStall != null) handler.removeCallbacks(tvStall); status = isPlaying() ? "playing" : "paused"; publish(); }
             return false;
         });
     }
@@ -300,7 +327,7 @@ public class PlaybackService extends Service {
         long duration = 0, position = 0;
         try { duration = player.getDuration(); position = player.getCurrentPosition(); } catch (Exception ignored) {}
         if (duration > 0) {
-            float window = crossfade ? Math.max(15f, crossfadeDuration + 5f) : 15f;
+            float window = crossfade ? Math.max(25f, crossfadeDuration + 10f) : 25f;
             if (duration - position > window * 1000f) return;
         }
         JSONObject candidate;
@@ -339,7 +366,7 @@ public class PlaybackService extends Service {
     }
     private void attachPreloadSource(CinePlayer media, JSONObject next, int epoch) {
         try {
-            if (new OfflineVault(this).contains(next.getString("id"))) {
+            if (!tv && new OfflineVault(this).contains(next.getString("id"))) {
                 next.put("offline", true);
                 String id = next.getString("id");
                 preloadTask = loader.submit(() -> {
@@ -404,6 +431,7 @@ public class PlaybackService extends Service {
         generation++;
         int epoch = generation;
         player = incoming; track = incomingTrack; prepared = true; playWhenReady = shouldPlay;
+        recoveryAttempts = 0; loadArtwork(track);
         sourceResolvedMs = sourceResolved; preparedMs = preparedTime;
         loadStartedAt = SystemClock.elapsedRealtime() - Math.max(0, preparedTime);
         bindActiveCallbacks(incoming, epoch);
@@ -632,7 +660,7 @@ public class PlaybackService extends Service {
                     status = "paused"; publish(); updateNotification(); audio.abandonAudioFocusRequest(focus); break;
                 case "resume":
                     cancelSleepFade(); playWhenReady = true;
-                    if (!prepared && player == null && track != null) { load(new JSONObject(track.toString())); return; }
+                    if (!prepared && player == null && track != null) { recoveryAttempts = 0; load(new JSONObject(track.toString())); return; }
                     if (prepared && player != null) {
                         if (audio.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) { status = "paused"; break; }
                         player.start(); status = "playing"; publish(); startForeground(1, notification());
@@ -669,19 +697,30 @@ public class PlaybackService extends Service {
         } catch (Exception error) { fail("Playback could not continue. Try playing the track again."); }
     }
     void publish() {
-        long position = 0, duration = track == null ? 0 : track.optLong("durationMs");
-        try { if (prepared && player != null) { position = player.getCurrentPosition(); duration = player.getDuration(); } } catch (Exception ignored) {}
+        long position = tv ? lastTvPosition : 0, duration = track == null ? 0 : track.optLong("durationMs");
+        try {
+            if (prepared && player != null) {
+                position = player.getCurrentPosition(); duration = player.getDuration();
+                if (tv && position > 0) lastTvPosition = position;
+            }
+        } catch (Exception ignored) {}
         int playbackState = status.equals("playing") ? PlaybackState.STATE_PLAYING : status.equals("loading") ? PlaybackState.STATE_BUFFERING : status.equals("error") ? PlaybackState.STATE_ERROR : PlaybackState.STATE_PAUSED;
         session.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_SEEK_TO | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_STOP)
             .setState(playbackState, position, status.equals("playing") ? 1 : 0).build());
-        if (track != null) session.setMetadata(new MediaMetadata.Builder()
+        String nextMetadataKey = track == null ? "" : track.toString() + ":" + duration + ":" + (artwork == null ? 0 : artwork.hashCode());
+        if (track != null && !nextMetadataKey.equals(metadataKey)) {
+            metadataKey = nextMetadataKey;
+            MediaMetadata.Builder metadata = new MediaMetadata.Builder()
             .putString(MediaMetadata.METADATA_KEY_TITLE, track.optString("title"))
             .putString(MediaMetadata.METADATA_KEY_ARTIST, track.optString("artist"))
             .putString(MediaMetadata.METADATA_KEY_ALBUM, "Cine music")
             .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, track.optString("title"))
             .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, track.optString("artist"))
             .putString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION, "Cine music")
-            .putLong(MediaMetadata.METADATA_KEY_DURATION, duration).build());
+            .putLong(MediaMetadata.METADATA_KEY_DURATION, duration);
+            if (artwork != null) metadata.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, artwork).putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, artwork);
+            session.setMetadata(metadata.build());
+        }
         String output = "System default";
         try { AudioDeviceInfo route = player == null ? null : player.getRoutedDevice(); if (route != null) output = route.getProductName().toString(); } catch (Exception ignored) {}
         JSONObject state = Events.json("track", track == null ? JSONObject.NULL : track, "status", status, "positionMs", position, "durationMs", duration, "error", error,
@@ -689,8 +728,72 @@ public class PlaybackService extends Service {
             "sourceResolvedMs", sourceResolvedMs, "preparedMs", preparedMs);
         snapshotJson = state.toString();
         Events.send(this, "player", state);
+        String widgetState = (track == null ? "" : track.optString("id")) + status;
+        if (!tv && (!widgetState.equals(lastWidgetState) || SystemClock.elapsedRealtime() - lastWidgetUpdate >= 1000)) {
+            lastWidgetState = widgetState; lastWidgetUpdate = SystemClock.elapsedRealtime(); MusicWidgetProvider.updateAll(this);
+        }
+    }
+    private void loadArtwork(JSONObject next) {
+        String address = next.optString("cover");
+        if (address.equals(artworkAddress)) return;
+        artworkAddress = address; artwork = MediaArtwork.cached(address); metadataKey = "";
+        MediaArtwork.load(address, image -> {
+            if (instance != this || !address.equals(artworkAddress)) return;
+            artwork = image; metadataKey = ""; lastWidgetUpdate = 0; publish(); updateNotification();
+        });
+    }
+    private void watchTvBuffer(int epoch, long timeout) {
+        if (tvStall != null) handler.removeCallbacks(tvStall);
+        tvStall = () -> { if (epoch == generation && "loading".equals(status) && playWhenReady) recoverStream(); };
+        handler.postDelayed(tvStall, timeout);
+    }
+    private void cancelTvRecovery() {
+        if (tvRetry != null) handler.removeCallbacks(tvRetry);
+        if (tvStall != null) handler.removeCallbacks(tvStall);
+        tvRetry = null; tvStall = null;
+    }
+    private void recoverStream() {
+        if (tv) {
+            if (tvRetry != null) return;
+            if (track == null || recoveryAttempts >= 3) {
+                fail("Playback lost its connection. Reconnect to Wi-Fi and choose Retry.");
+                return;
+            }
+            recoveryAttempts++;
+            final JSONObject retry;
+            try {
+                retry = new JSONObject(track.toString());
+                retry.remove("url"); retry.put("startPositionMs", lastTvPosition); retry.put("tvRetry", true);
+            } catch (Exception badTrack) { fail("This song could not be reopened."); return; }
+            final int epoch = ++generation;
+            final boolean shouldPlay = playWhenReady;
+            cancelTvRecovery(); cancelLoad(); releaseEqualizer();
+            if (player != null) { player.release(); player = null; }
+            prepared = false; status = "loading"; publish(); updateNotification();
+            tvRetry = () -> {
+                tvRetry = null;
+                if (epoch != generation || track == null) return;
+                StreamResolver.invalidate(retry.optString("id"));
+                try { boolean resume = shouldPlay && playWhenReady; load(retry); playWhenReady = resume; }
+                catch (Exception error) { fail("This song could not be reopened."); }
+            };
+            handler.postDelayed(tvRetry, 1500L << (recoveryAttempts - 1));
+            return;
+        }
+        if (track != null && !track.optBoolean("offline") && recoveryAttempts++ < 1) {
+            try {
+                long position = prepared && player != null ? player.getCurrentPosition() : 0;
+                boolean shouldPlay = playWhenReady;
+                JSONObject retry = new JSONObject(track.toString()); retry.remove("url"); retry.put("startPositionMs", position);
+                StreamResolver.invalidate(retry.optString("id"));
+                load(retry); playWhenReady = shouldPlay;
+                return;
+            } catch (Exception ignored) {}
+        }
+        fail("Playback failed. Check your connection and tap Play to retry, or choose a completed download.");
     }
     private void fail(String message) {
+        cancelTvRecovery();
         if (track != null) StreamResolver.invalidate(track.optString("id"));
         cancelSleepFade(); cancelCrossfade(); cancelPreload();
         generation++; error = message; status = "error"; prepared = false; playWhenReady = false; resumeOnFocus = false; resumeAfterBluetoothDisconnect = false; lastRoutePauseAt = 0;
@@ -703,11 +806,11 @@ public class PlaybackService extends Service {
         return PendingIntent.getService(this, action.hashCode(), new Intent(this, PlaybackService.class).setAction(action), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
     private Notification notification() {
-        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        boolean playing = status.equals("playing");
+        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class).putExtra("openPlayer", true), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        boolean playing = status.equals("playing") || status.equals("loading");
         Notification.Builder builder = new Notification.Builder(this, "playback")
             .setSmallIcon(R.drawable.ic_cine_notification)
-            .setContentTitle(track == null ? "Cine music" : track.optString("title"))
+            .setContentTitle(track == null ? "Cine music" : "Cine music · " + track.optString("title"))
             .setContentText(track == null ? "Ready to play" : track.optString("artist"))
             .setSubText("Cine music")
             .setContentIntent(open)
@@ -720,14 +823,7 @@ public class PlaybackService extends Service {
             .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_next, "Next", action("next")).build());
         
         // Add large icon (album art) if available
-        if (track != null && track.has("cover") && !track.isNull("cover") && !track.optString("cover").isEmpty()) {
-            try {
-                String coverUrl = track.optString("cover");
-                // Load cover asynchronously - for now use a placeholder
-                // In a full implementation, you'd load the bitmap in background
-                builder.setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.cine_launcher_background));
-            } catch (Exception ignored) {}
-        }
+        if (artwork != null) builder.setLargeIcon(artwork);
         
         // Add color styling based on album art (would extract dominant color)
         builder.setColor(Color.parseColor("#B7C5FF"));
@@ -737,10 +833,11 @@ public class PlaybackService extends Service {
     private void updateNotification() { ((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).notify(1, notification()); }
     @Override public IBinder onBind(Intent intent) { return null; }
     @Override public void onDestroy() {
+        cancelTvRecovery();
         generation++; cancelLoad(); cancelSleepFade(); cancelCrossfade(); cancelPreload(); handler.removeCallbacksAndMessages(null); loader.shutdownNow();
         releaseEqualizer(); if (player != null) player.release(); audio.abandonAudioFocusRequest(focus); session.release();
         if (audioDeviceCallback != null) audio.unregisterAudioDeviceCallback(audioDeviceCallback);
-        unregisterReceiver(noisy); instance = null; super.onDestroy();
+        unregisterReceiver(noisy); instance = null; MusicWidgetProvider.updateAll(this); super.onDestroy();
     }
     private static class MemoryAudio extends MediaDataSource {
         private byte[] bytes;

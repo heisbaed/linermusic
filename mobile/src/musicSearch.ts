@@ -9,7 +9,7 @@ export async function searchMusicCatalog(query: string, type: SearchType = 'all'
   // Mixed search supplies top hits/corrected queries that are sometimes absent
   // from Songs. Typed requests give each filter a complete first result page.
   const types: (InnertubeSearchFilter | undefined)[] = type === 'all'
-    ? [undefined, 'track']
+    ? [undefined, 'track', 'video']
     : type === 'track' ? [undefined, 'track', 'video'] : [undefined, type];
   const batches = new Map<number, SearchResult[]>();
   const partial = () => {

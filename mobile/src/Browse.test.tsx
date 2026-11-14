@@ -18,11 +18,12 @@ function library(): LibraryData {
 function app(): AppState {
   const data = library();
   return {
+    smart: { hidden: { songs: [], artists: [] }, checkpoint: null, hideSong: vi.fn(), hideArtist: vi.fn(), restore: vi.fn() },
     account: { library: data, ready: true, user: null, setLibrary: vi.fn(), signIn: vi.fn(), signOut: vi.fn(), syncStatus: '', retrySync: vi.fn(), updateProfile: vi.fn(), suspendSync: vi.fn(async () => () => {}) },
     playback: { player: { track: null, status: 'idle', positionMs: 0, durationMs: 0 }, queue: [], context: 'Test', shuffle: 'off', repeat: 'off', play: vi.fn(), playAll: vi.fn(), toggle: vi.fn(), next: vi.fn(), previous: vi.fn(), seek: vi.fn(), setShuffle: vi.fn(), cycleShuffle: vi.fn(), setRepeat: vi.fn(), setQueue: vi.fn(), playerLyrics: null },
     theme: 'default', setTheme: vi.fn(), updatePrefs: vi.fn(), prefs: { autoplay: false, wifiOnly: true, reducedMotion: 'system', haptics: false, privateListening: false, equalizerOn: false, eqBands: [0, 0, 0, 0, 0], eqPreset: 'Flat', audioQuality: 'auto', gapless: true, crossfadeSeconds: 0 },
     tab: 'home', goTab: vi.fn(), openRoute: vi.fn(), back: vi.fn(), openPlayer: vi.fn(), openMenu: vi.fn(), openUtility: vi.fn(), toast: vi.fn(), online: false,
-    downloads: [], jobs: [], download: vi.fn(), removeDownload: vi.fn(), refreshDownloads: vi.fn(), toggleFavorite: vi.fn(), isFavorite: id => data.favorites.some(song => song.id === id), addToPlaylist: null, setAddToPlaylist: vi.fn(), checkForUpdates: vi.fn(),
+    downloads: [], jobs: [], download: vi.fn(), downloadMany: vi.fn(async () => {}), removeDownload: vi.fn(), refreshDownloads: vi.fn(), toggleFavorite: vi.fn(), isFavorite: id => data.favorites.some(song => song.id === id), addToPlaylist: null, setAddToPlaylist: vi.fn(), checkForUpdates: vi.fn(),
   };
 }
 function render(screen: ReactNode, state = app()) { return renderToStaticMarkup(<AppContext.Provider value={state}>{screen}</AppContext.Provider>); }
@@ -105,7 +106,8 @@ describe('browse initial and offline states', () => {
     expect(html).toContain('Saved artist');
     expect(html).toContain('browse-round');
     expect(html).toContain('Recently saved');
-    expect(html).toContain('Name A to Z');
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).toContain('Sort Artists, Recently saved');
   });
   it('renders an owned playlist with duration, private status and non-playing edit actions', () => {
     const state = app(), html = render(<PlaylistScreen id="owned" />, state);

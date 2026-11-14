@@ -7,8 +7,6 @@ import { googleSignIn, subscribe } from './native';
 import { Brand, ThemeEdition } from './ui';
 
 import './account.css';
-import { isTvEnvironment } from './spatialNav';
-import { createRandomPairingCode, createTvPairing, listenToTvPairing } from './tvPairing';
 
 
 
@@ -632,21 +630,18 @@ export function useEmailCooldown(): [number, () => void] {
 
 
 
-type View = 'welcome' | 'login' | 'signup' | 'recovery' | 'sent' | 'verify' | 'action' | 'reset' | 'link' | 'tv-pair';
+type View = 'welcome' | 'login' | 'signup' | 'recovery' | 'sent' | 'verify' | 'action' | 'reset' | 'link';
 
 
 
 export function FirebaseAuth({ onClose, onSuccess, initialUser }: { onClose: () => void; onSuccess: (user: CineUser) => void; initialUser?: CineUser | null }) {
 
-  const isTv = isTvEnvironment();
 
   const [action, setAction] = useState<AuthAction | null>(() => parseAuthActionLink(window.location.href));
 
-  const [view, setView] = useState<View>(action ? action.mode === 'resetPassword' ? 'reset' : 'action' : initialUser ? 'verify' : isTv ? 'tv-pair' : 'welcome');
+  const [view, setView] = useState<View>(action ? action.mode === 'resetPassword' ? 'reset' : 'action' : initialUser ? 'verify' : 'welcome');
 
-  const [pairCode, setPairCode] = useState(''); const [pairNonce, setPairNonce] = useState(0);
 
-  const [pairStatus, setPairStatus] = useState<'idle' | 'generating' | 'waiting' | 'approved' | 'expired'>('idle');
   const [successUser, setSuccessUser] = useState<CineUser | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [successEmail, setSuccessEmail] = useState('');
@@ -691,34 +686,7 @@ export function FirebaseAuth({ onClose, onSuccess, initialUser }: { onClose: () 
 
 
 
-  useEffect(() => {
-    if (view !== 'tv-pair') return;
-    let stopListen: undefined | (() => void);
-    let cancelled = false;
-    (async () => {
-      setPairStatus('generating'); setError('');
-      try {
-        const code = createRandomPairingCode();
-        setPairCode(code);
-        await createTvPairing(code);
-        if (cancelled) return;
-        setPairStatus('waiting');
-        stopListen = listenToTvPairing(code, approvedUser => {
-          if (cancelled) return;
-          setPairStatus('approved');
-          finish({ ...approvedUser, emailVerified: true });
-        }, () => {
-          if (!cancelled) { setPairStatus('expired'); setError('Code expired. Generate a new code.'); }
-        });
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Could not connect to TV pairing service.');
-          setPairStatus('expired');
-        }
-      }
-    })();
-    return () => { cancelled = true; if (stopListen) stopListen(); };
-  }, [view, pairNonce]);
+
 
 
 
@@ -728,15 +696,7 @@ export function FirebaseAuth({ onClose, onSuccess, initialUser }: { onClose: () 
 
     if (inFlight.current) return;
 
-    if (isTv) {
 
-      if (view === 'tv-pair') onClose();
-
-      else navigate('tv-pair');
-
-      return;
-
-    }
 
     if (view === 'welcome') onClose();
 
@@ -958,7 +918,7 @@ export function FirebaseAuth({ onClose, onSuccess, initialUser }: { onClose: () 
 
   const headings: Record<View, string> = {
 
-    welcome: 'Hear beyond the ordinary.', 'tv-pair': 'Pair your Smart TV', login: 'Good to hear\nyou again.', signup: 'Your next chapter\nsounds like you.', recovery: 'Reset your password.', sent: 'Check your email.', verify: 'Verify your email.', action: action?.mode === 'verifyAndChangeEmail' ? 'Confirm your new email.' : 'Confirm your email.', reset: 'Choose a new password.', link: 'Open your email link.',
+    welcome: 'Hear beyond the ordinary.', login: 'Good to hear\nyou again.', signup: 'Your next chapter\nsounds like you.', recovery: 'Reset your password.', sent: 'Check your email.', verify: 'Verify your email.', action: action?.mode === 'verifyAndChangeEmail' ? 'Confirm your new email.' : 'Confirm your email.', reset: 'Choose a new password.', link: 'Open your email link.',
 
   };
 
@@ -972,79 +932,7 @@ export function FirebaseAuth({ onClose, onSuccess, initialUser }: { onClose: () 
 
 
 
-  if (view === 'tv-pair') {
-    const pairUrl = pairCode ? `https://cinemusic.web.app/pair?code=${pairCode}` : 'https://cinemusic.web.app/pair';
-    return (
-      <section className="auth-panel account-auth tv-pair-screen" data-auth-view="tv-pair" aria-busy={busy || pairStatus === 'generating'} ref={panel}>
-        <div className="tv-pair-grid">
-          <div className="tv-pair-qr-pane" aria-label="Pairing QR code">
-            <div className="tv-pair-qr-frame">
-              {pairCode && pairStatus !== 'generating' ? (
-                <>
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=10&ecc=M&data=${encodeURIComponent(pairUrl)}`}
-                    alt={`Scan to pair this TV. Pairing code ${pairCode}`}
-                    className="tv-pair-qr-image"
-                    width={360}
-                    height={360}
-                  />
-                  <div className="tv-pair-code" aria-label={`Pairing code ${pairCode.split('').join(' ')}`}>
-                    <span className="tv-pair-code-label">PAIRING CODE</span>
-                    <strong className="tv-pair-code-value">{pairCode}</strong>
-                  </div>
-                </>
-              ) : (
-                <div className="tv-pair-loading" role="status">Generating pairing code…</div>
-              )}
-            </div>
-          </div>
 
-          <div className="tv-pair-copy">
-            <span className="tv-badge-new">TV PAIRING</span>
-            <h1 className="tv-pair-title">Scan to sign in</h1>
-            <ol className="tv-pair-steps" aria-label="Pairing steps">
-              <li><span className="tv-step-num">1</span><span>Scan with phone →</span></li>
-              <li><span className="tv-step-num">2</span><span>Log in with Google/Email on phone →</span></li>
-              <li><span className="tv-step-num">3</span><span>TV unlocks automatically</span></li>
-            </ol>
-
-            <div className="tv-pair-status" role="status" aria-live="polite">
-              <span className={`tv-status-dot ${pairStatus === 'approved' ? 'ok' : pairStatus === 'waiting' || pairStatus === 'generating' ? 'pulse' : ''}`} aria-hidden="true" />
-              <span>
-                {pairStatus === 'waiting' ? 'Waiting for your phone…'
-                  : pairStatus === 'approved' ? 'Connected. Signing in…'
-                  : pairStatus === 'expired' ? 'Code expired. Generate a new code.'
-                  : 'Preparing your pairing code…'}
-              </span>
-            </div>
-
-            {error ? <p className="tv-pair-error" role="alert">{error}</p> : null}
-
-            <div className="tv-pair-actions">
-              <button
-                type="button"
-                className="tv-hero-cta"
-                data-tv-autofocus="true"
-                disabled={busy || pairStatus === 'generating'}
-                onClick={() => setPairNonce(n => n + 1)}
-              >
-                <Icon name="refresh" size={20} />
-                <span>Generate new code</span>
-              </button>
-              <button
-                type="button"
-                className="tv-btn-secondary"
-                disabled={busy}
-                onClick={() => navigate('login')}
-              >
-                <span>Sign in with Email on TV</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
 
 
   if (view === 'welcome') return <section className="auth-panel account-auth design-welcome" data-auth-view="welcome" aria-busy={busy} ref={panel}>
@@ -1075,7 +963,6 @@ export function FirebaseAuth({ onClose, onSuccess, initialUser }: { onClose: () 
 
     {googlePending && window.CineAndroid?.cancelGoogleSignIn && <button type="button" className="account-secondary" onClick={() => window.CineAndroid?.cancelGoogleSignIn?.()}>Cancel Google sign-in</button>}
 
-    {isTv && <button type="button" className="account-secondary tv-action-button" style={{marginBottom:'16px'}} onClick={() => navigate('tv-pair')}><Icon name="camera" size={18} /><span>Scan QR with phone instead</span></button>}
 
     {view === 'login' && <form onSubmit={event => void run(signIn, event)}><fieldset disabled={busy}>{emailField}{passwordField()}<button className="account-text" type="button" onClick={() => navigate('recovery')}>Forgot password?</button>{submitButton('Log in', 'Logging in...')}<p className="account-switch">New here? <button type="button" onClick={() => navigate('signup')}>Create an account</button></p></fieldset></form>}
 

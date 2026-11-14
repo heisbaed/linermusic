@@ -16,6 +16,7 @@
         <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.faketouch" android:required="false" />
+    <queries><intent><action android:name="android.speech.action.RECOGNIZE_SPEECH" /></intent></queries>
     <application android:banner="@drawable/cine_tv_banner" android:label="@string/cine_app_name" android:icon="@mipmap/ic_cine_launcher" android:roundIcon="@mipmap/ic_cine_launcher_round"
         android:theme="@style/AppTheme" android:allowBackup="false"
         android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules"
@@ -47,7 +48,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="cinemusic.web.app" android:pathPrefix="/pair" />
+                <data android:scheme="https" android:host="cinemusic.web.app" android:path="/tv-connect" />
             </intent-filter>
         </activity>
         <!-- WorkManager not used; disable its auto-initializer from androidx.startup. -->
@@ -73,9 +74,9 @@
         <service android:name=".PlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <service android:name=".DownloadService" android:exported="false" android:foregroundServiceType="dataSync" />
         <activity android:name=".UpdateActivity" android:exported="false" />
+        <receiver android:name=".UpdateInstallReceiver" android:exported="false" />
         <service android:name=".OTAUpdateService" android:exported="false" android:foregroundServiceType="dataSync" />
-        <service android:name=".MusicWidgetService" android:exported="false" />
-        <receiver android:name=".MusicWidgetProvider" android:exported="true">
+        <receiver android:name=".MusicWidgetProvider" android:exported="false" android:label="Cine music player">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

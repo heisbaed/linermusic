@@ -35,7 +35,7 @@
 .browse-genre[data-artwork=ready]:after{opacity:1}
 .browse-genre>.browse-genre-image{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;opacity:0;transition:opacity .22s}
 .browse-genre[data-artwork=ready]>.browse-genre-image{opacity:1}
-.browse-genre>span{font-size:19px;font-weight:600;letter-spacing:-.4px}
+.browse-genre>strong{font-size:19px;font-weight:600;letter-spacing:-.4px;min-width:0;overflow-wrap:anywhere}
 .browse-genre>svg:last-child{flex:none;margin-bottom:2px;opacity:.8}
 .browse-genre:active{filter:brightness(1.13);transform:scale(.98)}
 .browse-search .page-title{margin-bottom:21px}
@@ -75,6 +75,27 @@
 .browse-top-result .song-row,.browse-top-result .browse-catalog-row{border-bottom:0}
 .browse-top-result .cover{width:64px;height:64px}
 .browse-top-result .song-duration{display:none}
+.cine-app .browse-top-result{min-width:0;max-width:100%;overflow:hidden}
+.cine-app .browse-top-result .song-row{display:flex;flex-wrap:nowrap;min-width:0;max-width:100%;padding-inline:0}
+.cine-app .browse-top-result .song-main{flex:1 1 0%;min-width:0;max-width:100%}
+.cine-app .browse-top-result .cover{flex:0 0 56px;width:56px;height:56px}
+.cine-app .browse-top-result .row-copy{flex:1 1 0%;min-width:0;max-width:100%;overflow:hidden}
+.cine-app .browse-top-result .row-copy strong{white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cine-app .browse-top-result .icon-action{flex:0 0 48px;min-width:48px;min-height:48px}
+.cine-app .browse-genre{display:flex;align-items:flex-end;min-width:0;min-height:112px;overflow:hidden;color:#fff;box-shadow:none;background:#182637}
+.cine-app .browse-genre .cine-icon-mask{flex:0 0 18px;width:18px;height:18px}
+.collection-tools,.collection-selection{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:16px 0}
+.collection-tools label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.collection-tools select{min-height:48px;max-width:180px;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text)}
+.collection-selection{justify-content:flex-start;padding:12px;border-radius:12px;background:var(--surface)}
+.collection-selection>span{width:100%;font-size:14px}
+.selection-song{display:flex;gap:12px;align-items:center;min-height:72px;min-width:0;border-bottom:1px solid var(--line)}
+.selection-song>input{flex:none;width:24px;height:24px;margin:12px;accent-color:var(--accent)}
+.selection-song>.cover{flex:0 0 40px;width:40px;height:40px}
+.selection-song>.row-copy{flex:1 1 0%;min-width:0}
+.download-bulk-actions{display:flex;gap:8px;flex-wrap:wrap}
+.browse-download-jobs .section-heading{flex-wrap:wrap;gap:8px}
+.bulk-playlist-options{padding:16px}
 .browse-search .browse-search-filters{gap:8px;overflow:auto;margin:17px 0 10px;padding-bottom:3px;scrollbar-width:none}
 .browse-search-filters button{min-width:58px;min-height:48px;padding:0 16px;font-size:13px}
 .browse-history .section-heading{margin-top:22px}

@@ -4,11 +4,14 @@ import { innertubeCatalog } from '@/shared/media/innertube/innertubeCatalog';
 import type { AlbumDetails, ArtistDetails, ArtistAlbum, CatalogPlaylistDetails, SearchResult, SearchType, Track } from '@/shared/contracts';
 import { useApp, type Collection, type SearchHistory } from './AppContext';
 import { Icon, type IconName } from './Icons';
-import { Action, ConfirmDialog, Cover, Notice, PageHeader, SearchField, SongRows } from './ui';
+import { Action, ConfirmDialog, Cover, Notice, PageHeader, SearchField, Sheet, SongRows, SortControl } from './ui';
 import type { Playlist, Song } from './types';
+import { displaySongTitle } from './catalogQuality';
 import { searchMusicCatalog } from './musicSearch';
 import { figmaArtwork } from './figmaAssets';
 import { mergePlaylistSongDraft } from './playlistDraft';
+import { deduplicatePlaylist } from './smartFeatures';
+import { CollectionSongs } from './CollectionSongs';
 import { formatTime, playlistBackupFileName, playlistBackupText, playlistIsDownloaded } from './library';
 import './browse.css';
 import { SongRadio } from './SongRadio';
@@ -23,7 +26,7 @@ type PlaylistItem = Extract<SearchResult, { type: 'playlist' }>;
 export function songFrom(track: Track): Song {
   return {
     id: track.id,
-    title: track.title,
+    title: displaySongTitle(track.title, track.artists.map(artist => artist.name).join(', ')),
     artist: track.artists.map(artist => artist.name).join(', '),
     cover: track.cover?.url,
     durationMs: track.durationMs,
@@ -69,67 +72,17 @@ const searchCache = new Map<string, SearchResult[]>();
 const detailCache = new Map<string, CatalogDetails>();
 
 const genres = [
-  { name: 'Afrobeats', artist: 'Burna Boy' },
-  { name: 'R&B', artist: 'SZA' },
-  { name: 'Pop', artist: 'Dua Lipa' },
-  { name: 'Hip-Hop', artist: 'Kendrick Lamar' },
+  { name: 'Afrobeats', artwork: '/figma/05df4.png' },
+  { name: 'R&B', artwork: '/figma/c0942.png' },
+  { name: 'Pop', artwork: '/figma/162f4.png' },
+  { name: 'Hip-Hop', artwork: '/figma/c0942.png' },
 ] as const;
-type GenreArtwork = Record<string, { artist: string; sourceId: string; cover: string }>;
-const genreArtworkKey = 'cine:browse-cache:genre-art-v1';
-let genreArtworkRequest: Promise<GenreArtwork> | null = null;
-function cachedGenreArtwork(): { savedAt: number; entries: GenreArtwork } {
-  try {
-    const saved = JSON.parse(localStorage.getItem(genreArtworkKey) || 'null');
-    const entries: GenreArtwork = {};
-    for (const genre of genres) {
-      const item = saved?.entries?.[genre.name];
-      if (item?.artist === genre.artist && typeof item.sourceId === 'string' && typeof item.cover === 'string' && item.cover.startsWith('https://')) entries[genre.name] = item;
-    }
-    return { savedAt: Number(saved?.savedAt) || 0, entries };
-  } catch { return { savedAt: 0, entries: {} }; }
-}
-function fetchGenreArtwork(): Promise<GenreArtwork> {
-  const saved = cachedGenreArtwork();
-  if (Object.keys(saved.entries).length === genres.length && Date.now() - saved.savedAt < 86_400_000) return Promise.resolve(saved.entries);
-  if (!genreArtworkRequest) {
-    const abort = new AbortController(), timer = setTimeout(() => abort.abort(), 20_000);
-    genreArtworkRequest = Promise.allSettled(genres.map(async genre => {
-      const results = await searchCatalog(genre.artist, 'artist', abort.signal);
-      const artist = results.find(item => item.type === 'artist' && item.name.toLocaleLowerCase() === genre.artist.toLocaleLowerCase() && item.cover?.url.startsWith('https://'));
-      return artist?.type === 'artist' && artist.cover ? [genre.name, { artist: artist.name, sourceId: artist.id, cover: artist.cover.url }] as const : null;
-    })).then(results => {
-      const entries = { ...saved.entries };
-      for (const result of results) if (result.status === 'fulfilled' && result.value) entries[result.value[0]] = result.value[1];
-      try { localStorage.setItem(genreArtworkKey, JSON.stringify({ savedAt: Date.now(), entries })); } catch { /* Artwork caching must not block browsing. */ }
-      return entries;
-    }).finally(() => { clearTimeout(timer); genreArtworkRequest = null; });
-  }
-  return genreArtworkRequest;
-}
+
 function Genres({ onSearch }: { onSearch: (query: string) => void }) {
-  const { online } = useApp();
-  const grid = useRef<HTMLDivElement>(null);
-  const [artwork, setArtwork] = useState(() => cachedGenreArtwork().entries);
-  const [loaded, setLoaded] = useState<Record<string, string>>({});
-  const [failed, setFailed] = useState<Record<string, string>>({});
-  useEffect(() => {
-    if (!online) return;
-    let active = true, started = false;
-    const load = () => { if (started) return; started = true; void fetchGenreArtwork().then(entries => { if (active) setArtwork(entries); }); };
-    const observer = typeof IntersectionObserver !== 'undefined' ? new IntersectionObserver(entries => {
-      if (entries.some(entry => entry.isIntersecting)) { load(); observer?.disconnect(); }
-    }, { rootMargin: '100px' }) : null;
-    if (observer && grid.current) observer.observe(grid.current); else load();
-    return () => { active = false; observer?.disconnect(); };
-  }, [online]);
-  return <div className="browse-genres" ref={grid}>{genres.map(genre => {
-    const art = artwork[genre.name], cover = art?.cover;
-    const visible = Boolean(cover && failed[genre.name] !== cover && loaded[genre.name] === cover);
-    return <button className="browse-genre" data-artwork={visible ? 'ready' : 'pending'} data-artwork-artist={art?.artist} key={genre.name} onClick={() => onSearch(genre.name)} aria-label={`Search ${genre.name} music`}>
-      {cover && failed[genre.name] !== cover && <img className="browse-genre-image" src={cover} alt="" decoding="async" onLoad={() => setLoaded(old => ({ ...old, [genre.name]: cover }))} onError={() => setFailed(old => ({ ...old, [genre.name]: cover }))} />}
-      <span>{genre.name}</span><Icon name="chevron_right" size={18} />
-    </button>;
-  })}</div>;
+  return <div className="browse-genres">{genres.map(genre => <button className="browse-genre" data-artwork="ready" key={genre.name} onClick={() => onSearch(genre.name)} aria-label={`Search ${genre.name} music`}>
+    <img className="browse-genre-image" src={genre.artwork} alt="" decoding="async" />
+    <strong>{genre.name}</strong><Icon name="chevron_right" size={18} />
+  </button>)}</div>;
 }
 
 function AlbumShelf({ items }: { items: { id: string; title: string; artist?: string; cover?: string; year?: number }[] }) {
@@ -276,7 +229,7 @@ export function SearchScreen() {
   const playlists = results.filter((item): item is PlaylistItem => item.type === 'playlist');
   const target = app.account.library.playlists.find(playlist => playlist.id === app.addToPlaylist);
   const history = app.account.library.history;
-  const suggestedQueries = mergeSuggestions(query, suggestions, history.map(entry => entry.title || entry.query));
+  const suggestedQueries = mergeSuggestions(query, suggestions, history.map(entry => entry.title || entry.query)).slice(0, results.length ? 2 : 3);
   const topResult = filter === 'all' ? results[0] : undefined;
   const shownSongs = filter === 'all' ? songs.slice(0, 5) : songs;
   const seeAll = (type: SearchType, length: number, limit: number) => filter === 'all' && length > limit
@@ -304,7 +257,7 @@ export function SearchScreen() {
       <SectionHeading title="Browse all" /><Genres onSearch={text => { void run(text, 'all'); }} />
       <p className="browse-footnote">Find the artists, albums, and playlists that move you.</p>
     </>}
-    {loading && <Loading>Searching for {submitted}...</Loading>}
+    {loading && !results.length && <Loading>Searching...</Loading>}
     {!!error && !loading && <Notice title="Search could not connect" icon="wifi" action={<button className="secondary-button" onClick={() => { void run(submitted, filter, true); }}>Try again</button>}>{error}</Notice>}
     {!!submitted && !loading && !error && !results.length && <Notice title={`No results for “${submitted}”`} icon="search">Try a different spelling, a song title, or an artist's name.</Notice>}
     {!!results.length && <div className="browse-results" aria-live="polite" aria-busy={loading}>
@@ -376,8 +329,9 @@ function PlayButtons({ songs, context, download }: { songs: Song[]; context: str
 
 function DownloadJobs({ query }: { query: string }) {
   const app = useApp();
+  const [limit, setLimit] = useState(40);
   const jobs = app.jobs.filter(job => matchingSongs([job.song], query).length && !app.downloads.some(song => song.id === job.id));
-  if (!jobs.length) return null;
+  if (!app.jobs.some(job => !app.downloads.some(song => song.id === job.id))) return null;
   const native = window.CineAndroid;
   function control(action: 'pauseDownload' | 'resumeDownload' | 'cancelDownload', id: string) {
     const method = native?.[action];
@@ -385,54 +339,71 @@ function DownloadJobs({ query }: { query: string }) {
     try { method.call(native, id); app.refreshDownloads(); }
     catch (reason) { app.toast(message(reason)); }
   }
-  function resumeAll() {
+  async function resumeAll() {
     if (!native?.resumeDownload) return;
     if (!app.online) { app.toast('Connect to the internet to resume downloads.'); return; }
     if (app.prefs.wifiOnly && !native.isWifiConnected()) { app.toast('Downloads are set to Wi-Fi only. Connect to Wi-Fi to resume.'); return; }
     const pending = app.jobs.filter(job => ['paused', 'failed'].includes(job.status) && !app.downloads.some(song => song.id === job.id));
     let resumed = 0;
-    try { for (const job of pending) { native.resumeDownload(job.id); resumed++; } }
+    try {
+      for (let at = 0; at < pending.length; at += 20) {
+        const batch = pending.slice(at, at + 20);
+        await new Promise(resolve => setTimeout(resolve, 16));
+        if (native.resumeDownloads) native.resumeDownloads(JSON.stringify(batch.map(job => job.id)));
+        else for (const job of batch) native.resumeDownload(job.id);
+        resumed += batch.length;
+      }
+    }
     catch (reason) { app.toast(message(reason)); }
     app.refreshDownloads();
     if (resumed) app.toast(`Resuming ${resumed} downloads.`);
   }
   const resumable = app.jobs.some(job => ['paused', 'failed'].includes(job.status) && !app.downloads.some(song => song.id === job.id));
-  return <section className="browse-download-jobs"><SectionHeading title="In progress" action={resumable ? <button className="text-button" disabled={!native?.resumeDownload} onClick={resumeAll}>Resume all</button> : undefined} />
-    {jobs.map(job => {
+  return <section className="browse-download-jobs"><SectionHeading title="In progress" action={<div className="download-bulk-actions">{app.jobs.some(job => ['queued', 'downloading'].includes(job.status)) && <button className="text-button" disabled={!native?.pauseDownload} onClick={() => {
+      try { if (native?.pauseAllDownloads) native.pauseAllDownloads(); else for (const job of app.jobs.filter(item => ['queued', 'downloading'].includes(item.status))) native?.pauseDownload(job.id); }
+      catch (reason) { app.toast(message(reason)); }
+    }}>Pause all</button>}{resumable && <button className="text-button" disabled={!native?.resumeDownload} onClick={resumeAll}>Resume all</button>}</div>} />
+    {jobs.slice(0, limit).map(job => {
       const progress = Math.max(0, Math.min(99, Number.isFinite(job.progress) ? job.progress : 0));
-      const label = job.status === 'queued' ? (app.prefs.wifiOnly ? 'Queued · Waiting for Wi-Fi or a free slot' : 'Queued')
-        : job.status === 'downloading' ? `Downloading · ${Math.round(progress)}%` : job.status === 'paused' ? 'Paused · Resume restarts this transfer' : 'Download failed';
+      const label = job.status === 'queued' ? (app.prefs.wifiOnly && !native?.isWifiConnected() ? 'Waiting for Wi-Fi' : 'Queued · Waiting for a free slot')
+        : job.status === 'downloading' ? job.totalBytes || progress > 0 ? `Downloading · ${Math.round(progress)}%` : 'Preparing audio...' : job.status === 'paused' ? 'Paused · Resume restarts this transfer' : 'Download failed';
       return <div className="browse-download-job" key={job.id}>
         <Cover song={job.song} /><div className="row-copy"><strong>{job.song.title}</strong><small>{job.song.artist}</small>
           {job.status === 'downloading' && <progress max={100} value={progress} aria-label={`Downloading ${job.song.title}`} />}
           <small className={job.status === 'failed' ? 'browse-error-copy' : ''} role="status">{label}</small>
-          {job.error && job.status === 'failed' && <small className="browse-error-copy">{job.error}</small>}
+          {job.status === 'downloading' && !!job.totalBytes && <small>{((job.bytes || 0) / 1048576).toFixed(1)} / {(job.totalBytes / 1048576).toFixed(1)} MB{job.bytesPerSecond ? ` · ${Math.round(job.bytesPerSecond / 1024)} KB/s` : ''}</small>}
+          {job.error && (job.status === 'failed' || job.status === 'paused') && <small className="browse-error-copy">{job.error}</small>}
         </div>
-        <div className="browse-job-actions">{job.status === 'downloading' || job.status === 'queued'
+        <div className="browse-job-actions">{job.status === 'queued' && native?.prioritizeDownload && <button className="text-button" onClick={() => { native.prioritizeDownload?.(job.id); app.refreshDownloads(); }}>Download next</button>}{job.status === 'downloading' || job.status === 'queued'
           ? <Action icon="pause" label={`Pause download of ${job.song.title}`} disabled={!native?.pauseDownload} onClick={() => control('pauseDownload', job.id)} />
           : <button className="text-button" disabled={!native?.resumeDownload} onClick={() => control('resumeDownload', job.id)}>{job.status === 'failed' ? 'Retry' : 'Resume'}</button>}
           <Action icon="close" label={`Cancel download of ${job.song.title}`} disabled={!native?.cancelDownload} onClick={() => control('cancelDownload', job.id)} />
         </div>
       </div>;
     })}
+    {jobs.length > limit && <button className="secondary-button" onClick={() => setLimit(value => value + 40)}>Show more downloads</button>}
   </section>;
 }
 
 export function CollectionScreen({ collection }: { collection: Collection }) {
   const app = useApp();
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<'recent' | 'az'>('recent');
+  const [sort, setSort] = useState<'recent' | 'az' | 'artist' | 'duration'>('recent');
   useEffect(() => { setQuery(''); setSort('recent'); }, [collection]);
   const title = collection[0].toUpperCase() + collection.slice(1);
   const library = app.account.library;
   const create = () => app.openRoute({ kind: 'playlist-form' });
   const localSongs = collection === 'downloads' ? app.downloads : library.favorites;
-  const songs = matchingSongs(localSongs, query);
+  const songs = [...matchingSongs(localSongs, query)];
+  if (sort === 'az') songs.sort((a, b) => a.title.localeCompare(b.title));
+  if (sort === 'artist') songs.sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
+  if (sort === 'duration') songs.sort((a, b) => a.durationMs - b.durationMs);
   const text = query.trim().toLocaleLowerCase();
   const directories = collection === 'artists' ? library.artists.map(artist => ({ id: artist.id, title: artist.name, cover: artist.cover, subtitle: 'Artist' }))
     : collection === 'albums' ? library.albums.map(album => ({ ...album, subtitle: album.artist || 'Album' })) : [];
   const entries = directories.filter(item => `${item.title} ${item.subtitle}`.toLocaleLowerCase().includes(text));
   if (sort === 'az') entries.sort((a, b) => a.title.localeCompare(b.title));
+  if (sort === 'artist') entries.sort((a, b) => a.subtitle.localeCompare(b.subtitle) || a.title.localeCompare(b.title));
   const playlists = library.playlists.filter(playlist => `${playlist.name} ${playlist.description || ''}`.toLocaleLowerCase().includes(text));
   if (sort === 'az') playlists.sort((a, b) => a.name.localeCompare(b.name));
   const discover = () => {
@@ -445,9 +416,13 @@ export function CollectionScreen({ collection }: { collection: Collection }) {
       <p className="browse-collection-summary">{count(localSongs.length)}{collection === 'downloads' && app.downloads.some(song => song.downloadBytes) ? ` · ${(app.downloads.reduce((sum, song) => sum + (song.downloadBytes || 0), 0) / 1_048_576).toFixed(1)} MB` : ''}</p>
       {collection === 'downloads' && <p className="browse-offline-caption"><Icon name="lock" size={14} />Completed songs, ready to play offline.</p>}
       <SearchField value={query} onChange={setQuery} placeholder={`Search ${collection}`} label={`Search ${collection}`} />
+      <SortControl value={sort} onChange={value => setSort(value as typeof sort)} label={`Sort ${title}`} options={[{value:'recent',label:'Recently saved'},{value:'az',label:'Title A to Z'},{value:'artist',label:'Artist'},{value:'duration',label:'Duration'}]} />
       <PlayButtons songs={songs} context={title} download={collection === 'favorites' ? <DownloadCollection songs={localSongs} title="Liked Songs" /> : undefined} />
       {collection === 'downloads' && <DownloadJobs query={query} />}
-      {songs.length ? <>{collection === 'downloads' && !!app.jobs.length && <SectionHeading title="Ready offline" />}<SongRows songs={songs} context={title} showHearts={collection === 'favorites'} /></>
+      {songs.length ? <>{collection === 'downloads' && !!app.jobs.length && <SectionHeading title="Ready offline" />}<CollectionSongs hideSort songs={songs} context={title} hearts={collection === 'favorites'} onRemove={ids => {
+        if (collection === 'downloads') ids.forEach(id => app.removeDownload(id));
+        else app.account.setLibrary(library => ({ ...library, favorites: library.favorites.filter(song => !ids.has(song.id)) }));
+      }} /></>
         : <Notice title={query.trim() ? 'No matching songs' : collection === 'favorites' ? 'Keep the songs you love' : 'Your offline listening starts here'} icon={collection === 'favorites' ? 'heart' : 'download'}
           action={query.trim() ? <button className="text-button" onClick={() => setQuery('')}>Clear search</button> : <button className="secondary-button" onClick={() => app.goTab('search')}>Explore music</button>}>
           {query.trim() ? 'Try another song title or artist.' : collection === 'favorites' ? 'Tap the heart on any song to add it to your favorites.' : 'Use a song menu to download. Incomplete transfers are never shown as ready offline.'}
@@ -456,7 +431,7 @@ export function CollectionScreen({ collection }: { collection: Collection }) {
     </> : <>
       <p className="browse-collection-summary">{collection === 'playlists' ? count(library.playlists.length, 'playlist') : collection === 'albums' ? count(library.albums.length, 'album') : count(library.artists.length, 'artist')}</p>
       <SearchField value={query} onChange={setQuery} placeholder={`Find ${collection === 'artists' ? 'an artist' : collection === 'albums' ? 'an album' : 'a playlist'}`} label={`Search saved ${collection}`} />
-      <label className="browse-sort"><span>Sort by</span><select value={sort} onChange={event => setSort(event.target.value as 'recent' | 'az')}><option value="recent">Recently saved</option><option value="az">Name A to Z</option></select><Icon name="chevron_down" size={16} /></label>
+      <SortControl value={sort} onChange={value => setSort(value as typeof sort)} label={`Sort ${title}`} options={[{value:'recent',label:'Recently saved'},{value:'az',label:'Name A to Z'},...(collection === 'albums' ? [{value:'artist',label:'Artist'}] : [])]} />
       {collection === 'playlists' ? playlists.map(playlist => <button className="list-link browse-directory-row" key={playlist.id} onClick={() => app.openRoute({ kind: 'playlist', id: playlist.id })}>
         <Cover kind="playlist" song={{ title: playlist.name, cover: playlist.cover || playlist.songs[0]?.cover }} /><span className="row-copy"><strong>{playlist.name}</strong><small>{count(playlist.songs.length)} · Private</small></span><Icon name="chevron_right" size={19} />
       </button>) : entries.map(item => <button className="list-link browse-directory-row" key={item.id} onClick={() => app.openRoute({ kind: 'catalog', type: collection === 'artists' ? 'artist' : 'album', id: item.id })}>
@@ -499,7 +474,7 @@ function DownloadCollection({ songs, title }: { songs: Song[]; title: string }) 
       setConfirm(false);
       if (!app.online) { app.toast('Connect before starting downloads.'); return; }
       if (app.prefs.wifiOnly && !window.CineAndroid?.isWifiConnected()) { app.toast('Wi-Fi-only downloads are on. Connect to Wi-Fi before starting.'); return; }
-      pending.forEach(song => app.download(song));
+      void app.downloadMany(pending);
     }}>
       <p>Save {count(pending.length)} from <strong>{title}</strong> for offline listening inside Cine music?</p>
       <p>File sizes are not available in advance. This may use a substantial amount of data and device storage.</p>
@@ -539,6 +514,7 @@ export function PlaylistScreen({ id }: { id: string }) {
   const playlist = app.account.library.playlists.find(item => item.id === id);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   useEffect(() => { setEditing(false); setDeleting(false); }, [id]);
   if (!playlist) return <section className="screen browse-playlist"><PageHeader title="Playlist" /><Notice title="This playlist is not in your library" action={<button className="secondary-button" onClick={() => app.openRoute({ kind: 'collection', collection: 'playlists' })}>Your playlists</button>}>It may have been removed or belong to a different account. Playback has not been changed.</Notice></section>;
   return <section className="screen browse-playlist">
@@ -548,15 +524,19 @@ export function PlaylistScreen({ id }: { id: string }) {
       <span className="browse-private"><Icon name="lock" size={13} />Private playlist</span>
       {playlist.description && <p className="browse-description">{playlist.description}</p>}
     </div>
-    <div className="browse-detail-actions"><DownloadCollection songs={playlist.songs} title={playlist.name} /><button className="text-button" onClick={() => app.openRoute({ kind: 'playlist-form', id })}>Edit details</button><PlaylistExportButton playlists={[playlist]} label="Export" /><span className="browse-flex" />
+    <div className="browse-detail-actions"><DownloadCollection songs={playlist.songs} title={playlist.name} /><button className="text-button" onClick={() => app.openRoute({ kind: 'playlist-form', id })}>Edit details</button><PlaylistExportButton playlists={[playlist]} label="Export" />{deduplicatePlaylist(playlist.songs).length < playlist.songs.length && <button className="text-button" onClick={() => setCleaning(true)}>Clean duplicates</button>}<span className="browse-flex" />
       <Action icon="shuffle" label={`Shuffle ${playlist.name}`} disabled={!playlist.songs.length} onClick={() => app.playback.playAll(playlist.songs, true, playlist.name)} />
       <button className="browse-round-play" aria-label={`Play ${playlist.name}`} disabled={!playlist.songs.length} onClick={() => app.playback.playAll(playlist.songs, false, playlist.name)}><Icon name="play" size={25} /></button>
     </div>
     {!!playlist.songs.length && <SectionHeading title={count(playlist.songs.length)} action={<button className="text-button" onClick={() => setEditing(value => !value)}>{editing ? 'Done' : 'Edit songs'}</button>} />}
-    {playlist.songs.length ? editing ? <EditableSongs playlist={playlist} /> : <SongRows songs={playlist.songs} context={playlist.name} />
+    {playlist.songs.length ? editing ? <EditableSongs playlist={playlist} /> : <CollectionSongs songs={playlist.songs} context={playlist.name} onRemove={ids => app.account.setLibrary(library => ({ ...library, playlists: library.playlists.map(item => item.id === id ? { ...item, songs: item.songs.filter(song => !ids.has(song.id)) } : item) }))} />
       : <Notice title="The start of something good">Add songs from Search or any song's menu to build this playlist.</Notice>}
     <button className="browse-add-songs" onClick={() => { app.setAddToPlaylist(id); app.goTab('search'); }}><Icon name="plus" size={23} /><span>Add songs</span></button>
     <div className="browse-danger-zone"><button className="text-button browse-delete" onClick={() => setDeleting(true)}><Icon name="trash" size={17} />Delete playlist</button></div>
+    {cleaning && <ConfirmDialog title="Remove duplicate recordings?" confirmLabel="Clean duplicates" onClose={() => setCleaning(false)} onConfirm={() => {
+      app.account.setLibrary(library => ({ ...library, playlists: library.playlists.map(item => item.id === id ? { ...item, songs: deduplicatePlaylist(item.songs) } : item) }));
+      setCleaning(false); app.toast('Duplicate recordings removed.');
+    }}><p>{playlist.songs.length - deduplicatePlaylist(playlist.songs).length} duplicate recordings will be removed. Separate versions are kept.</p></ConfirmDialog>}
     {deleting && <ConfirmDialog title="Delete this playlist?" confirmLabel="Delete playlist" destructive onClose={() => setDeleting(false)} onConfirm={() => {
       app.account.setLibrary(library => ({ ...library, playlists: library.playlists.filter(item => item.id !== id) }));
       if (app.addToPlaylist === id) app.setAddToPlaylist(null);

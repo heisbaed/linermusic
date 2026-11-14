@@ -113,6 +113,7 @@ public class MainActivity extends Activity {
 
 
     private static final int SAVE_FILE = 44;
+    private static final int TV_VOICE = 45;
 
 
 
@@ -153,6 +154,8 @@ public class MainActivity extends Activity {
 
 
     private volatile String pendingSongLink = "";
+    private volatile String pendingTvLink = "";
+    private volatile boolean pendingPlayerOpen;
 
     private static final String APP_DOWNLOAD_URL = "https://cinemusic.web.app/download";
 
@@ -313,6 +316,7 @@ public class MainActivity extends Activity {
 
 
         web = new WebView(this); web.setBackgroundColor(startupColor); setContentView(web);
+        if (isTv) web.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
 
 
 
@@ -637,6 +641,13 @@ public class MainActivity extends Activity {
 
 
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == TV_VOICE) {
+            if (resultCode == RESULT_OK && data != null) {
+                ArrayList<String> matches = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
+                if (matches != null && !matches.isEmpty()) emit("tvVoiceResult", Events.json("text", matches.get(0)));
+            }
+            return;
+        }
 
 
 
@@ -729,6 +740,7 @@ public class MainActivity extends Activity {
 
 
     private void receiveAuthLink(Intent intent) {
+        if (intent != null && intent.getBooleanExtra("openPlayer", false)) { pendingPlayerOpen = true; intent.removeExtra("openPlayer"); }
 
 
 
@@ -737,6 +749,13 @@ public class MainActivity extends Activity {
 
 
         Uri uri = intent.getData();
+        boolean tvLink = ("cinemusic".equals(uri.getScheme()) && "pair".equals(uri.getHost()))
+            || ("https".equals(uri.getScheme()) && "cinemusic.web.app".equals(uri.getHost()) && "/tv-connect".equals(uri.getPath()));
+        if (tvLink) {
+            String id = uri.getQueryParameter("id"), mode = uri.getQueryParameter("mode");
+            if (!isTvDevice() && id != null && id.matches("[a-f0-9]{32}") && ("link".equals(mode) || "search".equals(mode))) pendingTvLink = uri.toString();
+            return;
+        }
 
 
 
@@ -886,11 +905,10 @@ public class MainActivity extends Activity {
 
 
 
-            emit("downloads", Events.json("items", new OfflineVault(MainActivity.this).list()));
-
-
-
-            emit("downloadJobs", Events.json("items", DownloadService.jobs(MainActivity.this)));
+            if (!isTvDevice()) network.execute(() -> {
+                if (!isTvDevice()) emit("downloads", Events.json("items", new OfflineVault(MainActivity.this).list()));
+                if (!isTvDevice()) emit("downloadJobs", Events.json("items", DownloadService.jobs(MainActivity.this)));
+            });
 
 
 
@@ -906,7 +924,9 @@ public class MainActivity extends Activity {
 
 
 
+            if (!pendingTvLink.isEmpty()) emit("tvLink", Events.json());
             if (!pendingSongLink.isEmpty()) emit("songLink", Events.json("id",pendingSongLink));
+            if (pendingPlayerOpen) emit("openPlayer", Events.json());
 
         });
 
@@ -1724,7 +1744,42 @@ public class MainActivity extends Activity {
 
 
 
+        @JavascriptInterface public String consumeTvLink() {
+            String link = pendingTvLink; pendingTvLink = ""; return link;
+        }
+        @JavascriptInterface public boolean hasTvVoice() {
+            return isTvDevice() && tvVoiceIntent().resolveActivity(getPackageManager()) != null;
+        }
+        @JavascriptInterface public void startTvVoice() {
+            if (!isTvDevice()) return;
+            runOnUiThread(() -> {
+                try { startActivityForResult(tvVoiceIntent(), TV_VOICE); }
+                catch (android.content.ActivityNotFoundException ignored) {}
+            });
+        }
+        @JavascriptInterface public void showTvKeyboard() {
+            if (!isTvDevice()) return;
+            runOnUiThread(() -> {
+                if (web != null) ((android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
+                    .showSoftInput(web, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+            });
+        }
+        @JavascriptInterface public void hideTvKeyboard() {
+            if (!isTvDevice()) return;
+            runOnUiThread(() -> {
+                if (web != null) ((android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
+                    .hideSoftInputFromWindow(web.getWindowToken(), 0);
+            });
+        }
+        @JavascriptInterface public void keepTvScreenOn(boolean enabled) {
+            if (!isTvDevice()) return;
+            runOnUiThread(() -> {
+                if (enabled) getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                else getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            });
+        }
         @JavascriptInterface public String consumeSongLink() { String id=pendingSongLink; pendingSongLink=""; return id; }
+        @JavascriptInterface public boolean consumePlayerOpen() { boolean pending = pendingPlayerOpen; pendingPlayerOpen = false; return pending; }
 
 
 
@@ -2148,11 +2203,11 @@ public class MainActivity extends Activity {
 
 
 
-        @JavascriptInterface public String downloads() { return new OfflineVault(MainActivity.this).list().toString(); }
+        @JavascriptInterface public String downloads() { return isTvDevice() ? "[]" : new OfflineVault(MainActivity.this).list().toString(); }
 
 
 
-        @JavascriptInterface public String downloadJobs() { return DownloadService.jobs(MainActivity.this).toString(); }
+        @JavascriptInterface public String downloadJobs() { return isTvDevice() ? "[]" : DownloadService.jobs(MainActivity.this).toString(); }
 
 
 
@@ -2177,6 +2232,16 @@ public class MainActivity extends Activity {
 
 
         @JavascriptInterface public void pauseDownload(String id) { DownloadService.cancel(MainActivity.this, id, true); }
+        @JavascriptInterface public void prioritizeDownload(String id) { DownloadService.prioritize(MainActivity.this, id); }
+        @JavascriptInterface public boolean requestMusicWidget() {
+            android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(MainActivity.this);
+            if (!manager.isRequestPinAppWidgetSupported()) return false;
+            runOnUiThread(() -> {
+                try { manager.requestPinAppWidget(new android.content.ComponentName(MainActivity.this, MusicWidgetProvider.class), null, null); }
+                catch (Exception ignored) { Events.send(MainActivity.this, "widgetError", Events.json("message", "Add Cine music from your launcher's Widgets menu.")); }
+            });
+            return true;
+        }
 
 
 
@@ -2195,6 +2260,13 @@ public class MainActivity extends Activity {
         }
 
 
+
+        @JavascriptInterface public void downloadMany(String tracksJson) { startDownloads(tracksJson, false); }
+        @JavascriptInterface public void resumeDownloads(String idsJson) {
+            try { startDownloads(DownloadService.resumableTracks(MainActivity.this, new org.json.JSONArray(idsJson)).toString(), true); }
+            catch (Exception error) { emit("downloadError", Events.json("message", "Could not resume downloads.")); }
+        }
+        @JavascriptInterface public void pauseAllDownloads() { network.execute(() -> DownloadService.pauseAll(MainActivity.this)); }
 
         @JavascriptInterface public void download(String trackJson) {
 
@@ -2612,7 +2684,19 @@ public class MainActivity extends Activity {
 
 
 
+    private void startDownloads(String tracksJson, boolean resume) {
+        if (isTvDevice()) return;
+        if (tracksJson == null || tracksJson.length() > 524288) { emit("downloadError", Events.json("message", "Download selection is too large. Select fewer songs.")); return; }
+        runOnUiThread(() -> {
+            try {
+                requestNotifications();
+                startForegroundService(new Intent(MainActivity.this, DownloadService.class).putExtra("tracks", tracksJson).putExtra("resume", resume));
+            } catch (Exception error) { emit("downloadError", Events.json("message", "Could not start downloads. Try again.")); }
+        });
+    }
+
     private void startDownload(String trackJson, boolean resume) {
+        if (isTvDevice()) return;
 
 
 
@@ -2714,9 +2798,24 @@ public class MainActivity extends Activity {
 
 
 
+    private Intent tvVoiceIntent() {
+        return new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Search Cine Music");
+    }
+
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
 
         if (isTvDevice() && event.getAction() == KeyEvent.ACTION_DOWN) {
+            if (Build.VERSION.SDK_INT >= 30 && web != null && web.getRootWindowInsets() != null
+                && web.getRootWindowInsets().isVisible(android.view.WindowInsets.Type.ime())) {
+                int code = event.getKeyCode();
+                if (code == KeyEvent.KEYCODE_ENTER || code == KeyEvent.KEYCODE_DPAD_CENTER
+                    || code == KeyEvent.KEYCODE_BACK || (code >= KeyEvent.KEYCODE_DPAD_UP && code <= KeyEvent.KEYCODE_DPAD_RIGHT)) {
+                    return super.dispatchKeyEvent(event);
+                }
+            }
 
             int code = event.getKeyCode();
 
@@ -2753,16 +2852,23 @@ public class MainActivity extends Activity {
             }
 
             if (tvKey != null) {
+                if (code == KeyEvent.KEYCODE_BACK && event.getRepeatCount() > 0) return true;
+                if ("enter".equals(tvKey) && event.getRepeatCount() > 0) return true;
 
                 final String key = tvKey;
 
                 if (web != null) {
 
-                    web.post(() -> web.evaluateJavascript("window.__cineTvKey?.(" + JSONObject.quote(key) + ")", null));
+                    web.post(() -> {
+                        if (web == null) return;
+                        web.evaluateJavascript("window.__cineTvKey?.(" + JSONObject.quote(key) + ")", result -> {
+                            if ("back".equals(key) && !"true".equals(result)) moveTaskToBack(true);
+                        });
+                    });
 
                 }
 
-                if (code != KeyEvent.KEYCODE_BACK) return true;
+                return true;
 
             }
 

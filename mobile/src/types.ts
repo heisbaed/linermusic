@@ -51,8 +51,13 @@ export interface NativeApi {
   downloads(): string;
   downloadJobs(): string;
   download(track: string): void;
+  downloadMany?(tracks: string): void;
+  resumeDownloads?(ids: string): void;
+  pauseAllDownloads?(): void;
   cancelDownload(id: string): void;
   pauseDownload(id: string): void;
+  prioritizeDownload?(id: string): void;
+  requestMusicWidget?(): boolean;
   resumeDownload(id: string): void;
   configureDownloads(wifiOnly: boolean): void;
   removeDownload(id: string): void;
@@ -61,6 +66,7 @@ export interface NativeApi {
   openNotificationSettings(): void;
   authTokens(): string;
   consumeSongLink?(): string;
+  consumePlayerOpen?(): boolean;
   saveAuthTokens(json: string): void;
   clearAuthTokens(): void;
   googleSignIn(requestId: string, webClientId: string, nonce: string): void;
@@ -76,6 +82,12 @@ export interface NativeApi {
   setCrossfade?(enabled: boolean, durationSeconds: number): void;
   setGapless?(enabled: boolean): void;
   isTv?(): boolean;
+  consumeTvLink?(): string;
+  hasTvVoice?(): boolean;
+  startTvVoice?(): void;
+  showTvKeyboard?(): void;
+  hideTvKeyboard?(): void;
+  keepTvScreenOn?(enabled: boolean): void;
 }
 declare global {
   interface Window {

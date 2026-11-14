@@ -16,7 +16,7 @@ import java.util.concurrent.*;
 /** Foreground review plus Android's permission-return installation flow. */
 public class UpdateActivity extends Activity {
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
-    private TextView status;private boolean waiting,checking;
+    private TextView status;private boolean waiting,checking,installing;
     private File apk(){return new File(getCacheDir(),"ota/update.apk");}
     static boolean trustedUrl(String value){try{URI u=new URI(value);return "https".equals(u.getScheme())&&u.getUserInfo()==null&&(u.getPort()==-1||u.getPort()==443)
         &&("cinemusic.web.app".equals(u.getHost())||("github.com".equals(u.getHost())&&u.getPath().startsWith("/heisbaed/linermusic/releases/download/")));}catch(Exception e){return false;}}
@@ -62,15 +62,41 @@ public class UpdateActivity extends Activity {
     }
     private void offerInstall(){try{verifyPackage(this,apk());status.setText("The downloaded update is ready to install.");
         new AlertDialog.Builder(this).setTitle("Install update").setMessage("Confirm installation in Android. Your music library will be kept.").setNegativeButton("Later",(d,w)->{}).setPositiveButton("Install",(d,w)->install()).show();
-    }catch(Exception e){apk().delete();check();}}
+    }catch(Exception e){apk().delete();getSharedPreferences("cine_updates",MODE_PRIVATE).edit().remove("install_message").remove("install_session").apply();check();}}
     private void install(){
         if(!getPackageManager().canRequestPackageInstalls()){waiting=true;startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+getPackageName())));return;}
-        try{verifyPackage(this,apk());Uri uri=FileProvider.getUriForFile(this,getPackageName()+".fileprovider",apk());
-            startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
-            status.setText("Confirm installation in Android. If cancelled, reopen Updates to retry.");
-        }catch(Exception e){status.setText("Could not install: "+e.getMessage());}
+        if (installing) return;
+        installing = true; status.setText("Preparing the update for Android...");
+        worker.execute(() -> {
+            PackageInstaller installer = getPackageManager().getPackageInstaller(); int sessionId = -1;
+            try {
+                verifyPackage(this, apk());
+                android.content.SharedPreferences prefs = getSharedPreferences("cine_updates", MODE_PRIVATE);
+                int previous = prefs.getInt("install_session", -1);
+                if (previous >= 0) { try { installer.abandonSession(previous); } catch (Exception ignored) {} }
+                PackageInstaller.SessionParams parameters = new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+                parameters.setAppPackageName(getPackageName()); parameters.setSize(apk().length());
+                if (Build.VERSION.SDK_INT >= 31) parameters.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_REQUIRED);
+                sessionId = installer.createSession(parameters);
+                prefs.edit().putInt("install_session", sessionId).putString("install_message", "Confirm the update in Android.").commit();
+                try (PackageInstaller.Session session = installer.openSession(sessionId)) {
+                    try (InputStream input = new FileInputStream(apk()); OutputStream output = session.openWrite("base.apk", 0, apk().length())) {
+                        byte[] buffer = new byte[65536]; int count;
+                        while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+                        session.fsync(output);
+                    }
+                    int flags = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
+                    PendingIntent callback = PendingIntent.getBroadcast(this, sessionId, new Intent(this, UpdateInstallReceiver.class), flags);
+                    session.commit(callback.getIntentSender());
+                }
+                runOnUiThread(() -> status.setText("Confirm the update in Android. Installation can take a minute while Android verifies it."));
+            } catch (Exception error) {
+                if (sessionId >= 0) { try { installer.abandonSession(sessionId); } catch (Exception ignored) {} }
+                runOnUiThread(() -> status.setText("Could not install. " + error.getMessage()));
+            } finally { installing = false; }
+        });
     }
-    protected void onResume(){super.onResume();if(waiting){waiting=false;if(getPackageManager().canRequestPackageInstalls())install();else status.setText("Installation permission was not granted. Reopen Updates to retry.");}}
+    protected void onResume(){super.onResume();if(waiting){waiting=false;if(getPackageManager().canRequestPackageInstalls())install();else status.setText("Installation permission was not granted. Reopen Updates to retry.");}else {String message=getSharedPreferences("cine_updates",MODE_PRIVATE).getString("install_message","");if(!message.isEmpty())status.setText(message);}}
     protected void onSaveInstanceState(Bundle b){super.onSaveInstanceState(b);b.putBoolean("waiting",waiting);}
     protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
 }

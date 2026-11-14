@@ -23,14 +23,17 @@ dependencies {
 
 android {
     buildFeatures { buildConfig true }
+    if (providers.gradleProperty('cineAssetsDir').isPresent()) {
+        sourceSets.main.assets.setSrcDirs([providers.gradleProperty('cineAssetsDir').get()])
+    }
     namespace 'com.heisbaed.cinemusic'
     compileSdk 36
     defaultConfig {
         applicationId 'com.heisbaed.cinemusic'
         minSdk 26
         targetSdk 36
-        versionCode providers.gradleProperty('cineVersionCode').map { it.toInteger() }.getOrElse(6)
-        versionName '0.1.5'
+        versionCode providers.gradleProperty('cineVersionCode').map { it.toInteger() }.getOrElse(7)
+        versionName providers.gradleProperty('cineVersionName').getOrElse('0.1.6')
         testInstrumentationRunner 'com.heisbaed.cinemusic.VaultChecks'
     }
     compileOptions {

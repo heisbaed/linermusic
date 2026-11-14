@@ -13,7 +13,7 @@ describe('responsive music search', () => {
     const partial=vi.fn(); const task=searchMusicCatalog('muz','all',undefined,partial);
     await vi.waitFor(()=>expect(partial).toHaveBeenCalledWith([expect.objectContaining({id:'one'})]));
     finish([song('two','Too Much')]); expect(await task).toHaveLength(2);
-    expect(searchRaw).toHaveBeenCalledTimes(2);
+    expect(searchRaw).toHaveBeenCalledTimes(3);
   });
   it('does not publish cancelled results', async()=>{
     const abort=new AbortController();const partial=vi.fn();

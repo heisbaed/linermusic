@@ -9,7 +9,7 @@ function jobsFrom(value: unknown): DownloadJob[] {
   return value.flatMap(item => {
     const song = item?.track || item?.song;
     return song?.id && ['queued', 'downloading', 'paused', 'failed'].includes(item.status)
-      ? [{ id: song.id, song, status: item.status, progress: Number(item.progress) || 0, error: item.error } as DownloadJob] : [];
+      ? [{ id: song.id, song, status: item.status, progress: Number(item.progress) || 0, error: item.error, bytes: Number(item.bytes) || 0, totalBytes: Number(item.totalBytes) || 0, bytesPerSecond: Number(item.bytesPerSecond) || 0 } as DownloadJob] : [];
   });
 }
 
@@ -35,8 +35,16 @@ export function useDownloads(prefs: Preferences, toast: (message: string) => voi
         if (added) current.current.toast(`${added.title} is ready to play offline in Cine music.`);
       }
       if (event.type === 'downloadJobs') { const next = jobsFrom(event.data.items); current.current.jobs = next; setJobs(next); }
-      if (event.type === 'downloadProgress') refreshDownloads();
-      if (event.type === 'downloadError') { refreshDownloads(); current.current.toast(String(event.data.message || 'Download failed. Retry from Downloads.')); }
+      if (event.type === 'downloadProgress') {
+        const next = jobsFrom([event.data])[0];
+        const jobs = current.current.jobs.filter(job => job.id !== event.data.id);
+        if (next) {
+          const index = current.current.jobs.findIndex(job => job.id === next.id);
+          jobs.splice(index < 0 ? jobs.length : index, 0, next);
+        }
+        current.current.jobs = jobs; setJobs(jobs);
+      }
+      if (event.type === 'downloadError') current.current.toast(String(event.data.message || 'Download failed. Retry from Downloads.'));
     });
   }, [disabled]);
   function download(song: Song) {
@@ -57,5 +65,26 @@ export function useDownloads(prefs: Preferences, toast: (message: string) => voi
     try { window.CineAndroid?.cancelDownload?.(id); window.CineAndroid?.removeDownload(id); refreshDownloads(); toast('Local download removed.'); }
     catch { toast('The download could not be removed. Try again.'); }
   }
-  return { downloads: disabled ? [] : downloads, jobs: disabled ? [] : jobs, download, removeDownload, refreshDownloads };
+  async function downloadMany(songs: Song[]) {
+    if (current.current.disabled) return;
+    const native = window.CineAndroid;
+    if (!native) { toast('Protected downloads require the Android app.'); return; }
+    if (!isOnline()) { toast('Connect to the internet to download songs.'); return; }
+    if (current.current.prefs.wifiOnly && !native.isWifiConnected()) { toast('Connect to Wi-Fi to start downloads.'); return; }
+    const pending = [...new Map(songs.map(song => [song.id, song])).values()].filter(song =>
+      !current.current.downloads.some(item => item.id === song.id)
+      && !current.current.jobs.some(job => job.id === song.id && job.status !== 'failed'));
+    for (let at = 0; at < pending.length; at += 20) {
+      const batch = pending.slice(at, at + 20);
+      current.current.jobs = [...current.current.jobs.filter(job => !batch.some(song => song.id === job.id)), ...batch.map(song => ({ id: song.id, song, status: 'queued' as const, progress: 0 }))];
+      setJobs(current.current.jobs);
+      await new Promise(resolve => setTimeout(resolve, 16));
+      try {
+        if (native.downloadMany) native.downloadMany(JSON.stringify(batch));
+        else for (const song of batch) native.download(JSON.stringify(song));
+      } catch { refreshDownloads(); toast('Some songs could not be queued. Retry from Downloads.'); return; }
+    }
+    if (pending.length) toast(`${pending.length} songs submitted to the download queue.`);
+  }
+  return { downloads: disabled ? [] : downloads, jobs: disabled ? [] : jobs, download, downloadMany, removeDownload, refreshDownloads };
 }

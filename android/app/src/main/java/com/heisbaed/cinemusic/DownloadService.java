@@ -32,7 +32,7 @@ public class DownloadService extends Service {
         final String sourceUrl;
         String status = "queued", error = "";
         int progress;
-        long bytes, totalBytes, lastProgress;
+        long bytes, totalBytes, lastProgress, transferStarted;
         volatile boolean stopped;
         volatile HttpURLConnection connection;
         Job(JSONObject source) throws Exception {
@@ -41,7 +41,7 @@ public class DownloadService extends Service {
         }
         JSONObject snapshot() {
             return Events.json("id", id, "track", track, "status", status, "progress", progress, "bytes", bytes,
-                "totalBytes", totalBytes, "error", error, "restartOnResume", true);
+                "totalBytes", totalBytes, "bytesPerSecond", transferStarted > 0 ? bytes * 1000 / Math.max(1, SystemClock.elapsedRealtime() - transferStarted) : 0, "error", error, "restartOnResume", true);
         }
     }
     private static synchronized void loadJobs(Context context) {
@@ -79,11 +79,14 @@ public class DownloadService extends Service {
         }
         JSONArray result = new JSONArray(); for (Job job : JOBS.values()) result.put(job.snapshot()); return result;
     }
-    private static void publishJobs(Context context) { Events.send(context, "downloadJobs", Events.json("items", jobs(context))); }
+    private static synchronized JSONArray jobSnapshot() {
+        JSONArray result = new JSONArray(); for (Job job : JOBS.values()) if (!"completed".equals(job.status)) result.put(job.snapshot()); return result;
+    }
+    private static void publishJobs(Context context) { Events.send(context, "downloadJobs", Events.json("items", jobSnapshot())); }
     private static void publishJob(Context context, Job job) {
         JSONObject state;
         synchronized (DownloadService.class) { if (JOBS.get(job.id) != job) return; state = job.snapshot(); }
-        Events.send(context, "downloadProgress", state); publishJobs(context);
+        Events.send(context, "downloadProgress", state);
     }
     static boolean isWifiConnected(Context context) {
         try {
@@ -112,7 +115,35 @@ public class DownloadService extends Service {
         loadJobs(context); Job job = JOBS.get(id);
         return job != null && ("paused".equals(job.status) || "failed".equals(job.status)) ? job.track.toString() : null;
     }
+    static synchronized JSONArray resumableTracks(Context context, JSONArray ids) {
+        loadJobs(context); JSONArray tracks = new JSONArray();
+        for (int index = 0; index < ids.length(); index++) {
+            Job job = JOBS.get(ids.optString(index));
+            if (job != null && ("paused".equals(job.status) || "failed".equals(job.status))) tracks.put(job.track);
+        }
+        return tracks;
+    }
+    static void pauseAll(Context context) {
+        List<HttpURLConnection> connections = new ArrayList<>();
+        synchronized (DownloadService.class) {
+            loadJobs(context);
+            for (Job job : JOBS.values()) if ("queued".equals(job.status) || "downloading".equals(job.status)) {
+                job.stopped = true; job.status = "paused"; job.progress = 0; job.bytes = 0;
+                if (job.connection != null) connections.add(job.connection);
+            }
+            persist(context);
+        }
+        for (HttpURLConnection connection : connections) connection.disconnect();
+        publishJobs(context);
+    }
     static synchronized void forget(Context context, String id) { loadJobs(context); JOBS.remove(id); persist(context); }
+    static synchronized void prioritize(Context context, String id) {
+        loadJobs(context);
+        Job job = JOBS.get(id);
+        if (job == null || !"queued".equals(job.status)) return;
+        Map<String, Job> reordered = new LinkedHashMap<>(); reordered.put(id, job); reordered.putAll(JOBS);
+        JOBS.clear(); JOBS.putAll(reordered); persist(context); publishJobs(context);
+    }
     void enforceWifi() {
         if (closed || !wifiOnly(this) || isWifiConnected(this)) return;
         List<String> ids = new ArrayList<>();
@@ -129,31 +160,29 @@ public class DownloadService extends Service {
         lastStartId = startId;
         startForeground(2, notification("Preparing your download", 0));
         try {
-            JSONObject track = new JSONObject(intent.getStringExtra("track")); String id = track.getString("id");
+            if (intent == null) { drainQueue(); return START_NOT_STICKY; }
+            JSONArray tracks = intent.hasExtra("tracks") ? new JSONArray(intent.getStringExtra("tracks")) : new JSONArray().put(new JSONObject(intent.getStringExtra("track")));
             boolean resume = intent.getBooleanExtra("resume", false);
-            Job job;
+            boolean waitingForWifi = wifiOnly(this) && !isWifiConnected(this);
+            OfflineVault vault = new OfflineVault(this);
             synchronized (DownloadService.class) {
-                jobs(this); Job existing = JOBS.get(id);
-                if (existing != null && "downloading".equals(existing.status)) {
-                    // Already in flight; republish and leave it alone.
-                    publishJob(this, existing); return START_NOT_STICKY;
+                loadJobs(this);
+                for (int index = 0; index < tracks.length(); index++) {
+                    JSONObject track = tracks.optJSONObject(index);
+                    if (track == null) continue;
+                    String id = track.optString("id");
+                    if (id.isEmpty() || id.length() > 256 || vault.contains(id)) continue;
+                    Job job = JOBS.get(id);
+                    if (job != null && ("downloading".equals(job.status) || "queued".equals(job.status) || ("paused".equals(job.status) && !resume))) continue;
+                    if (job == null) { job = new Job(track); JOBS.put(id, job); }
+                    job.status = waitingForWifi ? "paused" : "queued";
+                    job.error = waitingForWifi ? "Waiting for Wi-Fi. Connect and resume." : "";
                 }
-                if (existing != null && (resume || "failed".equals(existing.status))) {
-                    job = existing; // resume / retry: reuse the existing job
-                } else if (existing != null) {
-                    job = existing; // queued or paused — keep it; drainQueue will start it when idle
-                } else {
-                    job = new Job(track); JOBS.put(id, job);
-                }
-                if (!"downloading".equals(job.status)) { job.status = "queued"; job.error = ""; }
                 persist(this);
             }
-            if (wifiOnly(this) && !isWifiConnected(this)) {
-                synchronized (DownloadService.class) { if (JOBS.get(id) == job) cancel(this, id, true, "Wi-Fi-only downloads are enabled. Connect to Wi-Fi and resume."); }
-                drainQueue(); return START_NOT_STICKY;
-            }
-            drainQueue(); // picks the oldest queued job and starts it if the service is idle
-        } catch (Exception error) { drainQueue(); }
+            publishJobs(this);
+        } catch (Exception error) { Events.send(this, "downloadError", Events.json("message", "Some songs could not be queued. Retry from Downloads.")); }
+        drainQueue();
         return START_NOT_STICKY;
     }
     private void download(Job job) {
@@ -176,6 +205,7 @@ public class DownloadService extends Service {
                     job.totalBytes = total;
                     job.progress = 0;
                     job.bytes = 0;
+                    job.transferStarted = SystemClock.elapsedRealtime();
                     persist(this);
                 }
                 publishJob(this, job);
@@ -185,7 +215,7 @@ public class DownloadService extends Service {
                     synchronized (DownloadService.class) {
                         if (job.stopped) throw new InterruptedIOException("Download stopped");
                         job.bytes = read;
-                        if (now - job.lastProgress < 200) return;
+                        if (now - job.lastProgress < 500) return;
                         job.lastProgress = now; job.progress = length > 0 ? (int)Math.min(99, read * 100 / length) : -1;
                     }
                     if (wifiOnly(this) && !isWifiConnected(this)) { cancel(this, job.id, true, "Wi-Fi disconnected"); throw new InterruptedIOException("Wi-Fi disconnected"); }
@@ -195,7 +225,7 @@ public class DownloadService extends Service {
                     job.status = "completed"; job.progress = 100; job.bytes = job.totalBytes = track.optLong("downloadBytes"); persist(this);
                 });
             }
-            Events.send(this, "downloads", Events.json("items", vault.list())); publishJob(this, job);
+            Events.send(this, "downloads", Events.json("items", vault.list())); publishJob(this, job); publishJobs(this);
         } catch (Exception error) {
             synchronized (DownloadService.class) {
                 if (closed || job.stopped) return;
@@ -203,7 +233,7 @@ public class DownloadService extends Service {
                 job.status = "failed"; job.bytes = 0; job.progress = 0;
                 job.error = error.getMessage() == null ? "Download failed. Please retry." : error.getMessage(); persist(this);
             }
-            publishJob(this, job); Events.send(this, "downloadError", Events.json("id", job.id, "message", job.error));
+            publishJob(this, job); publishJobs(this); Events.send(this, "downloadError", Events.json("id", job.id, "message", job.error));
         } finally {
             if (job.connection != null) job.connection.disconnect(); job.connection = null;
             handler.post(() -> { inFlight--; drainQueue(); });

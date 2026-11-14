@@ -15,8 +15,9 @@ import java.util.function.BooleanSupplier;
 /** Device checks for the two core guarantees: protected files and native offline playback. */
 public class VaultChecks extends Instrumentation {
     private int passed;
+    private boolean speed;
     private final StringBuilder report = new StringBuilder();
-    @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
+    @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); speed = arguments != null && arguments.getString("speed", "false").equals("true"); start(); }
     private void check(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
     private void test(String name, CheckedRunnable run) throws Exception {
         run.run(); passed++; report.append("PASS: ").append(name).append('\n');
@@ -27,6 +28,7 @@ public class VaultChecks extends Instrumentation {
         Bundle result = new Bundle();
         try {
             Context context = getTargetContext(); OfflineVault vault = new OfflineVault(context);
+            if (speed) { result.putString("stream", DownloadSpeedChecks.verify(context)); finish(Activity.RESULT_OK, result); return; }
             test("Update sources and same-version APK rejection", () -> UpdateChecks.verify(context));
             test("Firebase network hosts are exact and external actions are validated", () -> {
                 MainActivity.configureNetworkHosts(context);
@@ -94,6 +96,8 @@ public class VaultChecks extends Instrumentation {
                 try {
                     vault.store(Events.json("id", id, "title", "Local job check"), new ByteArrayInputStream(data), data.length, (read, total) -> {});
                     DownloadService.jobs(context);
+                    JSONArray completed = vault.list();
+                    for (int i = 0; i < completed.length(); i++) check(completed.getJSONObject(i).has("id"), "A storage summary replaced a completed song");
                     JSONArray jobs = DownloadService.jobs(context); int found = 0;
                     for (int i = 0; i < jobs.length(); i++) {
                         JSONObject job = jobs.getJSONObject(i); if (!id.equals(job.optString("id"))) continue;
@@ -140,14 +144,17 @@ public class VaultChecks extends Instrumentation {
         try {
             JSONArray playbackQueue = new JSONArray().put(new JSONObject(first.toString())).put(second);
             first.put("queue", playbackQueue);
+            first.put("startPositionMs", 4000);
             context.startForegroundService(new Intent(context, PlaybackService.class).setAction("play").putExtra("track", first.toString()));
             await(() -> state.get().optString("status").equals("playing") && state.get().optLong("positionMs") > 400, "Offline playback did not start: " + state.get());
+            check(state.get().optLong("positionMs") >= 3900, "Listening checkpoint position was not restored");
             runOnMainSync(() -> PlaybackService.instance.setQueue(playbackQueue, false, "off"));
             runOnMainSync(() -> PlaybackService.instance.setQueue(playbackQueue, true, "all"));
             JSONObject snapshot = new JSONObject(PlaybackService.instance.snapshot());
             check(snapshot.getJSONArray("queue").length() == 2 && snapshot.getBoolean("shuffle") && "all".equals(snapshot.getString("repeat")), "Queue modes missing from native snapshot");
             check(snapshot.has("output") && snapshot.has("sleepDeadline") && !snapshot.getBoolean("sleepEndOfSong"), "Native snapshot is incomplete");
             check(PlaybackService.PREVIOUS_RESTART_MS == 3000, "Previous restart threshold changed");
+            test("Widget PendingIntents and system media controls use the shared player", () -> MediaSurfaceChecks.verify(this, context));
             runOnMainSync(() -> PlaybackService.instance.setQueue(playbackQueue, false, "off"));
             runOnMainSync(() -> PlaybackService.instance.command("pause", 0));
             await(() -> state.get().optString("status").equals("paused"), "Pause failed");

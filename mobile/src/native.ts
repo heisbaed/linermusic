@@ -112,8 +112,8 @@ function resumePreview() {
   try { void previewAudio?.play().catch(error => previewError(error, generation)); }
   catch (error) { previewError(error, generation); }
 }
-export function playNative(song: Song, url?: string, queue: Song[] = [], shuffle = false, repeat: 'off' | 'all' | 'one' = 'off', quality: 'auto' | 'low' | 'normal' | 'high' = 'auto', gapless = true, crossfadeSeconds = 0) {
-  if (window.CineAndroid) { window.CineAndroid.play(JSON.stringify({ ...song, url, queue, shuffle, repeat, quality, gapless, crossfadeSeconds })); return; }
+export function playNative(song: Song, url?: string, queue: Song[] = [], shuffle = false, repeat: 'off' | 'all' | 'one' = 'off', quality: 'auto' | 'low' | 'normal' | 'high' = 'auto', gapless = true, crossfadeSeconds = 0, positionMs = 0) {
+  if (window.CineAndroid) { window.CineAndroid.play(JSON.stringify({ ...song, url, queue, shuffle, repeat, quality, gapless, crossfadeSeconds, startPositionMs: Math.max(0, positionMs) })); return; }
   if (!url) throw new Error('Offline playback is available in the Android app.');
   if (!previewAudio) {
     previewAudio = new Audio();
@@ -132,6 +132,7 @@ export function playNative(song: Song, url?: string, queue: Song[] = [], shuffle
   playerState = { ...playerState, queue: [...queue], shuffle, repeat, error: undefined };
   previewSong = song;
   previewAudio.src = url;
+  if (positionMs > 0) previewAudio.addEventListener('loadedmetadata', () => { if (previewSong?.id === song.id) control('seek', positionMs); }, { once: true });
   previewEvent('loading');
   resumePreview();
 }

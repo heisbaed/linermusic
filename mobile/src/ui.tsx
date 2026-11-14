@@ -16,7 +16,7 @@ const activeSheets: HTMLElement[] = [];
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   const { theme } = useApp();
-  const src = figmaAssets[theme].logo;
+  const src = isTvEnvironment() ? '/cine-tv-logo.png' : figmaAssets[theme].logo;
   return compact ? <img className="brand-symbol" src={src} alt="Cine music" draggable={false} />
     : <span className="brand-wordmark"><img src={src} alt="" draggable={false} /><span>Cine music</span></span>;
 }
@@ -68,8 +68,18 @@ export function SearchField({ value, onChange, onSubmit, placeholder = 'Songs, a
   return <form className="search-field" role="search" onSubmit={submit}><Icon name="search" /><input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} aria-label={label} type="search" enterKeyHint="search" autoComplete="off" autoCapitalize="none" spellCheck={false} />{value && <Action icon="close" label={`Clear ${label.toLowerCase()}`} onClick={() => onChange('')} />}</form>;
 }
 
-export function SongRows({ songs, context = 'Music', editablePlaylistId, showHearts = false, onPlay, singleTrack = false }: {
-  songs: Song[]; context?: string; editablePlaylistId?: string; showHearts?: boolean; onPlay?: (song: Song) => void; singleTrack?: boolean;
+export function SortControl({ value, onChange, options, label = 'Sort music' }: {
+  value: string; onChange: (value: string) => void; options: { value: string; label: string }[]; label?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = options.find(option => option.value === value) || options[0];
+  return <><div className="sort-control"><span>Sort by</span><button type="button" className="sort-trigger" aria-label={`${label}, ${current.label}`} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}><strong>{current.label}</strong><Icon name="chevron_down" size={18} /></button></div>
+    {open && <Sheet title="Sort by" onClose={() => setOpen(false)} className="sort-sheet"><div className="sort-options" role="radiogroup" aria-label={label}>{options.map(option => <button type="button" role="radio" aria-checked={value === option.value} className={value === option.value ? 'sort-option selected' : 'sort-option'} data-sort={option.value} key={option.value} onClick={() => { onChange(option.value); setOpen(false); }}><span>{option.label}</span><span className="sort-indicator" aria-hidden="true">{value === option.value && <Icon name="check" size={18} />}</span></button>)}</div></Sheet>}
+  </>;
+}
+
+export function SongRows({ songs, context = 'Music', editablePlaylistId, showHearts = false, onPlay, singleTrack = false, queueSongs }: {
+  songs: Song[]; context?: string; editablePlaylistId?: string; showHearts?: boolean; onPlay?: (song: Song) => void; singleTrack?: boolean; queueSongs?: Song[];
 }) {
   const app = useApp();
   function move(id: string, offset: number) {
@@ -85,7 +95,7 @@ export function SongRows({ songs, context = 'Music', editablePlaylistId, showHea
     const current = app.playback.player.track?.id === song.id;
     const saved = app.isFavorite(song.id), downloaded = app.downloads.some(item => item.id === song.id);
     return <div className={`song-row ${current ? 'is-current' : ''} ${editablePlaylistId ? 'editable-song' : ''}`} key={song.id}>
-      <button className="song-main" onClick={() => { onPlay?.(song); void app.playback.play(song, singleTrack ? [song] : songs, context); }} aria-label={`Play ${song.title} by ${song.artist}`}>
+      <button className="song-main" onClick={() => { onPlay?.(song); void app.playback.play(song, singleTrack ? [song] : queueSongs || songs, context); }} aria-label={`Play ${song.title} by ${song.artist}`}>
         <Cover song={song} /><span className="row-copy"><strong>{song.title}</strong><small>{downloaded && <Icon name="download" size={12} />}{song.artist}</small></span>
       </button>
       {showHearts ? <Action icon="heart" label={`${saved ? 'Remove' : 'Save'} ${song.title} ${saved ? 'from' : 'to'} Favorites`} active={saved} onClick={() => app.toggleFavorite(song)} /> : <span className="song-duration">{formatTime(song.durationMs)}</span>}

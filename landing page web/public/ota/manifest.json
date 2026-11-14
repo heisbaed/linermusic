@@ -1,8 +1,8 @@
 {
-  "version": "0.1.5",
-  "versionCode": 6,
-  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.5/Cine-Music-0.1.5.apk",
-  "fileSize": 12154510,
-  "sha256": "b2293126489e9b5ed0c7e69788047adf45a19ce281b4cdf3de931fff04f7780c",
-  "releaseNotes": "Live search suggestions, progressive results and better partial-name matching; Resume all for paused/failed downloads; includes earlier lyrics, playback and search-field repairs."
+  "version": "0.1.6",
+  "versionCode": 7,
+  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.6/Cine-Music-0.1.6.apk",
+  "fileSize": 12298420,
+  "sha256": "cfa5bbbb4dd58bb6a85b3cba669d42a2b25cf75c6a1d9e37fa151fb4fd3a0e3f",
+  "releaseNotes": "Official live music search coverage and instrumental ranking fixes; instant genre artwork and long-title layout repairs; Daily Mix, hidden music, resume listening, playlist cleanup and lyric timing; bulk downloads and playlists; synchronized widgets and system media artwork."
 }

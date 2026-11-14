@@ -6,7 +6,7 @@ import type { NativeApi } from './types';
 
 declare global {
   interface Window {
-    __cineTvKey?: (key: string) => void;
+    __cineTvKey?: (key: string) => boolean;
     CineAndroid?: NativeApi;
   }
 }
@@ -90,7 +90,7 @@ export function focusElement(el: HTMLElement | null, opts?: { scroll?: ScrollLog
   if (!el) return false;
   const prevent = opts?.preventScroll ?? false;
   try { el.focus({ preventScroll: prevent }); } catch { el.focus(); }
-  if (!prevent) el.scrollIntoView({ behavior: 'smooth', block: opts?.scroll ?? 'nearest', inline: 'nearest' });
+  if (!prevent) el.scrollIntoView({ behavior: 'instant', block: opts?.scroll ?? 'nearest', inline: 'nearest' });
   applyTvFocusClass(el);
   rememberFocus(el);
   return true;
@@ -127,7 +127,7 @@ export function focusFirstActionable(root?: ParentNode | null) {
     candidates[0];
   if (target) {
     focusElement(target, { preventScroll: true });
-    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    target.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
   }
   return target || null;
 }
@@ -198,20 +198,20 @@ export function navigateSpatial(direction: Direction): boolean {
   }
 
   // Fallback: when moving right from rail into content, pick first content focusable.
-  if (direction === 'right' && current.closest('.tv-sidebar')) {
+  if (direction === 'right' && current.closest('.tv-header')) {
     const contentFirst = getFocusableElements(document.querySelector('.tv-main') || document)[0];
     if (contentFirst) { focusElement(contentFirst); return true; }
   }
   // Fallback: moving left from content, focus active rail item.
   if (direction === 'left' && current.closest('.tv-main')) {
-    const railActive = document.querySelector<HTMLElement>('.tv-sidebar .tv-nav-item.active, .tv-sidebar .tv-nav-item');
+    const railActive = document.querySelector<HTMLElement>('.tv-nav-item[aria-current=page], .tv-nav-item');
     if (railActive) { focusElement(railActive); return true; }
   }
   return false;
 }
 
 function focusRail(): boolean {
-  const active = document.querySelector<HTMLElement>('.tv-sidebar .tv-nav-item.active, .tv-sidebar [data-tv-rail-default], .tv-sidebar .tv-nav-item, .tv-sidebar button');
+  const active = document.querySelector<HTMLElement>('.tv-nav-item[aria-current=page], .tv-nav-item');
   return !!(active && focusElement(active));
 }
 
@@ -219,44 +219,39 @@ function hasOpenOverlay(): boolean {
   return !!document.querySelector('.tv-player[role="dialog"], .modal-scrim:not([hidden]), .sheet-backdrop, [role="dialog"][aria-modal="true"]');
 }
 
-export function handleTvKey(key: string): void {
+export function handleTvKey(key: string): boolean {
+  if (!window.dispatchEvent(new Event('cine:tv-input', { cancelable: true }))) return true;
+  const active = document.activeElement as HTMLElement | null;
+  if ((key === 'left' || key === 'right') && active?.getAttribute('role') === 'slider') {
+    active.dispatchEvent(new CustomEvent('cine:seek', { detail: key === 'left' ? -10000 : 10000 }));
+    return true;
+  }
   switch (key) {
     case 'up':
     case 'down':
     case 'left':
     case 'right':
-      navigateSpatial(key);
-      break;
+      return navigateSpatial(key);
     case 'enter': {
       const active = document.activeElement as HTMLElement | null;
       if (active && active !== document.body) active.click();
       else ensureTvFocus();
-      break;
+      return true;
     }
     case 'back':
-      handleBack();
-      break;
+      if (!window.dispatchEvent(new Event('cine:back', { cancelable: true }))) return true;
+      if (document.activeElement?.closest('.tv-main')) return focusRail();
+      return false;
     case 'play_pause':
     case 'play':
     case 'pause':
     case 'next':
     case 'previous':
       window.dispatchEvent(new CustomEvent('cine:remote-transport', { detail: { action: key } }));
-      break;
+      return true;
+    default:
+      return false;
   }
-}
-
-function handleBack() {
-  // Overlays/modals own back via capture listeners (preventDefault + stopImmediatePropagation).
-  const ev = new Event('cine:back', { cancelable: true });
-  const notCanceled = window.dispatchEvent(ev);
-  if (!notCanceled || ev.defaultPrevented) return;
-  // Second: if in content, return focus to nav rail.
-  const active = document.activeElement as HTMLElement | null;
-  if (active?.closest('.tv-main') && !hasOpenOverlay()) {
-    if (focusRail()) return;
-  }
-  // Otherwise let app/native handle (never trap).
 }
 
 let initialized = false;
@@ -300,7 +295,7 @@ export function initTvSpatialNav(): void {
     const active = document.activeElement as HTMLElement | null;
     if (!active || active === document.body || !isElementVisible(active)) ensureTvFocus();
   });
-  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'inert', 'aria-hidden', 'class', 'style'] });
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'inert', 'aria-hidden'] });
 
   const kick = () => ensureTvFocus();
   window.addEventListener('DOMContentLoaded', kick);
