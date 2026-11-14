@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
   return {
     base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : "/",
     build: {
+      rollupOptions: { input: { main: path.resolve(__dirname, 'index.html'), tv: path.resolve(__dirname, 'tv-connect.html') } },
       sourcemap: emitSourcemaps ? "inline" : false,
       minify: !emitSourcemaps,
     },

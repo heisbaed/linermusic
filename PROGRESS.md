@@ -15,7 +15,7 @@
 
 ## Release and remaining verification
 
-- v0.1.6, versionCode 7. APK releases/Cine-Music-0.1.6.apk, 12298420 bytes, SHA-256 cfa5bbbb4dd58bb6a85b3cba669d42a2b25cf75c6a1d9e37fa151fb4fd3a0e3f. Source branch release/0.1.6. Publication is being completed.
+- v0.1.6, versionCode 7. APK releases/Cine-Music-0.1.6.apk, 12298420 bytes, SHA-256 cfa5bbbb4dd58bb6a85b3cba669d42a2b25cf75c6a1d9e37fa151fb4fd3a0e3f. Source branch release/0.1.6. Published at https://github.com/heisbaed/linermusic/releases/tag/v0.1.6. Website and OTA manifest deployed to https://cinemusic.web.app.
 - Final installation is via USB at the user's request. Installer validation, unknown-source permission return and Android confirmation were exercised. A complete live OTA download-to-install cycle remains unverified.
 - The updater now uses PackageInstaller sessions and status callbacks, reports cancellation/failure, supports retry and clears stale install notices when a cached APK is no longer newer.
 - Device queue and listening preferences were restored after testing. Bulk user downloads were paused to recover the frozen screen. Keep them paused until the user resumes them.
@@ -81,3 +81,9 @@ The remaining sections describe the earlier 0.1.2 checkpoint and are retained fo
 Google account selection, every Bluetooth/output device, every TV remote and every real catalog song have not been exhaustively verified. Fixture tests are isolated and not production data. Existing release remains debug-signed to preserve update compatibility with previously distributed builds.
 
 Old historical notes were preserved in `PROGRESS-before-2026-11-14.md`.
+
+## Final device checkpoint
+
+- Final v0.1.6 APK installed over USB and reopened. Physical themed sorting sheets verified on Liked Songs and Albums. Download count remains 359.
+- Verified that the lyric preview no longer contains Tap to open. Playback of Umenipendelea (Live) was active after restoring a saved listening checkpoint.
+- SHA-256 of the installed APK and local release artifact matched. GitHub asset metadata and live OTA manifest were checked after publication.
