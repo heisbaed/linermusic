@@ -134,6 +134,7 @@ public class MainActivity extends Activity {
 
 
     private WebView web;
+    private CineSplashView startupSplash;
 
 
 
@@ -277,23 +278,12 @@ public class MainActivity extends Activity {
 
 
 
-        // Simple splash fade for all versions
-
         setTheme(R.style.AppTheme);
-
-
-
-        // Fade in the main content after splash
-
-        if (getWindow() != null && getWindow().getDecorView() != null) {
-
-            getWindow().getDecorView().setAlpha(0);
-
-            getWindow().getDecorView().animate().alpha(1).setDuration(400).start();
-
+        if (Build.VERSION.SDK_INT >= 31) {
+            getSplashScreen().setOnExitAnimationListener(splash -> {
+                splash.animate().alpha(0).setDuration(160).withEndAction(splash::remove).start();
+            });
         }
-
-
 
         configureNetworkHosts(this);
 
@@ -307,7 +297,7 @@ public class MainActivity extends Activity {
 
 
 
-        int startupColor = isTv ? Color.rgb(10, 10, 14) : Color.rgb(255, 243, 247);
+        int startupColor = getColor(R.color.cine_startup_background);
 
 
 
@@ -315,7 +305,13 @@ public class MainActivity extends Activity {
 
 
 
-        web = new WebView(this); web.setBackgroundColor(startupColor); setContentView(web);
+        web = new WebView(this);
+        web.setBackgroundColor(startupColor);
+        android.widget.FrameLayout content = new android.widget.FrameLayout(this);
+        content.addView(web, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        startupSplash = new CineSplashView(this);
+        content.addView(startupSplash, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        setContentView(content);
         if (isTv) web.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
 
 
@@ -1180,7 +1176,7 @@ public class MainActivity extends Activity {
 
 
 
-                || host.equals("lrclib.net") || host.equals("musicbrainz.org") || host.endsWith(".googlevideo.com") || host.equals("identitytoolkit.googleapis.com")
+                || host.equals("lrclib.net") || host.equals("itunes.apple.com") || host.equals("musicbrainz.org") || host.endsWith(".googlevideo.com") || host.equals("identitytoolkit.googleapis.com")
 
 
 
@@ -1339,6 +1335,15 @@ public class MainActivity extends Activity {
         }
 
 
+
+        @JavascriptInterface public void appReady() {
+            runOnUiThread(() -> {
+                if (startupSplash != null) {
+                    startupSplash.dismiss();
+                    startupSplash = null;
+                }
+            });
+        }
 
         @JavascriptInterface public void ready() {
 
@@ -1532,7 +1537,7 @@ public class MainActivity extends Activity {
 
 
 
-                    int background = isTvDevice() ? Color.rgb(10, 10, 14) : Color.parseColor(color);
+                    int background = Color.parseColor(color);
 
 
 

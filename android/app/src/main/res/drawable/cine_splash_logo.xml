@@ -1,0 +1,5 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:width="150dp" android:height="150dp" android:gravity="center">
+        <bitmap android:src="@drawable/cine_icon" android:gravity="fill" android:filter="true" />
+    </item>
+</layer-list>

@@ -78,13 +78,16 @@ try {
   await back();await back();
  });
  await check('Lyric timing persists and timed-line seeking includes the offset',async()=>{
-  await click('.mini-open');await click('[aria-label="Open lyrics"]');await wait("!!document.querySelector('.lyrics-timing')");
+  await click('.mini-open');await click('[aria-label="Open lyrics"]');await wait("!!document.querySelector('.lyric-line')");await click('.lyrics-style-trigger');await click('.lyrics-style-option:last-child');await wait("!!document.querySelector('.lyrics-timing')");
   await click('[aria-label="Show lyrics 250 milliseconds later"]');
   assert(await evaluate("document.querySelector('.lyrics-timing').textContent.includes('+0.25s')"),'Timing label not updated');
   const id=await evaluate("JSON.parse(window.CineAndroid.snapshot()).track.id");
   assert(await evaluate(`JSON.parse(localStorage.getItem('cine:lyric-offset:'+${JSON.stringify(id)}))`)===250,'Timing not persisted');
-  await click('.lyric-line');
+  await click('[aria-label="Close lyrics timing"]');await click('.lyric-line');
   assert(await evaluate("JSON.parse(window.CineAndroid.snapshot()).positionMs")===250,'Lyric seek ignored offset');
+  await click('.lyrics-style-trigger');await click('.lyrics-style-option:first-child');await delay(600);
+  assert(await evaluate("(()=>{const current=document.querySelector('.lyrics-style-flow .lyric-current'),other=document.querySelector('.lyrics-style-flow .lyric-line:not(.lyric-current)');return !!current&&!!other&&getComputedStyle(current).filter==='none'&&getComputedStyle(other).filter.includes('blur')&&Number(getComputedStyle(current).opacity)>Number(getComputedStyle(other).opacity)})()"),'Animated lyrics blur/focus did not distinguish neighboring lines');
+  await shot('animated-lyrics');
   await shot('timed-lyrics');await click('[aria-label="Back to player"]');await click('[aria-label="Collapse player"]');
  });
  await check('Resume listening restores saved queue, context and position',async()=>{
@@ -116,7 +119,7 @@ try {
   assert(JSON.stringify(titles)===JSON.stringify([...titles].sort((a,b)=>a.localeCompare(b))),'Liked Songs did not sort by title');
   await back();await textClick('Saved albums');
   await click('.browse-collection-albums .sort-trigger');assert(await evaluate("!!document.querySelector('.sort-options [data-sort=artist]')"),'Albums artist sorting missing');
-  await shot('themed-sort-sheet');await click('.sort-options [data-sort=artist]');
+  assert(await evaluate("(()=>{const e=document.querySelector('.sort-options [data-sort=artist]'),r=e.getBoundingClientRect();return !!document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('.sort-sheet')})()"),'Playback chrome overlays the sort sheet');await shot('themed-sort-sheet');await click('.sort-options [data-sort=artist]');
   await layout();await shot('album-sort');await back();
  });
  await check('Genre art is bundled and long top-result titles remain inside their card',async()=>{
@@ -139,6 +142,14 @@ try {
    await layout();
   }
   await shot('narrow-mini-player');
+ });
+
+ await check('New Releases excludes old and undated albums instead of filling the shelf with older music',async()=>{
+  await evaluate("Object.keys(localStorage).filter(k=>k.startsWith('cine:release-dates-v1:')).forEach(k=>localStorage.removeItem(k))");
+  await page.cdp('Page.navigate',{url:base+'/?ui-fixture=old-releases'});
+  await wait("!!document.querySelector('.home-feed .empty-state h2')&&document.querySelector('.home-feed .empty-state h2').textContent==='No new releases in the last 30 days'");
+  assert(await evaluate("!document.querySelector('.home-spotlight')"),'Older music was shown as a new release');
+  await shot('no-old-new-releases');
  });
 } finally {
  await fs.writeFile(new URL('audit-report.json',output),JSON.stringify(report,null,2));

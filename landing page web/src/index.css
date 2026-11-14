@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+.song-share-page h1 { font-size: clamp(2rem, 5vw, 4rem); }
+.shared-song-art { width: 100%; max-width: 480px; align-self: center; }
+.shared-song-art img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 16px; box-shadow: 0 18px 50px #0002; }
+
 @font-face {
   font-family: "Inter:Medium";
   src: url("https://static.figma.com/font/Inter_1") format("woff2");

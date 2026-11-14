@@ -7,12 +7,14 @@ export function songLink(id:string):string {
 }
 
 /** Shareable song link that works whether or not the recipient has the app. */
-export function shareSongLink(id:string):string {
+export function shareSongLink(id:string, song?: { title: string; artist: string }):string {
   if(!/^[a-zA-Z0-9_-]{11}$/.test(id))throw new Error('This song does not have a shareable catalog link.');
-  if (typeof window !== 'undefined' && window.CineAndroid?.getSongShareLink) {
-    return window.CineAndroid.getSongShareLink(id);
+  const url = new URL('https://cinemusic.web.app/song/' + id);
+  if (song) {
+    url.searchParams.set('title', song.title.slice(0, 300));
+    url.searchParams.set('artist', song.artist.slice(0, 160));
   }
-  return 'https://cinemusic.web.app/song/' + id;
+  return url.toString();
 }
 
 export function appShareLink():string {
@@ -23,18 +25,9 @@ export function appShareLink():string {
 }
 
 export function getShareText(song: { title: string; artist: string; id: string; durationMs?: number; cover?: string }):string {
-  const url = shareSongLink(song.id);
-  const appLink = appShareLink();
+  const url = shareSongLink(song.id, song);
   const duration = song.durationMs ? formatDuration(song.durationMs) : '';
-  return [
-    `${song.title} - ${song.artist}`,
-    duration ? `(${duration})` : '',
-    '',
-    `Listen: ${url}`,
-    '',
-    '— Sent from Cine Music',
-    appLink
-  ].filter(Boolean).join('\n');
+  return [`${song.title} - ${song.artist}`, duration ? `(${duration})` : '', url].filter(Boolean).join('\n');
 }
 
 /**
@@ -42,7 +35,7 @@ export function getShareText(song: { title: string; artist: string; id: string; 
  * These would be rendered on the server when someone visits the song link
  */
 export function getSongOGTags(song: { title: string; artist: string; id: string; cover?: string; durationMs?: number; lyrics?: string }):Record<string, string> {
-  const coverUrl = song.cover || `https://music.youtube.com/oembed?url=https://music.youtube.com/watch?v=${song.id}&format=json`;
+  const coverUrl = song.cover || `https://i.ytimg.com/vi/${song.id}/hqdefault.jpg`;
   const lyricsSnippet = song.lyrics ? getLyricsPreview(song.lyrics, 2).replace(/\n/g, ' ') : '';
   return {
     'og:title': `${song.title} - ${song.artist}`,
@@ -52,7 +45,6 @@ export function getSongOGTags(song: { title: string; artist: string; id: string;
     'og:type': 'music.song',
     'music:song': 'https://cinemusic.web.app/song/' + song.id,
     'music:artist': song.artist,
-    'music:recording_date': new Date().toISOString().split('T')[0],
   };
 }
 
@@ -69,7 +61,7 @@ export function getLyricsPreview(lyrics: string, maxLines: number = 4):string {
  * Generate a shareable lyrics card URL (would resolve to a web page with lyrics preview)
  */
 export function getLyricsShareLink(songId: string, lyricsSnippet: string):string {
-  // Encode lyrics snippet as base64 for URL parameter
+  shareSongLink(songId); // Validate the same catalog ID used by song sharing.
   const encoded = btoa(unescape(encodeURIComponent(lyricsSnippet.substring(0, 500)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   return `https://cinemusic.web.app/song/${songId}/lyrics?preview=${encoded}`;
 }

@@ -1,0 +1,7 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_cine_splash_motion">
+    <target android:name="cine_motion" android:animation="@animator/cine_splash_motion"/>
+    <target android:name="cine_path_0" android:animation="@animator/cine_splash_c_reveal"/>
+    <target android:name="cine_path_1" android:animation="@animator/cine_splash_c_reveal"/>
+    <target android:name="cine_path_2" android:animation="@animator/cine_splash_note_reveal"/>
+</animated-vector>

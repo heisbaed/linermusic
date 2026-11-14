@@ -63,9 +63,9 @@ const ease = [0.22, 1, 0.36, 1] as const;
 
 const APK_URL =
 
-  "https://github.com/heisbaed/linermusic/releases/download/v0.1.6/Cine-Music-0.1.6.apk";
+  "https://github.com/heisbaed/linermusic/releases/download/v0.1.7/Cine-Music-0.1.7.apk";
 
-const APK_SHA256 = "cfa5bbbb4dd58bb6a85b3cba669d42a2b25cf75c6a1d9e37fa151fb4fd3a0e3f";
+const APK_SHA256 = "cdc1174140bf4295693429a1cdfb69a2638fa51453800d68b4e3cbd192b0695c";
 function usePerformanceMode() {
 
   const [liteMode, setLiteMode] = useState(false);
@@ -1334,7 +1334,7 @@ function HomePage({ navigate }: { navigate: (page: Page, section?: string) => vo
 
           >
 
-            <span /> Android APK v0.1.6 · Available now
+            <span /> Android APK v0.1.7 · Available now
 
           </motion.div>
 
@@ -1908,11 +1908,11 @@ const faqs = [
 
     "Can I download Cine music right now?",
 
-    "Yes. Cine music v0.1.6 is available from the official GitHub release linked on this page. The current file is a debug-signed testing build.",
+    "Yes. Cine music v0.1.7 is available from the official GitHub release linked on this page. The current file is a debug-signed testing build.",
 
   ],
 
-  ["Which Android versions will be supported?", "Cine music v0.1.6 requires Android 8.0 or newer."],
+  ["Which Android versions will be supported?", "Cine music v0.1.7 requires Android 8.0 or newer."],
 
   [
 
@@ -1938,19 +1938,26 @@ const faqs = [
 
 function SongLinkPage({ songId }: { songId?: string }) {
 
+  const params = new URLSearchParams(window.location.search);
+  const title = params.get("title")?.slice(0, 300);
+  const artist = params.get("artist")?.slice(0, 160);
+  const [artFailed, setArtFailed] = useState(false);
+
   const appUrl = songId ? `cinemusic://song/${songId}` : "cinemusic://";
 
   return (
 
     <main className="download-page">
 
-      <section className="download-hero section-shell">
+      <section className="download-hero section-shell song-share-page">
 
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease }}>
 
           <div className="eyebrow"><span /> CINE MUSIC / SONG</div>
 
-          <h1>Open this song<br />in <em>Cine Music.</em></h1>
+          <h1 style={{ overflowWrap: "anywhere" }}>{title || <>Open this song<br />in <em>Cine Music.</em></>}</h1>
+
+          {artist && <p>{artist}</p>}
 
           <p>{songId ? "If you have Cine Music installed, open it to play this song. Otherwise, download the app first." : "Open Cine Music to continue."}</p>
 
@@ -1964,11 +1971,9 @@ function SongLinkPage({ songId }: { songId?: string }) {
 
         </motion.div>
 
-        <motion.div className="package-orb" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, ease }}>
+        <motion.div className="shared-song-art" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
 
-          <div className="orb-halo" />
-
-          <img src="/assets/cine-music-logo.png" alt="Cine music" />
+          <img src={songId && !artFailed ? `https://i.ytimg.com/vi/${songId}/hqdefault.jpg` : "/assets/cine-music-logo.png"} alt={title ? `Artwork for ${title}` : "Cine music"} onError={() => setArtFailed(true)} style={{ width: "100%", height: "auto", borderRadius: 16 }} />
 
         </motion.div>
 
@@ -2080,9 +2085,9 @@ function DownloadPage() {
 
             <p>
 
-              Cine music v0.1.6 brings streaming, background playback, offline downloads, search,
+              Cine music v0.1.7 brings streaming, background playback, offline downloads, search,
 
-              playlists, synced lyrics, a refreshed dark-green identity and cloud sync to Android 8.0 and newer.
+              playlists, synced lyrics, four themes and cloud sync to Android 8.0 and newer.
 
             </p>
 
@@ -2092,7 +2097,7 @@ function DownloadPage() {
 
             </a>
 
-            <span className="availability">v0.1.6 · 12.30 MB · Android 8.0+</span>
+            <span className="availability">v0.1.7 · 12.29 MB · Android 8.0+</span>
 
           </div>
 
@@ -2112,7 +2117,7 @@ function DownloadPage() {
 
                 <dt>Version</dt>
 
-                <dd>0.1.6</dd>
+                <dd>0.1.7</dd>
 
               </div>
 
@@ -2120,7 +2125,7 @@ function DownloadPage() {
 
                 <dt>File size</dt>
 
-                <dd>12.30 MB</dd>
+                <dd>12.29 MB</dd>
 
               </div>
 
@@ -2184,7 +2189,7 @@ function DownloadPage() {
 
         <motion.div {...reveal} className="section-heading">
 
-          <span className="kicker">WHAT’S IN V0.1.6</span>
+          <span className="kicker">WHAT’S IN V0.1.7</span>
 
           <h2>
 
@@ -2202,15 +2207,15 @@ function DownloadPage() {
 
           {[
 
-            ["Playback", "Streaming, background audio and media notification controls."],
+            ["Playback", "Keep listening with background audio, notification controls and a home-screen widget."],
 
-            ["Offline", "Downloads with automatic retry and an encrypted offline vault."],
+            ["Offline", "Save music inside Cine music. Pause, resume and manage your downloads together."],
 
-            ["Discovery", "Home shelves, release spotlights, categories, search and Explore."],
+            ["Fresh releases", "Discover releases with confirmed dates within the last 30 days."],
 
-            ["Your library", "Albums, artists, playlists, favorites, queue and playlist import."],
+            ["Your library", "Sort saved music, build playlists and manage songs in a few taps."],
 
-            ["Listening tools", "Synced lyrics, sleep timer, shuffle and repeat controls."],
+            ["Follow the lyrics", "Animated lyrics, timing adjustments and clear playback controls."],
 
             ["Cloud sync", "Email or Google sign-in with Firebase-powered synchronization."],
 
@@ -2225,8 +2230,6 @@ function DownloadPage() {
               key={title}
 
             >
-
-              <span>{String(index + 1).padStart(2, "0")}</span>
 
               <h3>{title}</h3>
 
@@ -2428,7 +2431,7 @@ function Footer({ navigate }: { navigate: (page: Page, section?: string) => void
 
         <span>Developed by Osborne's Digital Solutions · <a href="mailto:osbornesecards@gmail.com">osbornesecards@gmail.com</a></span>
 
-        <span>Android APK v0.1.6 · Available now</span>
+        <span>Android APK v0.1.7 · Available now</span>
 
       </div>
 
@@ -2454,7 +2457,7 @@ function MobileAction() {
 
           <strong>Cine music for Android</strong>
 
-          <small>v0.1.6 · 12.30 MB</small>
+          <small>v0.1.7 · 12.29 MB</small>
 
         </p>
 
@@ -2482,7 +2485,7 @@ export default function App() {
 
     const p = window.location.pathname || "/";
 
-    const song = p.match(/^\/song\/([A-Za-z0-9_-]{5,64})\/?$/);
+    const song = p.match(/^\/song\/([A-Za-z0-9_-]{11})(?:\/lyrics)?\/?$/);
 
     if (song) return { page: "song" as Page, section: undefined, songId: song[1] };
 

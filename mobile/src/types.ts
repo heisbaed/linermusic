@@ -77,6 +77,7 @@ export interface NativeApi {
   saveTextFile?(requestId: string, fileName: string, mimeType: string, text: string): void;
   getAppShareLink?(): string;
   getSongShareLink?(songId: string): string;
+  appReady?(): void;
   isAppInstalled?(): boolean;
   checkForUpdates?(): void;
   setCrossfade?(enabled: boolean, durationSeconds: number): void;

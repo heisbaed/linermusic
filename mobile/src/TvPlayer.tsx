@@ -11,21 +11,23 @@ import type { TvOverlay } from './TvApp';
 import './tv-player.css';
 
 export function TvPlayer({ mode, onMode, onBack }: {
-  mode: Exclude<TvOverlay, 'ambient'>; onMode: (mode: TvOverlay) => void; onBack: () => void;
+  mode: TvOverlay; onMode: (mode: TvOverlay) => void; onBack: () => void;
 }) {
   const app = useApp();
   const root = useRef<HTMLElement>(null);
   const activeLine = useRef<HTMLParagraphElement>(null);
   const lyricViewport = useRef<HTMLDivElement>(null);
+  const lyricColumn = useRef<HTMLDivElement>(null);
   const slider = useRef<HTMLButtonElement>(null);
   const [wash, setWash] = useState('');
   const { player, queue, seek, previous, next, toggle } = app.playback;
   const { track, status, durationMs } = player;
   const lyrics = useLyrics(track, mode === 'lyrics');
-  const position = useLivePosition(player, true);
+  const lines = useMemo(() => parseTvLyrics(lyrics.text), [lyrics.text]);
+  const wordTimed = useMemo(() => lines.some(line => line.words.length > 0), [lines]);
+  const position = useLivePosition(player, true, wordTimed ? 100 : 250);
   const live = useRef({ position, seek });
   live.current = { position, seek };
-  const lines = useMemo(() => parseTvLyrics(lyrics.text), [lyrics.text]);
   const active = lines.reduce((index, line, i) => line.time * 1000 <= position ? i : index, -1);
   const playing = status === 'playing' || status === 'loading';
   const split = mode !== 'player';
@@ -57,13 +59,20 @@ export function TvPlayer({ mode, onMode, onBack }: {
   }, [mode]);
   useLayoutEffect(() => {
     if (mode !== 'lyrics') return;
-    const viewport = lyricViewport.current, line = activeLine.current;
-    if (!viewport || !line) return;
-    const target = viewport.scrollTop + line.getBoundingClientRect().top - viewport.getBoundingClientRect().top
-      - (viewport.clientHeight - line.clientHeight) / 2;
-    viewport.scrollTo({ top: Math.max(0, target),
-      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
-  }, [mode, active]);
+    const viewport = lyricViewport.current, line = activeLine.current, column = lyricColumn.current;
+    if (!viewport || !line || !column) return;
+    function center() {
+      if (!viewport || !line || !column) return;
+      const offset = viewport.clientHeight / 2 - line.offsetTop - line.clientHeight / 2;
+      column.style.transform = 'translate3d(0,' + offset + 'px,0)';
+    }
+    center();
+    const resize = new ResizeObserver(center);
+    resize.observe(viewport);
+    let mounted = true;
+    void document.fonts.ready.then(() => { if (mounted) center(); });
+    return () => { mounted = false; resize.disconnect(); };
+  }, [mode, active, lines, track?.id]);
   if (!track) return null;
 
   const title = displaySongTitle(track.title, track.artist);
@@ -118,16 +127,16 @@ export function TvPlayer({ mode, onMode, onBack }: {
       </div>
       {mode === 'lyrics' && <section className="tv-lyrics-card" aria-label="Synced lyrics">
         <header><h2>Lyrics</h2></header>
-        <div className="tv-lyrics-viewport" ref={lyricViewport}>
-          {lines.length ? lines.map((line, index) => <p key={index} ref={index === active ? activeLine : undefined}
+        <div className="tv-lyrics-viewport" ref={lyricViewport}><div className="tv-lyrics-column" ref={lyricColumn}>
+          {lines.length ? lines.map((line, index) => <p key={index} ref={index === Math.max(0, active) ? activeLine : undefined}
             aria-current={index === active ? 'true' : undefined} className={`tv-lyric ${index === active ? 'current' : ''}`}
 >
             {index === active && line.words.length ? line.words.map((word, i) =>
               <span key={i} className={word.time * 1000 <= position ? 'sung' : ''}>{word.text}</span>) : line.text}
           </p>) : lyrics.text ? <p className="tv-unsynced">{lyrics.text}</p>
             : <div className="tv-lyrics-message"><Icon name="lyrics" size={42} /><p role="status">{lyrics.status === 'loading' ? 'Finding lyrics…' : lyrics.error || 'Lyrics are unavailable for this song.'}</p>
-              {lyrics.status === 'error' && <button className="tv-button" onClick={lyrics.retry}>Try again</button>}</div>}
-        </div>
+            </div>}
+        </div></div>
       </section>}
       {mode === 'queue' && <section className="tv-queue-card"><header><h2>Up Next</h2><small>{queue.length - at} songs</small></header>
         <div className="tv-next-viewport">{queue.slice(at, at + 60).map(song => <button className="tv-track" key={song.id}

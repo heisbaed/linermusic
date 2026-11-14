@@ -50,7 +50,7 @@
 .tv-lyrics-card,.tv-queue-card { min-width:0; min-height:0; height:100%; border-radius:1.35em; display:flex; flex-direction:column; overflow:hidden; }
 .tv-lyrics-card > header,.tv-queue-card > header { display:flex; align-items:center; justify-content:space-between; padding:1.1em 1.6em .5em; gap:1em; flex:none; }
 .tv-lyrics-card h2,.tv-queue-card h2 { font-size:1.05em; }
-.tv-lyrics-viewport { flex:1; min-height:0; overflow:hidden; pointer-events:none; user-select:none; position:relative; padding:32vh 2.8vw; scrollbar-width:none; scroll-padding-block:5em; }
+.tv-lyrics-viewport { flex:1; min-height:0; overflow:hidden; pointer-events:none; user-select:none; position:relative; padding:0 2.8vw; scrollbar-width:none; scroll-padding-block:5em; }
 .tv-lyrics-viewport::-webkit-scrollbar { display:none; }
 .tv-listener .tv-lyric { display:block; text-align:left; border:0; background:transparent; padding:.28em .14em; margin:0 0 .35em; width:100%; border-radius:.3em; color:var(--ink); opacity:.35; font-size:clamp(27px,3.1vw,56px)!important; font-weight:770; letter-spacing:-.035em; line-height:1.22!important; transition:opacity .25s; }
 .tv-lyric.current { opacity:1; }
@@ -69,3 +69,6 @@
  .tv-listener[data-view=lyrics] .tv-artwork-frame,.tv-listener[data-view=queue] .tv-artwork-frame {width:39vh;}
  .tv-listener[data-view=lyrics] .tv-playback-card,.tv-listener[data-view=queue] .tv-playback-card {font-size:.9em;}
 }
+
+.tv-lyrics-column { position:relative; width:100%; will-change:transform; transition:transform 600ms cubic-bezier(.22,.61,.36,1); }
+@media(prefers-reduced-motion:reduce) { .tv-lyrics-column { transition-duration:0ms; } }

@@ -211,17 +211,17 @@ export default function CineApp() {
         await navigator.share({
           title: song.title,
           text: `${song.title} - ${song.artist}`,
-          url: shareSongLink(song.id)
+          url: shareSongLink(song.id, song)
         });
       } catch (error) {
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
           await navigator.clipboard.writeText(shareText);
-          toast('Song link and app download link copied.');
+          toast('Song link copied.');
         }
       }
     } else {
       await navigator.clipboard.writeText(shareText);
-      toast('Song link and app download link copied.');
+      toast('Song link copied.');
     }
   }
 

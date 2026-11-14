@@ -220,7 +220,6 @@ function hasOpenOverlay(): boolean {
 }
 
 export function handleTvKey(key: string): boolean {
-  if (!window.dispatchEvent(new Event('cine:tv-input', { cancelable: true }))) return true;
   const active = document.activeElement as HTMLElement | null;
   if ((key === 'left' || key === 'right') && active?.getAttribute('role') === 'slider') {
     active.dispatchEvent(new CustomEvent('cine:seek', { detail: key === 'left' ? -10000 : 10000 }));

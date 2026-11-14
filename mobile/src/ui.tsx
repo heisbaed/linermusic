@@ -5,6 +5,7 @@ import { THEMES, TV_THEMES, useApp } from './AppContext';
 import { formatTime } from './library';
 import { isTvEnvironment } from './spatialNav';
 import type { Song } from './types';
+import { createPortal } from 'react-dom';
 import albumDark from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_placeholder_album_dark.svg';
 import albumLight from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_placeholder_album_light.svg';
 import artistDark from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_placeholder_artist_dark.svg';
@@ -140,11 +141,13 @@ export function Sheet({ title, children, onClose, full = false, active = true, c
     window.addEventListener('cine:back', nativeBack, true);
     return () => { node.removeEventListener('keydown', keydown); window.removeEventListener('cine:back', nativeBack, true); const at = activeSheets.indexOf(node); if (at >= 0) activeSheets.splice(at, 1); };
   }, [active]);
-  return <div className={`modal-scrim ${full ? 'fullscreen-scrim' : ''} ${className}`} onClick={event => { if (active && event.target === event.currentTarget) onClose(); }}>
+  const content = <div className={`modal-scrim ${full ? 'fullscreen-scrim' : ''} ${className}`} onClick={event => { if (active && event.target === event.currentTarget) onClose(); }}>
     <section ref={panel} className={`modal-sheet ${full ? 'fullscreen-sheet' : ''}`} role="dialog" aria-modal={active ? 'true' : undefined} aria-hidden={!active ? true : undefined} aria-label={title} tabIndex={-1}>
       {header && <header className="sheet-header"><h2>{title}</h2><Action icon={full ? 'chevron_down' : 'close'} label={full ? `Collapse ${title.toLowerCase()}` : `Close ${title.toLowerCase()}`} onClick={onClose} /></header>}{children}
     </section>
   </div>;
+  const host = typeof document === 'undefined' ? null : document.querySelector('.cine-app');
+  return host ? createPortal(content, host) : content;
 }
 
 export function ConfirmDialog({ title, children, onConfirm, onClose, confirmLabel = 'Confirm', destructive = false }: {

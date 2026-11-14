@@ -13,14 +13,14 @@ import { control } from './native';
 import { isOnline, onConnectivityChange } from './network';
 import { loadSaved, save, toggleFavorite } from './library';
 import { focusElement } from './spatialNav';
-import { Brand, Cover } from './ui';
+import { Brand } from './ui';
 import './tv.css';
 
 const noop = () => {};
 const defaults: Preferences = { autoplay: true, wifiOnly: true, reducedMotion: 'system', haptics: false,
   privateListening: false, equalizerOn: false, eqBands: [0, 0, 0, 0, 0], eqPreset: 'Flat',
   audioQuality: 'auto', gapless: false, crossfadeSeconds: 0 };
-export type TvOverlay = 'player' | 'lyrics' | 'queue' | 'ambient';
+export type TvOverlay = 'player' | 'lyrics' | 'queue';
 
 export default function TvApp() {
   const account = useAccount();
@@ -42,7 +42,6 @@ export default function TvApp() {
   const smart = useSmartFeatures(account.user, prefs.privateListening, playback);
   const verified = account.user?.emailVerified === true;
   const returnFocus = useRef<HTMLElement | null>(null);
-  const ambientReturn = useRef<TvOverlay | null>(null);
   const state = useRef({ overlay, routes, tab, playback, verified });
   state.current = { overlay, routes, tab, playback, verified };
   const page = routes.at(-1);
@@ -53,7 +52,6 @@ export default function TvApp() {
   }
   function back() {
     const current = state.current;
-    if (current.overlay === 'ambient') { if (ambientReturn.current) setOverlay(ambientReturn.current); else closeOverlay(); return true; }
     if (current.overlay === 'lyrics' || current.overlay === 'queue') { setOverlay('player'); return true; }
     if (current.overlay) { closeOverlay(); return true; }
     if (current.routes.length) { setRoutes(old => old.slice(0, -1)); return true; }
@@ -95,36 +93,10 @@ export default function TvApp() {
       window.removeEventListener('cine:remote-transport', transport);
     };
   }, []);
-  const playing = verified && playback.player.status === 'playing';
+  const playing = verified && ['playing', 'loading'].includes(playback.player.status);
   useEffect(() => {
     window.CineAndroid?.keepTvScreenOn?.(playing);
-    if (!playing) return;
-    let timer: ReturnType<typeof setTimeout>;
-    function reset() {
-      clearTimeout(timer);
-      if (!document.hidden) timer = setTimeout(() => {
-        const current = state.current.overlay;
-        if (current === 'ambient') return;
-        if (!current) returnFocus.current = document.activeElement as HTMLElement;
-        ambientReturn.current = current;
-        setOverlay('ambient');
-      }, 180_000);
-    }
-    function wake(event: Event) {
-      if (state.current.overlay === 'ambient') { event.preventDefault(); back(); }
-      reset();
-    }
-    reset();
-    window.addEventListener('cine:tv-input', wake);
-    window.addEventListener('pointermove', reset);
-    document.addEventListener('visibilitychange', reset);
-    return () => {
-      clearTimeout(timer);
-      window.CineAndroid?.keepTvScreenOn?.(false);
-      window.removeEventListener('cine:tv-input', wake);
-      window.removeEventListener('pointermove', reset);
-      document.removeEventListener('visibilitychange', reset);
-    };
+    return () => window.CineAndroid?.keepTvScreenOn?.(false);
   }, [playing]);
 
   const app: AppState = {
@@ -156,11 +128,7 @@ export default function TvApp() {
         {searchStarted && <div hidden={Boolean(page) || tab !== 'search'}><TvSearchScreen active={!page && tab === 'search'} /></div>}
         {page ? <TvRouteScreen key={page.key} route={page.route} /> : tab === 'library' ? <TvLibraryScreen /> : tab === 'home' ? <TvHomeScreen /> : null}
       </TvShell>
-      {overlay && playback.player.track && (overlay === 'ambient'
-        ? <button type="button" className="tv-ambient" data-tv-autofocus onClick={back} aria-label="Return to Cine Music">
-          <span className="tv-ambient-art"><Cover song={playback.player.track} /><strong>{playback.player.track.title}</strong><small>{playback.player.track.artist}</small></span>
-        </button>
-        : <TvPlayer mode={overlay} onMode={setOverlay} onBack={back} />)}
+      {overlay && playback.player.track && <TvPlayer mode={overlay} onMode={setOverlay} onBack={back} />}
     </>}
     {message && <div role="status" className="tv-toast">{message}</div>}
   </div></AppContext.Provider>;

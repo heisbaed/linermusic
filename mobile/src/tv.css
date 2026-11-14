@@ -123,13 +123,6 @@ html.is-tv, body.is-tv, .is-tv #root { width:100%; height:100%; margin:0; overfl
 .tv-unsynced { white-space:pre-wrap; font-size:1.25em; }
 .tv-queue-list { flex:1; padding:1vw 10vw 5vw; }
 .tv-toast { position:absolute; z-index:4; right:4vw; bottom:6.5vw; background:var(--base); border:1px solid var(--edge); padding:.7em 1em; border-radius:.65em; max-width:26em; box-shadow:0 .3em 1.1em #0003; }
-.tv-ambient { position:absolute; inset:0; border:0; background:#09070a; outline:none!important; color:#d3bbc9!important; }
-.tv-ambient-art { position:absolute; top:16%; left:17%; width:15vw; text-align:left; animation:tv-drift 72s infinite alternate linear; }
-.tv-ambient-art .cover { width:6vw; margin-bottom:.4em; opacity:.68; }
-.tv-ambient-art strong,.tv-ambient-art small { display:block; }
-.tv-ambient-art small { color:#937a89; }
-@keyframes tv-drift { 33% { transform:translate(46vw,5vh); } 66% { transform:translate(22vw,48vh); } 100% { transform:translate(1vw,30vh); } }
-@media (prefers-reduced-motion:reduce) { .tv-ambient-art { animation-duration:280s; } }
 @media(max-width:890px) {
   .tv-header { padding-inline:3.7vw; } .tv-nav { gap:.15em; } .tv-nav-item { padding-inline:.55em; }
   .tv-nav-item svg { display:none; } .tv-page { padding-inline:4vw; }

@@ -1,4 +1,5 @@
 <resources>
+  <color name="cine_startup_background">#120811</color>
   <color name="cine_midnight">#04100A</color>
   <color name="cine_icon_background">#04100A</color>
   <color name="cine_cyan">#00D9F2</color>
