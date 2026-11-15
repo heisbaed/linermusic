@@ -37,7 +37,7 @@
         ]
       },
       {
-        "source": "/ota/manifest.json",
+        "source": "/ota/**",
         "headers": [
           {
             "key": "Content-Type",
