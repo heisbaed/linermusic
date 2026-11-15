@@ -42,16 +42,19 @@ export default function TvApp() {
   const smart = useSmartFeatures(account.user, prefs.privateListening, playback);
   const verified = account.user?.emailVerified === true;
   const returnFocus = useRef<HTMLElement | null>(null);
+  const queueFromBrowsing = useRef(false);
   const state = useRef({ overlay, routes, tab, playback, verified });
   state.current = { overlay, routes, tab, playback, verified };
   const page = routes.at(-1);
 
   function closeOverlay() {
+    queueFromBrowsing.current = false;
     setOverlay(null);
-    requestAnimationFrame(() => { if (returnFocus.current?.isConnected) focusElement(returnFocus.current); });
+    window.setTimeout(() => { if (returnFocus.current?.isConnected) focusElement(returnFocus.current); }, 80);
   }
   function back() {
     const current = state.current;
+    if (current.overlay === 'queue' && queueFromBrowsing.current) { closeOverlay(); return true; }
     if (current.overlay === 'lyrics' || current.overlay === 'queue') { setOverlay('player'); return true; }
     if (current.overlay) { closeOverlay(); return true; }
     if (current.routes.length) { setRoutes(old => old.slice(0, -1)); return true; }
@@ -109,6 +112,7 @@ export default function TvApp() {
     back,
     openPlayer: () => {
       if (!playback.player.track) return;
+      queueFromBrowsing.current = false;
       returnFocus.current = document.activeElement as HTMLElement;
       setOverlay('player');
     },
@@ -124,7 +128,7 @@ export default function TvApp() {
       <Brand /><h1>Opening your library</h1><p role="status">{account.syncStatus}</p>
       <div className="tv-actions"><button className="tv-button" onClick={account.retrySync}>Retry sync</button><button className="tv-button" onClick={account.signOut}>Sign out</button></div>
     </main> : <>
-      <TvShell page={page?.key || tab} main={!page} settings={page?.route.kind === 'account'} overlay={Boolean(overlay)}>
+      <TvShell page={page?.key || tab} main={!page} settings={page?.route.kind === 'account'} overlay={Boolean(overlay)} onQueue={() => { returnFocus.current = document.activeElement as HTMLElement; queueFromBrowsing.current = true; setOverlay('queue'); }}>
         {searchStarted && <div hidden={Boolean(page) || tab !== 'search'}><TvSearchScreen active={!page && tab === 'search'} /></div>}
         {page ? <TvRouteScreen key={page.key} route={page.route} /> : tab === 'library' ? <TvLibraryScreen /> : tab === 'home' ? <TvHomeScreen /> : null}
       </TvShell>

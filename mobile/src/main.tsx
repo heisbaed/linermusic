@@ -10,7 +10,9 @@ if (isTvEnvironment()) {
 }
 if (isTvEnvironment()) initTvSpatialNav();
 
-const App = React.lazy(() => isTvEnvironment() ? import('./TvApp') : import('./CineApp'));
+const App = React.lazy(() => import.meta.env.VITE_CINE_PLATFORM === 'tv' ? import('./TvApp')
+  : import.meta.env.VITE_CINE_PLATFORM === 'mobile' ? import('./CineApp')
+  : isTvEnvironment() ? import('./TvApp') : import('./CineApp'));
 
 class ErrorBoundary extends React.Component<React.PropsWithChildren, { failed: boolean }> {
   state = { failed: false };
@@ -20,8 +22,8 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, { failed: b
     return this.state.failed ? <main className="recovery"><h1>Cine music</h1><p>Something interrupted this screen. Try opening Cine Music again.</p><button className="primary" onClick={() => location.reload()}>Open again</button></main> : this.props.children;
   }
 }
-const startup = <div className="cine-startup" role="status" aria-label="Opening Cine Music">
-  <div className="cine-startup-logo">Cine music</div>
+const startup = window.CineAndroid ? null : <div className="cine-startup" role="status" aria-label="Opening Cine Music">
+  <div className="cine-startup-brand"><div className="cine-startup-logo"><img src="/cine-brand.svg" alt="" /></div><span>Cine music</span></div>
   <p>By Osborne's Digital Solutions</p>
 </div>;
 function StartupReady() {

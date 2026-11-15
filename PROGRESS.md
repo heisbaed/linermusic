@@ -1,44 +1,33 @@
-# Cine music progress â€” 15 November 2026
+# Cine music release progress — 15 November 2026
 
-## Latest release
+## Release 0.1.8 / code 11
 
-Version 0.1.7, Android versionCode 8 is published. Source and progress are pushed to release/0.1.7. The landing page and OTA manifest are live at https://cinemusic.web.app.
+Separate mobile and TV APKs use dedicated interfaces, launcher entries, labels and update feeds. Existing package identity and signing are retained on each platform to preserve accounts and installation data.
 
-## Delivered changes
+- Mobile Connect replaces the top-bar Lyrics action. The lyrics preview remains available. Existing playback positions and layout were preserved in rendered checks before the final build.
+- TV keeps its top-bar tabs and has a slimmer seven-control mini-player. The direct Queue Back/focus path was adjusted.
+- TV Smart Shuffle cycles Off, Shuffle and Smart Shuffle using the existing recommendation engine, with a distinct sparkles icon.
+- Native private artwork cache persists across launches, with 64 MB mobile and 32 MB TV limits. TV WebView no-cache mode was removed. Cache clearing continues to preserve encrypted music downloads.
+- Unboxed animated pink emblem, Cine music wordmark and By Osborne's Digital Solutions footer. Startup follows application readiness.
+- Connect supports device ownership, remote controls and offline phone listening with reconnection.
+- Landing page presents separate mobile and TV downloads with sizes/checksums. OTA feeds are /ota/manifest.json for mobile and /ota/tv-manifest.json for TV.
 
-- New Releases uses confirmed dates within 30 days. Exact artist and title matching uses public iTunes release metadata. Old, unknown and future dates are excluded.
-- Animated-flow lyrics blur adjacent lines and keep the current line sharp. Timing adjustments live in Lyrics timing. Removed Tap to open.
-- Sorting sheets follow the app theme and render above the navigation and mini-player. Liked Songs and saved albums support sorting.
-- Song sharing uses one URL, with title/artist metadata for the browser page. Browser pages show real catalog artwork and open the selected song in Android. Lyrics URLs reach the song route.
-- Native splash uses a separate animated C-and-note reveal with the Cine music wordmark and By Osborne's Digital Solutions footer. It dismisses when React commits the app, without a fixed launch hold. System reduced-motion settings disable motion.
-- Launcher uses a dark background and pink emblem, including adaptive icons.
-- Landing page has updated branding, current release highlights, file information and generic social preview artwork.
+## Verification and limits
 
-## Verification
+105 unit tests, eight core rendered groups and twelve smart-feature groups passed earlier. The TV chat verified actual audio ownership, transfer, remote pause/seek/next and offline/reconnection on the prior Connect preview. Both separate APK builds succeeded and installation commands returned Success on phone and TV.
 
-- 105 unit tests passed.
-- Eight core rendered feature groups and eleven smart-feature groups passed. Coverage includes search, radio, library routes, lyric navigation, four themes, selected playback controls, bulk downloads, sorting, narrow layouts and exclusion of old releases.
-- Browser song page checked at 360 px with actual artwork, correct app URL and no horizontal overflow.
-- Android build succeeded. All 509 packaged assets match the release-source snapshot byte for byte.
-- Version 0.1.7 / code 8 was installed over USB. Previous physical library check retained 361 completed downloads. A concurrent TV chat subsequently installed 0.1.7-connect.1 / code 9. Reinstalling the public release was rejected as a version downgrade. No downgrade or data removal was performed.
-- Final cold-launch recording and physical screenshots were blocked by the phone lock screen. The recording was black and is not counted as splash verification. AVD configuration exists, but its phone system image is incomplete, so no emulator visual check has been claimed.
+The owner explicitly requested stopping all tests to conserve quota. No further testing is being performed. Final artwork caching, TV Smart Shuffle and Queue focus restoration remain unverified on devices. Final splash appearance and the complete OTA download-to-install cycle are also unverified. Do not claim complete end-to-end verification.
 
-## Release artifact
+Song-specific social previews remain skipped at the owner's request. Generic site previews and song browser links are present. Existing debug signing is retained for update compatibility.
 
-- File releases/Cine-Music-0.1.7.apk
-- Size 12,294,157 bytes
-- SHA-256 cdc1174140bf4295693429a1cdfb69a2638fa51453800d68b4e3cbd192b0695c
-- Source branch release/0.1.7
-- Public download https://github.com/heisbaed/linermusic/releases/tag/v0.1.7
-- GitHub asset digest, uploaded size, website download URL, website checksum and live OTA manifest independently matched this artifact.
+## Artifacts
 
-## Remaining work and decisions
+- releases/Cine-Music-Mobile-0.1.8.apk
+- releases/Cine-Music-TV-0.1.8.apk
+- releases/SHA256SUMS.txt
+- Source branch release/0.1.8
+- Public site https://cinemusic.web.app
 
-- Song-specific social chat previews were skipped at the owner's request. Firebase billing is disabled and no preview server was deployed. Generic site preview metadata remains.
-- A complete fresh OTA download-to-install cycle remains unverified. APK installation uses Android confirmation.
-- Concurrent device-transfer/backend work remains in the main workspace. The release snapshot retains the playback engine verified in v0.1.6. TV/device transfer is not claimed verified in this release.
-- Final splash appearance and fresh playback on the installed package await an unlocked physical phone. No exhaustive all-catalog, Google-account, Bluetooth-output or TV-device test is claimed.
-- The owner has been asked to authorize coordination with Plan Cine Music Android TV before sending that chat a message. The phone currently carries its newer Connect preview, and the public release stays separate pending that decision.
-- Release remains debug-signed for compatibility with the previously distributed app.
+Separate platform web builds are available through npm run build:mobile and npm run build:tv in mobile. Native packaging selects cinePlatform=mobile or cinePlatform=tv with cineAssetsDir pointing to the corresponding web output.
 
-Historical progress is in Git history and PROGRESS-before-2026-11-14.md.
+Publication is being completed. No further device verification is authorized in this turn.

@@ -114,7 +114,7 @@ public class PlaybackService extends Service {
         @Override public void onReceive(Context context, Intent intent) {
             boolean bluetooth = isBluetoothOutput();
             if (isAudible()) {
-                command("pause", 0);
+                commandLocal("pause", 0);
                 lastRoutePauseAt = SystemClock.elapsedRealtime();
                 resumeAfterBluetoothDisconnect = bluetooth;
             }
@@ -142,7 +142,7 @@ public class PlaybackService extends Service {
             .setOnAudioFocusChangeListener(change -> {
                 if (change == AudioManager.AUDIOFOCUS_LOSS) { 
                     resumeOnFocus = false; 
-                    command("pause", 0); 
+                    commandLocal("pause", 0); 
                 }
                 else if (change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
                     resumeOnFocus = isPlaying(); playWhenReady = false;
@@ -152,7 +152,7 @@ public class PlaybackService extends Service {
                 else if (change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK && player != null) player.setVolume(.2f, .2f);
                 else if (change == AudioManager.AUDIOFOCUS_GAIN) {
                     if (player != null) player.setVolume(1, 1);
-                    if (resumeOnFocus) { resumeOnFocus = false; command("resume", 0); }
+                    if (resumeOnFocus) { resumeOnFocus = false; commandLocal("resume", 0); }
                 }
             }).build();
         session = new MediaSession(this, "Cine music");
@@ -178,7 +178,7 @@ public class PlaybackService extends Service {
                 handler.postDelayed(() -> {
                     if (!resumeAfterBluetoothDisconnect || !prepared || track == null || isPlaying()) return;
                     resumeAfterBluetoothDisconnect = false;
-                    command("resume", 0);
+                    commandLocal("resume", 0);
                 }, 500);
             }
 
@@ -186,7 +186,7 @@ public class PlaybackService extends Service {
                 if (!containsBluetoothOutput(removedDevices)) return;
                 boolean recentRoutePause = lastRoutePauseAt > 0 && SystemClock.elapsedRealtime() - lastRoutePauseAt < 2000;
                 if (!isAudible() && !recentRoutePause) return;
-                command("pause", 0);
+                commandLocal("pause", 0);
                 resumeAfterBluetoothDisconnect = true;
             }
         };
@@ -202,16 +202,9 @@ public class PlaybackService extends Service {
         if ("play".equals(intent.getAction())) {
             startForeground(1, notification());
             try {
-                JSONObject data = new JSONObject(intent.getStringExtra("track"));
-                recoveryAttempts = 0;
-                if (data.has("quality")) setAudioQuality(data.optString("quality", "auto"));
-                if (data.has("gapless")) setGapless(data.optBoolean("gapless", true));
-                if (data.has("crossfadeSeconds")) setCrossfade(data.optDouble("crossfadeSeconds", 0) > 0, (float)data.optDouble("crossfadeSeconds", 0));
-                if (data.has("queue")) setQueue(data.optJSONArray("queue"), data.optBoolean("shuffle"), data.optString("repeat", "off"));
-                data.remove("queue"); data.remove("shuffle"); data.remove("repeat"); data.remove("quality"); data.remove("gapless"); data.remove("crossfadeSeconds");
-                load(data);
-            }
-            catch (Exception error) { fail("Could not load this track"); }
+                if (intent.getBooleanExtra("connectLocal", false)) playLocal(new JSONObject(intent.getStringExtra("track")));
+                else CineConnect.get(this).play(intent.getStringExtra("track"));
+            } catch (Exception error) { fail("Could not load this track"); }
         } else if ("resume".equals(intent.getAction())) {
             command("resume", 0);
         } else if ("pause".equals(intent.getAction())) {
@@ -223,6 +216,19 @@ public class PlaybackService extends Service {
         }
         return START_STICKY;
     }
+    void playLocal(JSONObject data) throws Exception {
+        recoveryAttempts = 0;
+        boolean paused = data.optBoolean("connectPaused");
+        data.remove("connectPaused");
+        if (data.has("quality")) setAudioQuality(data.optString("quality", "auto"));
+        if (data.has("gapless")) setGapless(data.optBoolean("gapless", true));
+        if (data.has("crossfadeSeconds")) setCrossfade(data.optDouble("crossfadeSeconds") > 0, (float)data.optDouble("crossfadeSeconds"));
+        if (data.has("queue")) setQueue(data.optJSONArray("queue"), data.optBoolean("shuffle"), data.optString("repeat", "off"));
+        data.remove("queue"); data.remove("shuffle"); data.remove("repeat"); data.remove("quality"); data.remove("gapless"); data.remove("crossfadeSeconds");
+        load(data);
+        if (paused) playWhenReady = false;
+    }
+
     private void load(JSONObject next) throws Exception {
         cancelTvRecovery();
         if (track == null || !track.optString("id").equals(next.optString("id")) || (tv && !next.optBoolean("tvRetry"))) recoveryAttempts = 0;
@@ -253,7 +259,7 @@ public class PlaybackService extends Service {
             if (tvStall != null) handler.removeCallbacks(tvStall);
             if (resumePosition > 0) media.seekTo(Math.min(resumePosition, Math.max(0, media.getDuration() - 1000)), MediaPlayer.SEEK_CLOSEST);
             applyEqualizer();
-            if (playWhenReady) command("resume", 0); else { publish(); updateNotification(); }
+            if (playWhenReady) commandLocal("resume", 0); else { publish(); updateNotification(); }
         });
         bindActiveCallbacks(media, epoch);
         if (tv) watchTvBuffer(epoch, 22_000);
@@ -540,7 +546,7 @@ public class PlaybackService extends Service {
         // Check time-based sleep timer
         if (sleepDeadline > 0 && sleepDeadline != Long.MAX_VALUE && System.currentTimeMillis() >= sleepDeadline) {
             clearSleepTimer();
-            command("pause", 0);
+            commandLocal("pause", 0);
         }
     }
     
@@ -550,7 +556,7 @@ public class PlaybackService extends Service {
     private void beginSleepFade() {
         cancelCrossfade();
         publish();
-        if (!prepared || player == null) { command("pause", 0); return; }
+        if (!prepared || player == null) { commandLocal("pause", 0); return; }
         cancelSleepFade();
         final int epoch = generation;
         final long started = SystemClock.elapsedRealtime();
@@ -562,7 +568,7 @@ public class PlaybackService extends Service {
                 player.setVolume(volume, volume);
                 if (progress >= 1f) {
                     sleepFade = null;
-                    command("pause", 0);
+                    commandLocal("pause", 0);
                     if (prepared && player != null) player.setVolume(1, 1);
                 } else handler.postDelayed(this, 100);
             }
@@ -629,9 +635,9 @@ public class PlaybackService extends Service {
     private void advance(int direction, boolean ended) {
         if (track == null) return;
         try {
-            if (direction < 0 && prepared && player.getCurrentPosition() > PREVIOUS_RESTART_MS) { command("seek", 0); return; }
+            if (direction < 0 && prepared && player.getCurrentPosition() > PREVIOUS_RESTART_MS) { commandLocal("seek", 0); return; }
             JSONObject next = nextTrack(direction, ended);
-            if (next == null) { if (direction < 0 && prepared) command("seek", 0); else publish(); return; }
+            if (next == null) { if (direction < 0 && prepared) commandLocal("seek", 0); else publish(); return; }
             load(next);
         } catch (Exception error) { fail("The next song could not be played."); }
     }
@@ -651,6 +657,10 @@ public class PlaybackService extends Service {
             || (Build.VERSION.SDK_INT >= 31 && (type == AudioDeviceInfo.TYPE_BLE_HEADSET || type == AudioDeviceInfo.TYPE_BLE_SPEAKER));
     }
     void command(String action, double value) {
+        if (!CineConnect.get(this).route(action, value)) commandLocal(action, value);
+    }
+
+    void commandLocal(String action, double value) {
         if (action == null) return;
         try {
             switch (action) {
@@ -727,7 +737,7 @@ public class PlaybackService extends Service {
             "queue", queue, "shuffle", shuffle, "repeat", repeat, "output", output, "sleepDeadline", sleepDeadline, "sleepEndOfSong", sleepTrackId != null, "equalizer", equalizerInfo,
             "sourceResolvedMs", sourceResolvedMs, "preparedMs", preparedMs);
         snapshotJson = state.toString();
-        Events.send(this, "player", state);
+        CineConnect.get(this).localState(state);
         String widgetState = (track == null ? "" : track.optString("id")) + status;
         if (!tv && (!widgetState.equals(lastWidgetState) || SystemClock.elapsedRealtime() - lastWidgetUpdate >= 1000)) {
             lastWidgetState = widgetState; lastWidgetUpdate = SystemClock.elapsedRealtime(); MusicWidgetProvider.updateAll(this);

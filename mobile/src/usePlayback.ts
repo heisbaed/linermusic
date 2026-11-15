@@ -57,6 +57,10 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     const unsubscribe = subscribe(event => {
       if (event.type === 'player') {
         const state = event.data as unknown as PlayerState;
+        if (state.remoteDeviceId) {
+          autoplayController.current?.abort();
+          smartController.current?.abort();
+        }
         setPlayer(state);
         live.current.player = state;
         if (state.track && Array.isArray(state.queue)) { setLocalQueue(state.queue); live.current.queue = state.queue; }
@@ -65,19 +69,19 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
           setLocalShuffle(next); live.current.shuffle = next;
         }
         if (state.track && state.repeat) { setLocalRepeat(state.repeat); live.current.repeat = state.repeat; }
-        if (state.status === 'playing' && state.track && playedId.current !== state.track.id) {
+        if (!state.remoteDeviceId && state.status === 'playing' && state.track && playedId.current !== state.track.id) {
           playedId.current = state.track.id;
           heard.current = [state.track,...heard.current.filter(s=>s.id!==state.track!.id)];
           live.current.onRecent(state.track);
         }
-        if (state.status === 'playing' && state.track) {
+        if (!state.remoteDeviceId && state.status === 'playing' && state.track) {
           const remaining = live.current.queue.length - live.current.queue.findIndex(song=>song.id===state.track?.id);
           if (live.current.shuffle === 'smart' && !smartAdded.current.size && !smartBusy.current) void addSmartSongs(state.track);
           if (live.current.shuffle === 'smart' || remaining <= 4) void prepareRelated(state.track);
         }
         if (state.status === 'error') live.current.toast(state.error || 'Playback could not start. Check your connection and try again.');
         clearTimeout(autoplayTask.current);
-        if (state.status === 'ended') {
+        if (!state.remoteDeviceId && state.status === 'ended') {
           // The native service advances first. Only an exhausted queue stays ended.
           autoplayTask.current = setTimeout(() => void appendRadio(), 350);
         }
@@ -109,7 +113,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
       const url = isAndroid || local ? undefined : await resolveStream(track.id, controller.signal);
       if (controller.signal.aborted) return;
       playNative(track, url, items, live.current.shuffle !== 'off', live.current.repeat, live.current.prefs.audioQuality, live.current.prefs.gapless, live.current.prefs.crossfadeSeconds, positionMs);
-      if(items.length===1 && live.current.prefs.autoplay) void prepareRelated(track);
+      if(items.length===1 && live.current.prefs.autoplay && !live.current.player.remoteDeviceId) void prepareRelated(track);
     } catch (error) {
       if (controller.signal.aborted) return;
       const message = error instanceof Error ? error.message : 'This song could not be played.';
@@ -120,14 +124,14 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
 
   async function prepareRelated(seed:Song){
     const current=live.current, smartActive=current.shuffle==='smart';
-    if(radioBusy.current||(!current.prefs.autoplay&&!smartActive)||!isOnline()||(current.repeat!=='off'&&!smartActive)||(radioAttempt.current.id===seed.id&&Date.now()-radioAttempt.current.at<30000))return;
+    if(current.player.remoteDeviceId||radioBusy.current||(!current.prefs.autoplay&&!smartActive)||!isOnline()||(current.repeat!=='off'&&!smartActive)||(radioAttempt.current.id===seed.id&&Date.now()-radioAttempt.current.at<30000))return;
     radioBusy.current=true;radioAttempt.current={id:seed.id,at:Date.now()};
     const controller=new AbortController();autoplayController.current=controller;
     try{
       const seeds=[seed,...heard.current.filter(song=>song.id!==seed.id).slice(0,2)];
       for(const candidate of seeds){
         const result=await innertubeCatalog.getRadio(candidate.id,{signal:controller.signal,k:50});
-        if(controller.signal.aborted||(!live.current.prefs.autoplay&&live.current.shuffle!=='smart'))return;
+        if(controller.signal.aborted||live.current.player.remoteDeviceId||(!live.current.prefs.autoplay&&live.current.shuffle!=='smart'))return;
         if (live.current.player.track?.id !== seed.id && !live.current.queue.some(song => song.id === seed.id)) return;
         const added=personalize(relatedSongs(result.items,[seed,...heard.current,...live.current.queue]).map(songFromTrack)).slice(0,25);
         if(!added.length)continue;
@@ -141,12 +145,12 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
   }
   async function addSmartSongs(seed:Song){
     const current=live.current;
-    if(current.shuffle!=='smart'||smartBusy.current||!isOnline()||(smartSeed.current===seed.id&&smartAdded.current.size))return;
+    if(current.player.remoteDeviceId||current.shuffle!=='smart'||smartBusy.current||!isOnline()||(smartSeed.current===seed.id&&smartAdded.current.size))return;
     smartBusy.current=true;smartSeed.current=seed.id;
     const controller=new AbortController();smartController.current=controller;
     try{
       const result=await innertubeCatalog.getRadio(seed.id,{signal:controller.signal,k:50});
-      if(controller.signal.aborted||live.current.shuffle!=='smart')return;
+      if(controller.signal.aborted||live.current.player.remoteDeviceId||live.current.shuffle!=='smart')return;
       if (live.current.player.track?.id !== seed.id && !live.current.queue.some(song => song.id === seed.id)) return;
       const added=personalize(relatedSongs(result.items,[seed,...heard.current,...live.current.queue]).map(songFromTrack)).slice(0,20);
       if(!added.length){live.current.toast('No smart recommendations were available for this song.');return;}

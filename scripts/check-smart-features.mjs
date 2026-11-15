@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import { installFixture } from './ui-fixture.mjs';
 
 // Real rendered app, isolated localhost fixture data; no real users or audio.
-const base = 'http://127.0.0.1:5178';
+const base = process.env.CINE_AUDIT_URL || 'http://127.0.0.1:5178';
 const output = new URL('../.device-test/smart-review/', import.meta.url);
 await fs.mkdir(output,{recursive:true});
 const report={checks:[],failures:[],errors:[],screenshots:[],fixture:true};
@@ -142,6 +142,19 @@ try {
    await layout();
   }
   await shot('narrow-mini-player');
+ });
+
+ await check('Device button preserves artwork and playback control positions on narrow and standard phones',async()=>{
+  await click('.mini-open');
+  for (const [width,height] of [[320,640],[402,874]]) {
+   await page.cdp('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true});
+   await delay(150);
+   const result=await evaluate(`(()=>{const button=document.querySelector('.player-context-label .connect-output-compact');if(!button)return {valid:false,reason:'missing compact button'};const parent=button.parentElement,next=button.nextSibling;const positions=()=>['.design-player-header','.floating-artwork','.player-control-card .seek','.player-control-card .transport'].map(selector=>{const e=document.querySelector(selector);if(!e)return null;const r=e.getBoundingClientRect();return {selector,x:r.x,y:r.y,w:r.width,h:r.height}});const withButton=positions(),target=button.getBoundingClientRect();button.remove();const without=positions();parent.insertBefore(button,next);return {valid:!document.querySelector('.player-lyrics-button')&&!!document.querySelector('.lyric-preview')&&target.width>=48&&target.height>=48&&target.left>=0&&target.right<=innerWidth&&withButton.every((r,i)=>!r||['x','y','w','h'].every(key=>Math.abs(r[key]-without[i][key])<.6)),withButton,without,target:{width:target.width,height:target.height}}})()`);
+   assert(result.valid,'Device control changed playback layout: '+JSON.stringify(result));
+   await layout();
+  }
+  await shot('compact-player-device-button');
+  await click('[aria-label="Collapse player"]');
  });
 
  await check('New Releases excludes old and undated albums instead of filling the shelf with older music',async()=>{

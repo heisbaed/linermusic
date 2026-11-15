@@ -1,11 +1,13 @@
 {
   "name": "cine-music-mobile",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
+    "build:mobile": "tsc --noEmit && vite build --mode mobile --outDir ../android/build/web-mobile",
+    "build:tv": "tsc --noEmit && vite build --mode tv --outDir ../android/build/web-tv",
     "test": "vitest run"
   },
   "dependencies": {

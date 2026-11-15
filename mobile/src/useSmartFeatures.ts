@@ -67,7 +67,7 @@ export function useSmartFeatures(user: CineUser | null, privateListening: boolea
       if (document.hidden && signal.aborted) return;
       const { current: saved, playback: playing, privateListening: privateMode, owner: activeOwner, key: activeKey } = live.current;
       const { player, queue, context } = playing;
-      if (activeOwner !== owner || privateMode || !player.track || !['playing', 'paused'].includes(player.status)) return;
+      if (activeOwner !== owner || privateMode || player.remoteDeviceId || !player.track || !['playing', 'paused'].includes(player.status)) return;
       const clean = (song: Song): Song => ({
         id: song.id, title: song.title, artist: song.artist, artistId: song.artistId, albumId: song.albumId,
         durationMs: song.durationMs, cover: song.cover?.startsWith('https://') ? song.cover : undefined,

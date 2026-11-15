@@ -1,8 +1,9 @@
 {
-  "version": "0.1.7",
-  "versionCode": 8,
-  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.7/Cine-Music-0.1.7.apk",
-  "fileSize": 12294157,
-  "sha256": "cdc1174140bf4295693429a1cdfb69a2638fa51453800d68b4e3cbd192b0695c",
-  "releaseNotes": "New Releases limited to confirmed dates within 30 days; animated lyric blur and timing menu; themed sorting sheets; cleaner song sharing with browser artwork; dark launcher icon and Osborne branding on splash."
+  "version": "0.1.8",
+  "versionCode": 11,
+  "platform": "mobile",
+  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.8/Cine-Music-Mobile-0.1.8.apk",
+  "fileSize": 12406667,
+  "sha256": "a8e7e482dafd6e4dbd0cca9e722771c99fa33d7d68af6c886ca0dfdb26928093",
+  "releaseNotes": "Separate mobile and TV apps with shared playback, remote controls, updated player layout and animated brand splash."
 }

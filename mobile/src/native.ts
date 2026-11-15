@@ -12,7 +12,7 @@ function deliver(listener: (event: Envelope) => void, event: Envelope) {
 }
 function publish(event: Envelope) {
   if (event.type === 'player') playerState = { ...playerState, ...event.data } as PlayerState;
-  if (['player', 'downloads', 'downloadJobs', 'authLink'].includes(event.type)) {
+  if (['player', 'downloads', 'downloadJobs', 'authLink', 'connect'].includes(event.type)) {
     if (event.type === 'player') event = { type: 'player', data: { ...playerState } };
     stateEvents.set(event.type, event);
   }

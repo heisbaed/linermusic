@@ -1,0 +1,24 @@
+.connect-controls { display:grid; gap:16px; }
+.connect-hint { margin:0; color:var(--muted); font-size:.92em; line-height:1.5; }
+.connect-devices { display:grid; gap:10px; }
+.connect-device { display:flex; align-items:center; gap:13px; width:100%; text-align:left; font:inherit; color:var(--text,var(--ink)); padding:16px; border:1px solid var(--line,var(--edge)); border-radius:16px; background:var(--surface); }
+.connect-device > span:not(.cine-icon-mask) { min-width:0; flex:1; }
+.connect-device strong,.connect-device small { display:block; }
+.connect-device small { margin-top:4px; color:var(--muted); font-size:.8em; }
+.connect-device[aria-pressed=true] { background:color-mix(in srgb,var(--accent) 13%,var(--surface)); border-color:var(--accent); }
+.connect-device:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+.connect-device:disabled { opacity:.55; }
+.connect-output { display:inline-flex; align-items:center; justify-content:center; gap:.5em; border:1px solid var(--glass-line,var(--line)); border-radius:100px; padding:.6em .8em; background:var(--glass,var(--surface)); color:var(--accent); font:inherit; font-size:.8em; }
+.connect-output span:not(.cine-icon-mask) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:12em; }
+.connect-output-compact { width:48px; min-width:48px; height:48px; min-height:48px; padding:0; flex:none; }
+.player-context-label .connect-output-compact { margin-block:-4px; }
+.tv-app .connect-device { padding:.8em; border-radius:.8em; }
+.tv-app .connect-hint { font-size:.85em; }
+.tv-app .connect-output { box-shadow:inset 0 1px 0 #ffffff4f,0 .3em .8em var(--glass-shadow); }
+.tv-app .modal-scrim { position:fixed; inset:0; z-index:10; display:grid; place-items:center; background:#2b102b6b; padding:5vw; }
+.tv-app .modal-sheet { width:min(540px,65vw); max-height:80vh; overflow:auto; border-radius:1.3em; padding:1.5em; border:1px solid var(--edge); background:var(--base); color:var(--ink); box-shadow:inset 0 1px 0 #ffffff8f,0 1em 3em #220b2733; }
+.tv-app .sheet-header { display:flex; align-items:center; justify-content:space-between; gap:1em; margin-bottom:1.2em; }
+.tv-app .sheet-header h2 { font-size:1.3em; }
+.tv-app .sheet-header .icon-action { display:grid; place-items:center; width:2.7em; height:2.7em; border-radius:50%; color:var(--ink); border:1px solid var(--edge); background:var(--surface); }
+.tv-listener-header > .connect-output { flex:none; }
+

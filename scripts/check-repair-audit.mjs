@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import { installFixture } from './ui-fixture.mjs';
 
 // Real rendered app, isolated localhost fixture data; no real users or audio.
-const base = 'http://127.0.0.1:5178';
+const base = process.env.CINE_AUDIT_URL || 'http://127.0.0.1:5178';
 const output = new URL('../.device-test/design-review/', import.meta.url);
 await fs.mkdir(output,{recursive:true});
 const report={checks:[],failures:[],errors:[],screenshots:[],fixture:true};
@@ -86,7 +86,7 @@ try {
  });
  await check('Player opens lyrics, scrolls current line, respects manual browsing, and returns',async()=>{
   await click('.mini-open');await wait("!!document.querySelector('.player-control-card')");
-  await click('.player-lyrics-button');
+  await click('.lyric-preview');
   await wait("!!document.querySelector('.lyrics-lines')");
   await delay(500);
   const lyricsGeometry=await evaluate("(()=>{const root=document.querySelector('.lyrics-lines'),selected=root.querySelector('.lyric-current'),footer=document.querySelector('.lyrics-transport');return {hasCurrent:!!selected,scroll:root.scrollTop,footer:footer.getBoundingClientRect().bottom,height:innerHeight}})()");

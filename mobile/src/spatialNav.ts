@@ -12,6 +12,8 @@ declare global {
 }
 
 export function isTvEnvironment(): boolean {
+  if (import.meta.env.VITE_CINE_PLATFORM === 'tv') return true;
+  if (import.meta.env.VITE_CINE_PLATFORM === 'mobile') return false;
   if (typeof window === 'undefined') return false;
   if (window.CineAndroid?.isTv?.()) return true;
   if (window.location?.search?.includes('tv=1')) return true;
@@ -75,6 +77,10 @@ function isElementVisible(el: HTMLElement): boolean {
 }
 
 export function getFocusableElements(root: ParentNode = document): HTMLElement[] {
+  if (root === document) {
+    const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')).filter(isElementVisible);
+    root = dialogs.at(-1) || root;
+  }
   const elements = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
   return elements.filter(isElementVisible);
 }

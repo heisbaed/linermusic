@@ -2902,3 +2902,5 @@ h1 em {
 }
 
 .tv-connect-input { display:block; width:100%; padding:12px 14px; margin-top:6px; color:inherit; border:1px solid #a5939f; border-radius:10px; background:#79647625; }
+
+.tv-download-card { margin-top:24px; }

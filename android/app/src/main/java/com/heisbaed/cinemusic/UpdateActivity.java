@@ -46,7 +46,7 @@ public class UpdateActivity extends Activity {
     private void check(){
         if(checking)return;checking=true;status.setText("Checking for updates...");
         worker.execute(()->{HttpURLConnection connection=null;try{
-            connection=(HttpURLConnection)new URL("https://cinemusic.web.app/ota/manifest.json").openConnection();connection.setConnectTimeout(10000);connection.setReadTimeout(15000);connection.setUseCaches(false);
+            connection=(HttpURLConnection)new URL("https://cinemusic.web.app/ota/" + ("tv".equals(BuildConfig.CINE_PLATFORM) ? "tv-manifest.json" : "manifest.json")).openConnection();connection.setConnectTimeout(10000);connection.setReadTimeout(15000);connection.setUseCaches(false);
             if(connection.getResponseCode()!=200)throw new IOException("Update server is unavailable");
             ByteArrayOutputStream bytes=new ByteArrayOutputStream();try(InputStream in=connection.getInputStream()){byte[]buf=new byte[4096];int n;while((n=in.read(buf))!=-1){if(bytes.size()+n>65536)throw new IOException("Invalid manifest");bytes.write(buf,0,n);}}
             JSONObject data=new JSONObject(bytes.toString("UTF-8"));

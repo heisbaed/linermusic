@@ -1,7 +1,8 @@
+import { ConnectControls, ConnectLabel } from './ConnectControls';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './AppContext';
 import { Icon } from './Icons';
-import { Cover } from './ui';
+import { Cover, Sheet } from './ui';
 import { formatTime } from './library';
 import { useLyrics, useLivePosition } from './Player';
 import { focusFirstActionable } from './spatialNav';
@@ -20,6 +21,7 @@ export function TvPlayer({ mode, onMode, onBack }: {
   const lyricColumn = useRef<HTMLDivElement>(null);
   const slider = useRef<HTMLButtonElement>(null);
   const [wash, setWash] = useState('');
+  const [devicesOpen, setDevicesOpen] = useState(false);
   const { player, queue, seek, previous, next, toggle } = app.playback;
   const { track, status, durationMs } = player;
   const lyrics = useLyrics(track, mode === 'lyrics');
@@ -86,6 +88,7 @@ export function TvPlayer({ mode, onMode, onBack }: {
     <header className="tv-listener-header">
       <button className="tv-icon-button tv-glass-back" onClick={onBack} aria-label={split ? 'Back to artwork' : 'Back to browsing'}><Icon name="back" size={24} /></button>
       <span>{split ? title : 'Now Playing'}</span>
+      <ConnectLabel onClick={() => setDevicesOpen(true)} />
       <nav className="tv-player-tabs" aria-label="Player views">
         <button onClick={() => onMode('player')} aria-pressed={mode === 'player'}><Icon name="album" size={21} /><span>Artwork</span></button>
         <button onClick={() => onMode('lyrics')} aria-pressed={mode === 'lyrics'}><Icon name="lyrics" size={21} /><span>Lyrics</span></button>
@@ -110,8 +113,8 @@ export function TvPlayer({ mode, onMode, onBack }: {
           </button>
           <div className="tv-time"><span>{formatTime(position)}</span><span>−{formatTime(Math.max(0, durationMs - position))}</span></div>
           <div className="tv-player-controls">
-            <button className="tv-icon-button" aria-label="Shuffle" aria-pressed={app.playback.shuffle !== 'off'}
-              onClick={() => app.playback.setShuffle(app.playback.shuffle === 'off' ? 'on' : 'off')}><Icon name="shuffle" size={22} /></button>
+            <button className="tv-icon-button" aria-label={app.playback.shuffle === 'smart' ? 'Smart shuffle on' : app.playback.shuffle === 'on' ? 'Shuffle on' : 'Shuffle off'} aria-pressed={app.playback.shuffle !== 'off'}
+              onClick={app.playback.cycleShuffle}><Icon name={app.playback.shuffle === 'smart' ? 'sparkles' : 'shuffle'} size={22} /></button>
             <button className="tv-icon-button" onClick={previous} aria-label="Previous"><Icon name="previous" size={29} /></button>
             <button className="tv-main-play" onClick={toggle} data-tv-autofocus aria-label={status === 'error' ? 'Retry playback' : playing ? 'Pause' : 'Play'}>
               <Icon name={status === 'error' ? 'refresh' : playing ? 'pause' : 'play'} size={31} />
@@ -146,5 +149,6 @@ export function TvPlayer({ mode, onMode, onBack }: {
         </button>)}</div>
       </section>}
     </div>
+    {devicesOpen && <Sheet title="Listen on" onClose={() => setDevicesOpen(false)}><ConnectControls /></Sheet>}
   </section>;
 }

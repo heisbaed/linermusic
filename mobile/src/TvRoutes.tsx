@@ -1,3 +1,4 @@
+import { ConnectControls } from './ConnectControls';
 import { useEffect, useState } from 'react';
 import { TV_THEMES, useApp } from './AppContext';
 import { songFrom } from './Browse';
@@ -91,6 +92,7 @@ export function TvRouteScreen({ route }: { route: TvRoute }) {
     <header className="tv-page-title"><h1>Settings</h1><p>{app.account.user?.email}</p></header>
     <section><h2>Appearance</h2><div className="tv-actions">{TV_THEMES.map(theme => <button className="tv-button tv-theme-choice" key={theme.id}
       data-tv-key={theme.id} aria-pressed={theme.id === app.theme} onClick={() => app.setTheme(theme.id)}><span style={{ background: theme.background, borderColor: theme.accent }} />{theme.name}</button>)}</div></section>
+    <section><h2>Listen on</h2><ConnectControls /></section>
     <section><h2>Playback</h2><button className="tv-button" aria-pressed={app.prefs.autoplay}
       onClick={() => app.updatePrefs({ autoplay: !app.prefs.autoplay })}>Autoplay similar songs · {app.prefs.autoplay ? 'On' : 'Off'}</button></section>
     <section><h2>Account</h2><p role="status">{app.account.syncStatus}</p><div className="tv-actions">

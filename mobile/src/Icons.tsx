@@ -1,8 +1,10 @@
 import { useContext } from 'react';
 import { AppContext } from './AppContext';
 import { figmaAssets } from './figmaAssets';
-export type IconName = 'home' | 'search' | 'explore' | 'library' | 'download' | 'account' | 'check' | 'play' | 'pause' | 'next' | 'previous' | 'heart' | 'close' | 'back' | 'queue' | 'plus' | 'shuffle' | 'sparkles' | 'repeat' | 'repeat_one' | 'settings' | 'music' | 'trash' | 'wifi' | 'lyrics' | 'more' | 'chevron_down' | 'lock' | 'headphones' | 'chevron_up' | 'chevron_right' | 'album' | 'artist' | 'playlist' | 'equalizer' | 'timer' | 'share' | 'bell' | 'info' | 'edit' | 'logout' | 'eye' | 'drag' | 'sort' | 'arrow_right' | 'refresh' | 'mail' | 'shield' | 'eye_off' | 'tag' | 'camera' | 'folder';
+export type IconName = 'home' | 'search' | 'explore' | 'library' | 'download' | 'account' | 'check' | 'play' | 'pause' | 'next' | 'previous' | 'heart' | 'close' | 'back' | 'queue' | 'plus' | 'shuffle' | 'sparkles' | 'repeat' | 'repeat_one' | 'settings' | 'music' | 'trash' | 'wifi' | 'lyrics' | 'more' | 'chevron_down' | 'lock' | 'headphones' | 'chevron_up' | 'chevron_right' | 'album' | 'artist' | 'playlist' | 'equalizer' | 'timer' | 'share' | 'bell' | 'info' | 'edit' | 'logout' | 'eye' | 'drag' | 'sort' | 'arrow_right' | 'refresh' | 'mail' | 'shield' | 'eye_off' | 'tag' | 'camera' | 'folder' | 'tv' | 'phone';
 const paths: Partial<Record<IconName, React.ReactNode>> = {
+  tv: <><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></>,
+  phone: <><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></>,
   home: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" /></>,
   search: <><circle cx="10.5" cy="10.5" r="7" /><path d="m16 16 5 5" /></>,
   library: <><rect x="3" y="4" width="5" height="16" rx="1" /><path d="M12 4v16m5-16 4 15" /></>,

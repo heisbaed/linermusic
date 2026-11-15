@@ -210,66 +210,6 @@ public class MainActivity extends Activity {
 
 
 
-    private static final String AUTH_KEY_ALIAS = "cine.music.auth.tokens.v1";
-
-
-
-    private javax.crypto.SecretKey authTokenKey() throws Exception {
-
-
-
-        java.security.KeyStore store = java.security.KeyStore.getInstance("AndroidKeyStore");
-
-
-
-        store.load(null);
-
-
-
-        if (store.containsAlias(AUTH_KEY_ALIAS)) return (javax.crypto.SecretKey) store.getKey(AUTH_KEY_ALIAS, null);
-
-
-
-        javax.crypto.KeyGenerator generator = javax.crypto.KeyGenerator.getInstance(
-
-
-
-            android.security.keystore.KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
-
-
-
-        generator.init(new android.security.keystore.KeyGenParameterSpec.Builder(AUTH_KEY_ALIAS,
-
-
-
-            android.security.keystore.KeyProperties.PURPOSE_ENCRYPT | android.security.keystore.KeyProperties.PURPOSE_DECRYPT)
-
-
-
-            .setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
-
-
-
-            .setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE)
-
-
-
-            .setRandomizedEncryptionRequired(true).build());
-
-
-
-        return generator.generateKey();
-
-
-
-    }
-
-
-
-
-
-
-
     @Override public void onCreate(Bundle state) {
 
 
@@ -281,7 +221,8 @@ public class MainActivity extends Activity {
         setTheme(R.style.AppTheme);
         if (Build.VERSION.SDK_INT >= 31) {
             getSplashScreen().setOnExitAnimationListener(splash -> {
-                splash.animate().alpha(0).setDuration(160).withEndAction(splash::remove).start();
+                splash.remove();
+                if (startupSplash != null) startupSplash.reveal();
             });
         }
 
@@ -312,7 +253,8 @@ public class MainActivity extends Activity {
         startupSplash = new CineSplashView(this);
         content.addView(startupSplash, new android.widget.FrameLayout.LayoutParams(-1, -1));
         setContentView(content);
-        if (isTv) web.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
+        if (Build.VERSION.SDK_INT < 31) startupSplash.post(startupSplash::reveal);
+        web.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
 
 
 
@@ -485,6 +427,10 @@ public class MainActivity extends Activity {
 
 
                 Uri uri = request.getUrl();
+                if ("GET".equals(request.getMethod()) && !request.isForMainFrame()) {
+                    WebResourceResponse artwork = ArtworkCache.load(MainActivity.this, uri);
+                    if (artwork != null) return artwork;
+                }
 
 
 
@@ -912,7 +858,7 @@ public class MainActivity extends Activity {
 
 
 
-            if (service != null) service.publish(); else emit("player", PlaybackService.idleSnapshot());
+            if (service != null) service.publish(); else CineConnect.get(MainActivity.this).accountChanged();
 
 
 
@@ -1328,7 +1274,7 @@ public class MainActivity extends Activity {
 
 
 
-            return service == null ? PlaybackService.idleSnapshot().toString() : service.snapshot();
+            return CineConnect.get(MainActivity.this).snapshot();
 
 
 
@@ -1417,109 +1363,21 @@ public class MainActivity extends Activity {
 
 
 
-        @JavascriptInterface public String authTokens() {
-
-
-
-            try {
-
-
-
-                String encoded = getSharedPreferences("cine_auth", MODE_PRIVATE).getString("tokens", "");
-
-
-
-                if (encoded.isEmpty()) return "{}";
-
-
-
-                byte[] stored = android.util.Base64.decode(encoded, android.util.Base64.NO_WRAP);
-
-
-
-                byte[] iv = Arrays.copyOfRange(stored, 0, 12);
-
-
-
-                byte[] cipherText = Arrays.copyOfRange(stored, 12, stored.length);
-
-
-
-                javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
-
-
-
-                cipher.init(javax.crypto.Cipher.DECRYPT_MODE, authTokenKey(), new javax.crypto.spec.GCMParameterSpec(128, iv));
-
-
-
-                return new String(cipher.doFinal(cipherText), StandardCharsets.UTF_8);
-
-
-
-            } catch (Exception ignored) { return "{}"; }
-
-
-
-        }
-
-
+        @JavascriptInterface public String authTokens() { return AuthStore.read(MainActivity.this).toString(); }
 
         @JavascriptInterface public void saveAuthTokens(String json) {
-
-
-
-            try {
-
-
-
-                if (json == null || json.length() > 16_384) return;
-
-
-
-                javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
-
-
-
-                cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, authTokenKey());
-
-
-
-                byte[] iv = cipher.getIV(), encrypted = cipher.doFinal(json.getBytes(StandardCharsets.UTF_8));
-
-
-
-                ByteArrayOutputStream output = new ByteArrayOutputStream(); output.write(iv); output.write(encrypted);
-
-
-
-                getSharedPreferences("cine_auth", MODE_PRIVATE).edit()
-
-
-
-                    .putString("tokens", android.util.Base64.encodeToString(output.toByteArray(), android.util.Base64.NO_WRAP)).apply();
-
-
-
-            } catch (Exception ignored) {}
-
-
-
+            AuthStore.write(MainActivity.this, json);
+            CineConnect.get(MainActivity.this).accountChanged();
         }
-
-
 
         @JavascriptInterface public void clearAuthTokens() {
-
-
-
-            getSharedPreferences("cine_auth", MODE_PRIVATE).edit().remove("tokens").apply();
-
-
-
+            AuthStore.clear(MainActivity.this);
+            CineConnect.get(MainActivity.this).accountChanged();
         }
 
+        @JavascriptInterface public String connectSnapshot() { return CineConnect.get(MainActivity.this).devices(); }
 
+        @JavascriptInterface public void selectPlaybackDevice(String id) { CineConnect.get(MainActivity.this).transfer(id); }
 
         @JavascriptInterface public void setSystemBars(String color, boolean lightIcons) {
 
@@ -1932,7 +1790,7 @@ public class MainActivity extends Activity {
 
 
 
-                try { if (PlaybackService.instance != null) PlaybackService.instance.setQueue(new org.json.JSONArray(json), shuffle, repeat); }
+                try { CineConnect.get(MainActivity.this).queue(json, shuffle, repeat); }
 
 
 
@@ -2168,7 +2026,7 @@ public class MainActivity extends Activity {
 
 
 
-                    startForegroundService(new Intent(MainActivity.this, PlaybackService.class).setAction("play").putExtra("track", json));
+                    CineConnect.get(MainActivity.this).play(json);
 
 
 
@@ -2196,7 +2054,7 @@ public class MainActivity extends Activity {
 
 
 
-                if (PlaybackService.instance != null) PlaybackService.instance.command(action, value);
+                if (!CineConnect.get(MainActivity.this).route(action, value) && PlaybackService.instance != null) PlaybackService.instance.commandLocal(action, value);
 
 
 
@@ -2790,6 +2648,8 @@ public class MainActivity extends Activity {
 
 
     private boolean isTvDevice() {
+        if ("tv".equals(BuildConfig.CINE_PLATFORM)) return true;
+        if ("mobile".equals(BuildConfig.CINE_PLATFORM)) return false;
 
         android.app.UiModeManager uiModeManager = (android.app.UiModeManager) getSystemService(UI_MODE_SERVICE);
 
@@ -2934,6 +2794,16 @@ public class MainActivity extends Activity {
     }
 
 
+
+    @Override protected void onStart() {
+        super.onStart();
+        CineConnect.get(this).foreground(true);
+    }
+
+    @Override protected void onStop() {
+        CineConnect.get(this).foreground(false);
+        super.onStop();
+    }
 
     @Override protected void onDestroy() {
 

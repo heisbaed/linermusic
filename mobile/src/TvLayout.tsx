@@ -13,8 +13,8 @@ const NAV: { id: Tab | 'settings'; label: string; icon: IconName }[] = [
   { id: 'library', label: 'Library', icon: 'library' }, { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
-export function TvShell({ page, main, settings, overlay, children }: {
-  page: string; main: boolean; settings: boolean; overlay: boolean; children: ReactNode;
+export function TvShell({ page, main, settings, overlay, onQueue, children }: {
+  page: string; main: boolean; settings: boolean; overlay: boolean; onQueue: () => void; children: ReactNode;
 }) {
   const app = useApp();
   const content = useRef<HTMLElement>(null);
@@ -43,7 +43,7 @@ export function TvShell({ page, main, settings, overlay, children }: {
     };
   }, [page]);
 
-  const { track, status } = app.playback.player;
+  const { track, status, positionMs, durationMs } = app.playback.player;
   const playing = status === 'playing' || status === 'loading';
   return <div className="tv-shell" aria-hidden={overlay || undefined} ref={element => { element?.toggleAttribute('inert', overlay); }}>
     <header className="tv-header">
@@ -52,9 +52,9 @@ export function TvShell({ page, main, settings, overlay, children }: {
         {NAV.map(item => <button type="button" key={item.id} className="tv-nav-item"
           aria-current={(item.id === 'settings' ? settings : main && app.tab === item.id) ? 'page' : undefined}
           onClick={() => item.id === 'settings' ? app.openRoute({ kind: 'account', page: 'profile' }) : app.goTab(item.id)}>
-          <Icon name={item.icon} size={21} />{item.label}
+          <Icon name={item.icon} size={21} /><span>{item.label}</span>
         </button>)}
-        {track && <button type="button" className="tv-nav-item" onClick={app.openPlayer}><Icon name="music" size={21} />Now Playing</button>}
+        {track && <button type="button" className="tv-nav-item" onClick={app.openPlayer}><Icon name="music" size={21} /><span>Now Playing</span></button>}
       </nav>
     </header>
     <main className="tv-main" ref={content}>{children}</main>
@@ -62,8 +62,16 @@ export function TvShell({ page, main, settings, overlay, children }: {
       <button type="button" className="tv-mini" onClick={app.openPlayer} aria-label={`Open Now Playing: ${displaySongTitle(track.title, track.artist)}`}>
         <Cover song={track} /><span><strong>{displaySongTitle(track.title, track.artist)}</strong><small>{status === 'loading' ? 'Connecting…' : status === 'error' ? 'Playback interrupted' : track.artist}</small></span>
       </button>
-      <button type="button" className="tv-icon-button" onClick={app.playback.toggle} aria-label={playing ? 'Pause' : 'Play'}><Icon name={playing ? 'pause' : 'play'} size={23} /></button>
-      <button type="button" className="tv-icon-button" onClick={app.playback.next} aria-label="Next"><Icon name="next" size={23} /></button>
+      <div className="tv-mini-actions" role="group" aria-label="Quick playback controls">
+        <button type="button" className="tv-icon-button" aria-label={app.isFavorite(track.id) ? 'Unlike song' : 'Like song'} aria-pressed={app.isFavorite(track.id)} onClick={() => app.toggleFavorite(track)}><Icon name="heart" size={21} filled={app.isFavorite(track.id)} /></button>
+        <button type="button" className="tv-icon-button" aria-label={app.playback.shuffle === 'smart' ? 'Smart shuffle on' : app.playback.shuffle === 'on' ? 'Shuffle on' : 'Shuffle off'} aria-pressed={app.playback.shuffle !== 'off'} onClick={app.playback.cycleShuffle}><Icon name={app.playback.shuffle === 'smart' ? 'sparkles' : 'shuffle'} size={20} /></button>
+        <button type="button" className="tv-icon-button" onClick={app.playback.previous} aria-label="Previous"><Icon name="previous" size={23} /></button>
+        <button type="button" className="tv-icon-button tv-mini-play" onClick={app.playback.toggle} aria-label={playing ? 'Pause' : 'Play'}><Icon name={playing ? 'pause' : 'play'} size={23} /></button>
+        <button type="button" className="tv-icon-button" onClick={app.playback.next} aria-label="Next"><Icon name="next" size={23} /></button>
+        <button type="button" className="tv-icon-button" aria-label={`Repeat ${app.playback.repeat}`} aria-pressed={app.playback.repeat !== 'off'} onClick={() => app.playback.setRepeat(app.playback.repeat === 'off' ? 'all' : app.playback.repeat === 'all' ? 'one' : 'off')}><Icon name={app.playback.repeat === 'one' ? 'repeat_one' : 'repeat'} size={20} /></button>
+        <button type="button" className="tv-icon-button" onClick={onQueue} aria-label="Open queue"><Icon name="queue" size={22} /></button>
+      </div>
+      <div className="tv-mini-progress" aria-hidden="true"><span style={{ width: Math.max(0, Math.min(100, positionMs / (durationMs || track.durationMs || 1) * 100)) + '%' }} /></div>
     </footer>}
   </div>;
 }

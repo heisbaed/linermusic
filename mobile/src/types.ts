@@ -21,6 +21,8 @@ export interface PlayerState {
   shuffle?: boolean;
   repeat?: 'off' | 'all' | 'one';
   output?: string;
+  remoteDeviceId?: string;
+  remoteDeviceName?: string;
   sleepDeadline?: number;
   sleepEndOfSong?: boolean;
   equalizer?: { ready: boolean; available: boolean; bandCount?: number; frequencies?: number[]; minDb?: number; maxDb?: number };
@@ -89,6 +91,8 @@ export interface NativeApi {
   showTvKeyboard?(): void;
   hideTvKeyboard?(): void;
   keepTvScreenOn?(enabled: boolean): void;
+  connectSnapshot?(): string;
+  selectPlaybackDevice?(id: string): void;
 }
 declare global {
   interface Window {
