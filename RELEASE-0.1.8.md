@@ -11,3 +11,5 @@ Cine music Mobile and Cine music TV 0.1.8
 - TV Smart Shuffle cycles Off, Shuffle and Smart Shuffle in both players.
 
 Final testing was stopped at the owner's request. The latest caching and Smart Shuffle changes remain unverified on devices. Earlier verification and remaining limitations are recorded in PROGRESS.md. Song-specific social previews remain skipped at the owner's request. Existing debug signing is preserved for update compatibility. Android requires installer confirmation for APK updates.
+
+Mobile-specific CSS import ordering was corrected after a reported layout regression. Final testing remains disabled at the owner's request.

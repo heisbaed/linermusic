@@ -30,4 +30,4 @@ Song-specific social previews remain skipped at the owner's request. Generic sit
 
 Separate platform web builds are available through npm run build:mobile and npm run build:tv in mobile. Native packaging selects cinePlatform=mobile or cinePlatform=tv with cineAssetsDir pointing to the corresponding web output.
 
-Publication is being completed. No further device verification is authorized in this turn.
+Publication is being completed. No further testing is authorized. The reported mobile layout regression was traced to platform-bundle CSS ordering. CineApp now imports its canonical theme/layout styles after component styles, and the corrected mobile APK is being installed.

@@ -66,7 +66,7 @@ const APK_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.8
 const APK_TV_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.8/Cine-Music-TV-0.1.8.apk";
 const APK_TV_SHA256 = "4ff2c40587921bbaf9800c2f1fe8611861e7cbb007caf7d97e3067f68e06eb8b";
 const APK_TV_SIZE = "12.28 MB";
-const APK_SHA256 = "a8e7e482dafd6e4dbd0cca9e722771c99fa33d7d68af6c886ca0dfdb26928093";
+const APK_SHA256 = "9d6ff60cad4ec4e740e2e8d1d5340059d2469ac86c2417c39715227de6f1a934";
 function usePerformanceMode() {
 
   const [liteMode, setLiteMode] = useState(false);

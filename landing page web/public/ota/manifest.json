@@ -3,7 +3,7 @@
   "versionCode": 11,
   "platform": "mobile",
   "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.8/Cine-Music-Mobile-0.1.8.apk",
-  "fileSize": 12406667,
-  "sha256": "a8e7e482dafd6e4dbd0cca9e722771c99fa33d7d68af6c886ca0dfdb26928093",
+  "fileSize": 12406668,
+  "sha256": "9d6ff60cad4ec4e740e2e8d1d5340059d2469ac86c2417c39715227de6f1a934",
   "releaseNotes": "Separate mobile and TV apps with shared playback, remote controls, updated player layout and animated brand splash."
 }

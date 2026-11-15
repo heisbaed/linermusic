@@ -1,6 +1,3 @@
-import './cine.css';
-import './design.css';
-import './liquid.css';
 import { consumePhoneTvLink, PhoneTvLink } from './TvAuth';
 import type { TvLink } from '@/shared/tvSession';
 import { useEffect, useRef, useState } from 'react';
@@ -53,6 +50,10 @@ type RouteEntry = { key: string; route: Route };
 type SheetState = { kind: 'queue' } | { kind: 'menu'; song: Song } | { kind: Utility };
 
 
+
+import './cine.css';
+import './design.css';
+import './liquid.css';
 
 function initialPreferences(): Preferences {
 
