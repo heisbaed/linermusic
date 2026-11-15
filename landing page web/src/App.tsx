@@ -64,7 +64,7 @@ const ease = [0.22, 1, 0.36, 1] as const;
 const APK_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.8/Cine-Music-Mobile-0.1.8.apk";
 
 const APK_TV_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.8/Cine-Music-TV-0.1.8.apk";
-const APK_TV_SHA256 = "4ff2c40587921bbaf9800c2f1fe8611861e7cbb007caf7d97e3067f68e06eb8b";
+const APK_TV_SHA256 = "62dfa74c6801988e3feb43046d671d573c67832ba234587d4a268fab209ca49d";
 const APK_TV_SIZE = "12.28 MB";
 const APK_SHA256 = "9d6ff60cad4ec4e740e2e8d1d5340059d2469ac86c2417c39715227de6f1a934";
 function usePerformanceMode() {

@@ -48,9 +48,14 @@ export default function TvApp() {
   const page = routes.at(-1);
 
   function closeOverlay() {
+    const restoreQueue = queueFromBrowsing.current;
     queueFromBrowsing.current = false;
     setOverlay(null);
-    window.setTimeout(() => { if (returnFocus.current?.isConnected) focusElement(returnFocus.current); }, 80);
+    window.setTimeout(() => {
+      const target = returnFocus.current?.isConnected ? returnFocus.current
+        : restoreQueue ? document.querySelector<HTMLButtonElement>('button[aria-label="Open queue"]') : null;
+      if (target) focusElement(target);
+    }, 80);
   }
   function back() {
     const current = state.current;

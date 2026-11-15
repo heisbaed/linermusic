@@ -4,6 +4,6 @@
   "platform": "tv",
   "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.8/Cine-Music-TV-0.1.8.apk",
   "fileSize": 12284779,
-  "sha256": "4ff2c40587921bbaf9800c2f1fe8611861e7cbb007caf7d97e3067f68e06eb8b",
+  "sha256": "62dfa74c6801988e3feb43046d671d573c67832ba234587d4a268fab209ca49d",
   "releaseNotes": "Separate mobile and TV apps with shared playback, remote controls, updated player layout and animated brand splash."
 }
