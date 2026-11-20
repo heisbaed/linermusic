@@ -14,6 +14,7 @@ import { isOnline, onConnectivityChange } from './network';
 import { loadSaved, save, toggleFavorite } from './library';
 import { focusElement } from './spatialNav';
 import { Brand } from './ui';
+import { trackEvent, trackPageView } from './analytics';
 import './tv.css';
 
 const noop = () => {};
@@ -43,6 +44,7 @@ export default function TvApp() {
   const verified = account.user?.emailVerified === true;
   const returnFocus = useRef<HTMLElement | null>(null);
   const queueFromBrowsing = useRef(false);
+  const previousVerified = useRef(verified);
   const state = useRef({ overlay, routes, tab, playback, verified });
   state.current = { overlay, routes, tab, playback, verified };
   const page = routes.at(-1);
@@ -77,6 +79,16 @@ export default function TvApp() {
     if (!verified) control('stop');
     setTab('home'); setRoutes([]); setOverlay(null);
   }, [verified, account.user?.localId]);
+  useEffect(() => {
+    if (verified === previousVerified.current) return;
+    previousVerified.current = verified;
+    trackEvent(verified ? 'sign_in' : 'sign_out', { path: 'account' });
+  }, [verified]);
+  useEffect(() => {
+    if (!verified) return;
+    const route = routes.at(-1)?.route;
+    trackPageView(`tv/${overlay ? 'overlay-' + overlay : route ? route.kind : tab}`);
+  }, [tab, routes.at(-1)?.key, overlay, verified]);
   useEffect(() => {
     if (!message) return;
     const timer = setTimeout(() => setMessage(''), 4500);

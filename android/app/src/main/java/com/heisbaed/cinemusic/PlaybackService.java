@@ -199,6 +199,10 @@ public class PlaybackService extends Service {
             // Don't stop service - keep playing in background
             return START_STICKY; 
         }
+        if ("remote".equals(intent.getAction())) {
+            try { present(new JSONObject(CineConnect.get(this).snapshot())); startForeground(1, notification()); } catch (Exception ignored) {}
+            return START_NOT_STICKY;
+        }
         if ("play".equals(intent.getAction())) {
             startForeground(1, notification());
             try {
@@ -307,7 +311,7 @@ public class PlaybackService extends Service {
         media.setOnCompletionListener(value -> { if (epoch == generation) completeCurrent(); });
         media.setOnSeekCompleteListener(value -> { if (epoch == generation) publish(); });
         media.addOnRoutingChangedListener(router -> { if (epoch == generation) publish(); }, handler);
-        media.setOnErrorListener((value, what, extra) -> { if (epoch == generation) recoverStream(); return true; });
+        media.setOnErrorListener((value, what, extra) -> { if (epoch == generation) { recordFailure(media.failureDetail().isEmpty() ? "Audio decoder error " + what + "/" + extra : media.failureDetail()); recoverStream(); } return true; });
         media.setOnInfoListener((value, what, extra) -> {
             if (epoch != generation) return false;
             if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) { status = playWhenReady ? "loading" : "paused"; if (tv && playWhenReady) watchTvBuffer(epoch, 14_000); publish(); }
@@ -714,6 +718,35 @@ public class PlaybackService extends Service {
                 if (tv && position > 0) lastTvPosition = position;
             }
         } catch (Exception ignored) {}
+        String output = "System default";
+        try { AudioDeviceInfo route = player == null ? null : player.getRoutedDevice(); if (route != null) output = route.getProductName().toString(); } catch (Exception ignored) {}
+        JSONObject state = Events.json("track", track == null ? JSONObject.NULL : track, "status", status, "positionMs", position, "durationMs", duration, "error", error,
+            "queue", queue, "shuffle", shuffle, "repeat", repeat, "output", output, "sleepDeadline", sleepDeadline, "sleepEndOfSong", sleepTrackId != null, "equalizer", equalizerInfo,
+            "sourceResolvedMs", sourceResolvedMs, "preparedMs", preparedMs);
+        snapshotJson = state.toString();
+        CineConnect.get(this).localState(state);
+
+    }
+    private JSONObject surfaceState;
+    private android.graphics.Bitmap surfaceArtwork;
+    private String surfaceCover = "";
+    private String surfaceNoticeKey = "";
+    void present(JSONObject state) {
+        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) { handler.post(() -> present(state)); return; }
+        if (instance != this) return;
+        surfaceState = state;
+        JSONObject track = state.optJSONObject("track");
+        String status = state.optString("status", "paused");
+        long position = state.optLong("positionMs"), duration = state.optLong("durationMs");
+        String cover = track == null ? "" : track.optString("cover");
+        if (!cover.equals(surfaceCover)) {
+            surfaceCover = cover;
+            surfaceArtwork = MediaArtwork.cached(cover);
+            if (!cover.isEmpty()) MediaArtwork.load(cover, image -> {
+                if (instance == this && cover.equals(surfaceCover)) { surfaceArtwork = image; present(surfaceState); }
+            });
+        }
+        android.graphics.Bitmap artwork = surfaceArtwork;
         int playbackState = status.equals("playing") ? PlaybackState.STATE_PLAYING : status.equals("loading") ? PlaybackState.STATE_BUFFERING : status.equals("error") ? PlaybackState.STATE_ERROR : PlaybackState.STATE_PAUSED;
         session.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_SEEK_TO | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_STOP)
             .setState(playbackState, position, status.equals("playing") ? 1 : 0).build());
@@ -731,13 +764,8 @@ public class PlaybackService extends Service {
             if (artwork != null) metadata.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, artwork).putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, artwork);
             session.setMetadata(metadata.build());
         }
-        String output = "System default";
-        try { AudioDeviceInfo route = player == null ? null : player.getRoutedDevice(); if (route != null) output = route.getProductName().toString(); } catch (Exception ignored) {}
-        JSONObject state = Events.json("track", track == null ? JSONObject.NULL : track, "status", status, "positionMs", position, "durationMs", duration, "error", error,
-            "queue", queue, "shuffle", shuffle, "repeat", repeat, "output", output, "sleepDeadline", sleepDeadline, "sleepEndOfSong", sleepTrackId != null, "equalizer", equalizerInfo,
-            "sourceResolvedMs", sourceResolvedMs, "preparedMs", preparedMs);
-        snapshotJson = state.toString();
-        CineConnect.get(this).localState(state);
+        String noticeKey = nextMetadataKey + ":" + status + ":" + state.optString("remoteDeviceName");
+        if (!noticeKey.equals(surfaceNoticeKey)) { surfaceNoticeKey = noticeKey; updateNotification(); }
         String widgetState = (track == null ? "" : track.optString("id")) + status;
         if (!tv && (!widgetState.equals(lastWidgetState) || SystemClock.elapsedRealtime() - lastWidgetUpdate >= 1000)) {
             lastWidgetState = widgetState; lastWidgetUpdate = SystemClock.elapsedRealtime(); MusicWidgetProvider.updateAll(this);
@@ -802,7 +830,14 @@ public class PlaybackService extends Service {
         }
         fail("Playback failed. Check your connection and tap Play to retry, or choose a completed download.");
     }
+    private void recordFailure(String detail) {
+        String safe = detail == null ? "Unknown media failure" : detail.replaceAll("https?://\\S+", "[URL omitted]");
+        getSharedPreferences("cine_playback_diagnostics", MODE_PRIVATE).edit().putString("last_failure",
+            Events.json("at", System.currentTimeMillis(), "id", track == null ? "" : track.optString("id"),
+                "platform", BuildConfig.CINE_PLATFORM, "error", safe.substring(0, Math.min(1000, safe.length()))).toString()).apply();
+    }
     private void fail(String message) {
+        recordFailure(message);
         cancelTvRecovery();
         if (track != null) StreamResolver.invalidate(track.optString("id"));
         cancelSleepFade(); cancelCrossfade(); cancelPreload();
@@ -816,8 +851,11 @@ public class PlaybackService extends Service {
         return PendingIntent.getService(this, action.hashCode(), new Intent(this, PlaybackService.class).setAction(action), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
     private Notification notification() {
+        JSONObject track = surfaceState == null ? this.track : surfaceState.optJSONObject("track");
+        android.graphics.Bitmap artwork = surfaceState == null ? this.artwork : surfaceArtwork;
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class).putExtra("openPlayer", true), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        boolean playing = status.equals("playing") || status.equals("loading");
+        String visibleStatus = surfaceState == null ? status : surfaceState.optString("status");
+        boolean playing = visibleStatus.equals("playing") || visibleStatus.equals("loading");
         Notification.Builder builder = new Notification.Builder(this, "playback")
             .setSmallIcon(R.drawable.ic_cine_notification)
             .setContentTitle(track == null ? "Cine music" : "Cine music · " + track.optString("title"))

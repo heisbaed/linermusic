@@ -6,7 +6,7 @@ const manifests={}, sums=[];
 for(const platform of ['mobile','tv']){
  const name=`Cine-Music-${platform==='tv'?'TV':'Mobile'}-${version}.apk`;
  const apk=await fs.readFile('releases/'+name), sha256=crypto.createHash('sha256').update(apk).digest('hex');
- const manifest={version,versionCode,platform,downloadUrl:`https://github.com/heisbaed/linermusic/releases/download/v${version}/${name}`,fileSize:apk.length,sha256,releaseNotes:'Separate mobile and TV apps with shared playback, remote controls, updated player layout and animated brand splash.'};
+ const manifest={version,versionCode,platform,downloadUrl:`https://github.com/heisbaed/linermusic/releases/download/v${version}/${name}`,fileSize:apk.length,sha256,releaseNotes:'Resets Smart Shuffle recommendations when changing music, rejects stale recommendation requests, reduces TV lyrics rendering work, and caches lyrics during the session. Synchronizes phone notification and widget controls with linked TV playback. Adds bounded source-session recovery and platform checks for APK updates.'};
  manifests[platform]=manifest;sums.push(`${sha256}  ${name}`);
  await fs.writeFile(`landing page web/public/ota/${platform==='tv'?'tv-manifest.json':'manifest.json'}`,JSON.stringify(manifest,null,2)+'\n');
 }

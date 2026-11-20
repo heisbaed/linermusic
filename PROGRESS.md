@@ -1,4 +1,13 @@
-# Cine music release progress — 15 November 2026
+# Cine music repair progress - 20 November 2026
+
+## Release 0.1.13 / code 16
+
+Separate TV and mobile builds contain Smart Shuffle context cancellation, bounded session lyrics caching, TV lyric rendering improvements, shared Connect media notification/widget state, one fresh source-session retry for rejected audio URLs, private last-failure diagnostics, and platform validation for updates. See RELEASE-0.1.13.md for evidence and limits.
+
+The reported evening playback error was not reproduced; the same song played during diagnosis. This is not a claim that all playback failures are resolved. No automated test suites were run. Full OTA installation and extended TV performance remain unverified.
+
+---
+# Cine music release progress ï¿½ 15 November 2026
 
 ## Release 0.1.8 / code 11
 
@@ -31,3 +40,65 @@ Song-specific social previews remain skipped at the owner's request. Generic sit
 Separate platform web builds are available through npm run build:mobile and npm run build:tv in mobile. Native packaging selects cinePlatform=mobile or cinePlatform=tv with cineAssetsDir pointing to the corresponding web output.
 
 Publication is being completed. No further testing is authorized. The reported mobile layout regression was traced to platform-bundle CSS ordering. CineApp now imports its canonical theme/layout styles after component styles, and the corrected mobile APK is being installed.
+
+## Signalroom analytics
+
+First-party, privacy-safe analytics were added for the mobile app, Android TV and landing page. Events are coarse counts and labels only: no search text, song titles, artwork URLs or device identifiers are uploaded. Events are written idempotently through Firebase RTDB REST to `/analytics/<surface>/events/<id>` with server timestamps and a local retry queue.
+
+- `mobile/src/analytics.ts` initializes a fresh session per launch, tracks app opens, installs/version changes, heartbeats, page views, playback start/pause/resume/skip/complete, downloads, search counts, radio, lyrics, theme, Connect pairing/selection, sign-in/out and OTA checks.
+- `MainActivity` exposes `appVersion()` through the existing native bridge so release versions can be grouped.
+- `landing page web/src/lib/telemetry.ts` records landing page views and APK download clicks; `/dashboard` is an admin-only REST/polling analytics view in `src/pages/Dashboard.tsx`.
+- `database.rules.json` adds a validated public-write/admin-read analytics node with a timestamp index. The rules were deployed to `cinemusic-1-default-rtdb`; unauthenticated analytics reads correctly return HTTP 401.
+- Landing hosting was deployed to `https://cinemusic.web.app`; `/dashboard` returns the SPA shell and `/firebase-config.json` is publicly readable.
+
+Type checks, 105 unit tests and production builds pass for both `mobile` and `landing page web`. No device testing was performed, per the owner's testing freeze.
+
+## Release 0.1.9 / code 12
+
+Published via the existing OTA feeds on 15 November 2026.
+
+- Mobile and TV APKs rebuilt from the platform web bundles with Signalroom analytics included and verified inside the packaged assets.
+- GitHub release: https://github.com/heisbaed/linermusic/releases/tag/v0.1.9
+- Live feeds: https://cinemusic.web.app/ota/manifest.json and https://cinemusic.web.app/ota/tv-manifest.json
+- Landing download links, sizes, checksums and version copy were updated and hosting redeployed.
+- No device update was performed. Android will show its installer confirmation when an installed 0.1.8 app receives the 0.1.9 update.
+
+## Release 0.1.10 / code 13
+
+Published via the existing OTA feeds on 15 November 2026.
+
+- Mobile and TV check for updates automatically five seconds after launch and only open the update prompt when the manifest version code is newer.
+- The check reuses the validated manifest fetch in `UpdateActivity`; up-to-date launches remain silent and network failures are ignored.
+- Manual `Settings > About > Check for updates` remains available.
+- GitHub release: https://github.com/heisbaed/linermusic/releases/tag/v0.1.10
+- Live feeds: https://cinemusic.web.app/ota/manifest.json and https://cinemusic.web.app/ota/tv-manifest.json
+- Landing hosting was redeployed with 0.1.10 download links, sizes and checksums.
+- Users on 0.1.8 or 0.1.9 must update once manually because those builds do not contain the launch check. Android still requires installer confirmation.
+- No device testing was performed, per the owner's testing freeze.
+
+## Release 0.1.11 / code 14
+
+Published via the existing OTA feeds on 15 November 2026.
+
+- Fixed playback analytics so a new track is counted as `play` rather than `resume` when native playback passes through a transient paused state.
+- Fixed search analytics so settled Browse typing is counted once per query without requiring Enter.
+- Fixed download analytics by reconciling persisted download state on launch and foreground, restoring completions lost while the app was backgrounded or closed.
+- Dashboard downloads KPI now separates started and completed downloads.
+- Mobile and TV APKs rebuilt from the platform web bundles with the analytics fixes verified inside the packaged assets.
+- GitHub release: https://github.com/heisbaed/linermusic/releases/tag/v0.1.11
+- Live feeds: https://cinemusic.web.app/ota/manifest.json and https://cinemusic.web.app/ota/tv-manifest.json
+- Landing hosting was redeployed with 0.1.11 download links, sizes and checksums.
+- No device testing was performed, per the owner's testing freeze.
+
+## Release 0.1.12 / code 15
+
+Published via the existing OTA feeds on 15 November 2026.
+
+- Fixed the update screen reopening on every launch by comparing the manifest against the installed package version at runtime.
+- Automatic updates now show a dismissible in-app prompt instead of opening a persistent update screen; choosing Later suppresses that version.
+- Successful installs clear the cached update APK and update notification.
+- Mobile and TV APKs rebuilt from the platform web bundles with the update-flow fix verified in the packaged bytecode.
+- GitHub release: https://github.com/heisbaed/linermusic/releases/tag/v0.1.12
+- Live feeds: https://cinemusic.web.app/ota/manifest.json and https://cinemusic.web.app/ota/tv-manifest.json
+- Landing hosting was redeployed with 0.1.12 download links, sizes and checksums.
+- No device testing was performed, per the owner's testing freeze.

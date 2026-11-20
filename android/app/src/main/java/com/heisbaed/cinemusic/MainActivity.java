@@ -1758,6 +1758,14 @@ public class MainActivity extends Activity {
 
 
 
+        @JavascriptInterface public String appVersion() {
+
+            return BuildConfig.VERSION_NAME;
+
+        }
+
+
+
         @JavascriptInterface public boolean isAppInstalled() {
 
             return true; // This method is always called from within the app
@@ -1777,6 +1785,58 @@ public class MainActivity extends Activity {
                 } catch (Exception ignored) {}
 
             });
+
+        }
+
+
+
+        @JavascriptInterface public void autoCheckForUpdates() {
+
+            new Thread(() -> {
+
+                try {
+
+                    JSONObject data = UpdateActivity.fetchManifest();
+
+                    long available = data.getLong("versionCode");
+
+                    android.content.pm.PackageInfo installedInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+
+                    long installed = Build.VERSION.SDK_INT >= 28 ? installedInfo.getLongVersionCode() : installedInfo.versionCode;
+
+                    if (available <= installed) return;
+
+                    long dismissed = getSharedPreferences("cine_updates", MODE_PRIVATE).getLong("dismissed_update", 0);
+
+                    if (dismissed >= available) return;
+
+                    String version = data.optString("version", "");
+
+                    String notes = data.optString("releaseNotes", "");
+
+                    runOnUiThread(() -> {
+
+                        if (isFinishing() || isDestroyed()) return;
+
+                        new AlertDialog.Builder(MainActivity.this)
+
+                            .setTitle("Update Cine music")
+
+                            .setMessage("Version " + version + " is available." + (notes.isEmpty() ? "" : "\n\n" + notes))
+
+                            .setNegativeButton("Later", (dialog, which) -> getSharedPreferences("cine_updates", MODE_PRIVATE).edit().putLong("dismissed_update", available).apply())
+
+                            .setPositiveButton("Update", (dialog, which) -> {
+
+                                try { startActivity(new Intent(MainActivity.this, UpdateActivity.class).setAction("available")); } catch (Exception ignored) {}
+
+                            }).show();
+
+                    });
+
+                } catch (Exception ignored) {}
+
+            }, "cine-auto-update").start();
 
         }
 

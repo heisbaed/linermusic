@@ -18,14 +18,19 @@ public class UpdateActivity extends Activity {
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private TextView status;private boolean waiting,checking,installing;
     private File apk(){return new File(getCacheDir(),"ota/update.apk");}
+    static long installedVersion(Context c){try{android.content.pm.PackageInfo info=c.getPackageManager().getPackageInfo(c.getPackageName(),0);return Build.VERSION.SDK_INT>=28?info.getLongVersionCode():info.versionCode;}catch(Exception e){return BuildConfig.VERSION_CODE;}}
     static boolean trustedUrl(String value){try{URI u=new URI(value);return "https".equals(u.getScheme())&&u.getUserInfo()==null&&(u.getPort()==-1||u.getPort()==443)
         &&("cinemusic.web.app".equals(u.getHost())||("github.com".equals(u.getHost())&&u.getPath().startsWith("/heisbaed/linermusic/releases/download/")));}catch(Exception e){return false;}}
     static void verifyPackage(Context c,File file)throws Exception{
         PackageManager pm=c.getPackageManager();
-        int flags=Build.VERSION.SDK_INT>=28?PackageManager.GET_SIGNING_CERTIFICATES:PackageManager.GET_SIGNATURES;
+        int flags=(Build.VERSION.SDK_INT>=28?PackageManager.GET_SIGNING_CERTIFICATES:PackageManager.GET_SIGNATURES) | PackageManager.GET_META_DATA;
         PackageInfo incoming=pm.getPackageArchiveInfo(file.getAbsolutePath(),flags);
         PackageInfo current=pm.getPackageInfo(c.getPackageName(),flags);
         if(incoming==null||!c.getPackageName().equals(incoming.packageName)||(Build.VERSION.SDK_INT>=28?incoming.getLongVersionCode()<=current.getLongVersionCode():incoming.versionCode<=current.versionCode))throw new IOException("This is not a newer Cine music APK");
+        if (incoming.applicationInfo != null && incoming.applicationInfo.metaData != null) {
+            String platform = incoming.applicationInfo.metaData.getString("com.heisbaed.cinemusic.PLATFORM", "");
+            if (!platform.isEmpty() && !BuildConfig.CINE_PLATFORM.equals(platform)) throw new IOException("This update is for a different Cine music app");
+        }
         Signature[] existing=Build.VERSION.SDK_INT>=28&&current.signingInfo!=null?current.signingInfo.getApkContentsSigners():current.signatures;
         Signature[] candidate=Build.VERSION.SDK_INT>=28&&incoming.signingInfo!=null?incoming.signingInfo.getApkContentsSigners():incoming.signatures;
         if(existing==null||candidate==null)throw new IOException("Could not verify update signer");
@@ -43,14 +48,23 @@ public class UpdateActivity extends Activity {
         Button close=new Button(this);close.setText("Back to music");close.setOnClickListener(v->finish());layout.addView(close);setContentView(layout);
         if(apk().exists())offerInstall();else if("progress".equals(getIntent().getAction()))status.setText("Download progress is in the notification. Return here when it finishes to install.");else check();
     }
-    private void check(){
-        if(checking)return;checking=true;status.setText("Checking for updates...");
-        worker.execute(()->{HttpURLConnection connection=null;try{
+    static JSONObject fetchManifest()throws Exception{
+        HttpURLConnection connection=null;
+        try{
             connection=(HttpURLConnection)new URL("https://cinemusic.web.app/ota/" + ("tv".equals(BuildConfig.CINE_PLATFORM) ? "tv-manifest.json" : "manifest.json")).openConnection();connection.setConnectTimeout(10000);connection.setReadTimeout(15000);connection.setUseCaches(false);
             if(connection.getResponseCode()!=200)throw new IOException("Update server is unavailable");
             ByteArrayOutputStream bytes=new ByteArrayOutputStream();try(InputStream in=connection.getInputStream()){byte[]buf=new byte[4096];int n;while((n=in.read(buf))!=-1){if(bytes.size()+n>65536)throw new IOException("Invalid manifest");bytes.write(buf,0,n);}}
-            JSONObject data=new JSONObject(bytes.toString("UTF-8"));
-            if(data.getLong("versionCode")<=BuildConfig.VERSION_CODE){runOnUiThread(()->status.setText("You are up to date. Version "+BuildConfig.VERSION_NAME));return;}
+            JSONObject manifest = new JSONObject(bytes.toString("UTF-8"));
+            String platform = manifest.optString("platform");
+            if (!platform.isEmpty() && !BuildConfig.CINE_PLATFORM.equals(platform)) throw new IOException("Update channel does not match this app");
+            return manifest;
+        }finally{if(connection!=null)connection.disconnect();}
+    }
+    private void check(){
+        if(checking)return;checking=true;status.setText("Checking for updates...");
+        worker.execute(()->{try{
+            JSONObject data=fetchManifest();
+            if(data.getLong("versionCode")<=installedVersion(this)){runOnUiThread(()->{status.setText("You are up to date. Version "+BuildConfig.VERSION_NAME);if("available".equals(getIntent().getAction()))finish();});return;}
             String url=data.getString("downloadUrl"),hash=data.getString("sha256"),version=data.getString("version");long size=data.getLong("fileSize");
             if(!trustedUrl(url)||!hash.matches("[a-fA-F0-9]{64}")||size<=0||size>200_000_000)throw new IOException("Update metadata is incomplete");
             runOnUiThread(()->{if(isFinishing()||isDestroyed())return;status.setText("Version "+version+" is available.");
@@ -58,7 +72,7 @@ public class UpdateActivity extends Activity {
                     .setNegativeButton("Later",(d,w)->{}).setPositiveButton("Download",(d,w)->{
                         startForegroundService(new Intent(this,OTAUpdateService.class).setAction("download").putExtra("url",url).putExtra("sha256",hash).putExtra("size",size));
                         status.setText("Downloading. You can return to music; tap the notification when ready.");}).show();});
-        }catch(Exception e){runOnUiThread(()->status.setText("Could not check for updates. "+(e.getMessage()==null?"Try again.":e.getMessage())));}finally{if(connection!=null)connection.disconnect();checking=false;}});
+        }catch(Exception e){runOnUiThread(()->status.setText("Could not check for updates. "+(e.getMessage()==null?"Try again.":e.getMessage())));}finally{checking=false;}});
     }
     private void offerInstall(){try{verifyPackage(this,apk());status.setText("The downloaded update is ready to install.");
         new AlertDialog.Builder(this).setTitle("Install update").setMessage("Confirm installation in Android. Your music library will be kept.").setNegativeButton("Later",(d,w)->{}).setPositiveButton("Install",(d,w)->install()).show();

@@ -8,6 +8,8 @@ import type { PlaybackController, Preferences, ShuffleMode } from './AppContext'
 import type { PlayerState, Song } from './types';
 import { displaySongTitle, relatedSongs } from './catalogQuality';
 import { normalizeHidden, personalizeSongs, type HiddenMusic } from './smartFeatures';
+import { analyticsContextLabel, trackEvent } from './analytics';
+import { nextPlaybackTelemetry, type PlaybackTelemetryState } from './playbackTelemetry';
 
 function uniqueSongs(songs: Song[]): Song[] {
   const ids = new Set<string>();
@@ -46,8 +48,11 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
   const autoplayController = useRef<AbortController | null>(null);
   const smartController = useRef<AbortController | null>(null);
   const smartBusy = useRef(false);
+  const queueGeneration = useRef(0);
   const smartSeed = useRef('');
   const smartAdded = useRef<Set<string>>(new Set());
+  const tracked = useRef({ status: '', id: '' });
+  const telemetry = useRef<PlaybackTelemetryState>({ startedId: '', resumePending: false });
 
   useEffect(() => { save('queue', queue); }, [queue]);
   useEffect(() => { save('shuffle', shuffle); }, [shuffle]);
@@ -57,13 +62,16 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     const unsubscribe = subscribe(event => {
       if (event.type === 'player') {
         const state = event.data as unknown as PlayerState;
+        const previous = tracked.current;
         if (state.remoteDeviceId) {
           autoplayController.current?.abort();
           smartController.current?.abort();
         }
         setPlayer(state);
         live.current.player = state;
-        if (state.track && Array.isArray(state.queue)) { setLocalQueue(state.queue); live.current.queue = state.queue; }
+        if (state.track && Array.isArray(state.queue)) {
+          if (JSON.stringify(state.queue) !== JSON.stringify(live.current.queue)) { setLocalQueue(state.queue); live.current.queue = state.queue; }
+        }
         if (state.track && typeof state.shuffle === 'boolean') {
           const next: ShuffleMode = state.shuffle ? (live.current.shuffle === 'smart' ? 'smart' : 'on') : 'off';
           setLocalShuffle(next); live.current.shuffle = next;
@@ -77,9 +85,16 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
         if (!state.remoteDeviceId && state.status === 'playing' && state.track) {
           const remaining = live.current.queue.length - live.current.queue.findIndex(song=>song.id===state.track?.id);
           if (live.current.shuffle === 'smart' && !smartAdded.current.size && !smartBusy.current) void addSmartSongs(state.track);
-          if (live.current.shuffle === 'smart' || remaining <= 4) void prepareRelated(state.track);
+          if (remaining <= 4 && !smartBusy.current) void prepareRelated(state.track);
         }
         if (state.status === 'error') live.current.toast(state.error || 'Playback could not start. Check your connection and try again.');
+        if (!state.remoteDeviceId) {
+          const current = { status: state.status, id: state.track?.id || '' };
+          const event = nextPlaybackTelemetry(previous, current, telemetry.current);
+          telemetry.current = event.state;
+          if (event.event) trackEvent(event.event, { path: 'player', label: analyticsContextLabel(live.current.context), mediaPositionMs: state.positionMs });
+          tracked.current = current;
+        }
         clearTimeout(autoplayTask.current);
         if (!state.remoteDeviceId && state.status === 'ended') {
           // The native service advances first. Only an exhausted queue stays ended.
@@ -96,9 +111,18 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     return () => { unsubscribe(); clearTimeout(autoplayTask.current); resolving.current?.abort(); autoplayController.current?.abort(); smartController.current?.abort(); };
   }, []);
 
-  async function play(song: Song, songs = live.current.queue, from = live.current.context, positionMs = 0) {
+  async function play(song: Song, songs = [song], from = song.title, positionMs = 0) {
+    telemetry.current = { startedId: '', resumePending: false };
     resolving.current?.abort();
     autoplayController.current?.abort();
+    smartController.current?.abort();
+    if (songs !== live.current.queue || from !== live.current.context) {
+      queueGeneration.current++;
+      if (songs === live.current.queue) songs = songs.filter(item => !smartAdded.current.has(item.id) || item.id === song.id);
+      smartAdded.current.clear(); smartSeed.current = ''; heard.current = [];
+      smartBusy.current = false; radioBusy.current = false;
+      radioAttempt.current = { id: '', at: 0 };
+    }
     const controller = new AbortController();
     resolving.current = controller;
     const local = live.current.downloads.find(item => item.id === song.id);
@@ -126,12 +150,13 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     const current=live.current, smartActive=current.shuffle==='smart';
     if(current.player.remoteDeviceId||radioBusy.current||(!current.prefs.autoplay&&!smartActive)||!isOnline()||(current.repeat!=='off'&&!smartActive)||(radioAttempt.current.id===seed.id&&Date.now()-radioAttempt.current.at<30000))return;
     radioBusy.current=true;radioAttempt.current={id:seed.id,at:Date.now()};
+    const generation=queueGeneration.current;
     const controller=new AbortController();autoplayController.current=controller;
     try{
       const seeds=[seed,...heard.current.filter(song=>song.id!==seed.id).slice(0,2)];
       for(const candidate of seeds){
         const result=await innertubeCatalog.getRadio(candidate.id,{signal:controller.signal,k:50});
-        if(controller.signal.aborted||live.current.player.remoteDeviceId||(!live.current.prefs.autoplay&&live.current.shuffle!=='smart'))return;
+        if(controller.signal.aborted||generation!==queueGeneration.current||live.current.player.remoteDeviceId||(!live.current.prefs.autoplay&&live.current.shuffle!=='smart'))return;
         if (live.current.player.track?.id !== seed.id && !live.current.queue.some(song => song.id === seed.id)) return;
         const added=personalize(relatedSongs(result.items,[seed,...heard.current,...live.current.queue]).map(songFromTrack)).slice(0,25);
         if(!added.length)continue;
@@ -141,16 +166,17 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
         break;
       }
     }catch{ /* Leave existing music playable if the provider is unavailable. */ }
-    finally{radioBusy.current=false;}
+    finally{if(autoplayController.current===controller)radioBusy.current=false;}
   }
   async function addSmartSongs(seed:Song){
     const current=live.current;
     if(current.player.remoteDeviceId||current.shuffle!=='smart'||smartBusy.current||!isOnline()||(smartSeed.current===seed.id&&smartAdded.current.size))return;
     smartBusy.current=true;smartSeed.current=seed.id;
+    const generation=queueGeneration.current;
     const controller=new AbortController();smartController.current=controller;
     try{
       const result=await innertubeCatalog.getRadio(seed.id,{signal:controller.signal,k:50});
-      if(controller.signal.aborted||live.current.player.remoteDeviceId||live.current.shuffle!=='smart')return;
+      if(controller.signal.aborted||generation!==queueGeneration.current||live.current.player.remoteDeviceId||live.current.shuffle!=='smart')return;
       if (live.current.player.track?.id !== seed.id && !live.current.queue.some(song => song.id === seed.id)) return;
       const added=personalize(relatedSongs(result.items,[seed,...heard.current,...live.current.queue]).map(songFromTrack)).slice(0,20);
       if(!added.length){live.current.toast('No smart recommendations were available for this song.');return;}
@@ -160,8 +186,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     }catch{
       if(!controller.signal.aborted&&live.current.shuffle==='smart'){applyShuffle('on');live.current.toast('Smart shuffle is unavailable. Normal shuffle is on.');}
     }finally{
-      smartBusy.current=false;
-      if(smartController.current===controller)smartController.current=null;
+      if(smartController.current===controller){smartBusy.current=false;smartController.current=null;}
     }
   }
   async function appendRadio(){
@@ -201,6 +226,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     if (current.shuffle === 'smart' && value !== 'smart') {
       smartController.current?.abort();
       smartController.current = null;
+      smartBusy.current = false;
       const added = smartAdded.current;
       smartAdded.current = new Set();
       if (added.size) {
@@ -237,6 +263,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
       const id = current.player.track.id;
       save('skipped:' + current.owner, [id, ...loadSaved<string[]>('skipped:' + current.owner, []).filter(item => item !== id)].slice(0, 100));
     }
+    if (current.player.track) trackEvent('skip', { path: 'player', mediaPositionMs: current.player.positionMs, label: current.player.positionMs < 30000 ? 'early' : 'late' });
     if (isAndroid) control('next'); else void browserAdvance(1);
   }
   return { player, queue, context, shuffle, repeat, play, playAll, toggle, next, previous: () => { if (isAndroid) control('previous'); else void browserAdvance(-1); }, seek: ms => control('seek', Math.max(0, Math.min(live.current.player.durationMs, ms))), setShuffle, cycleShuffle, setRepeat, setQueue, playerLyrics, setPlayerLyrics };

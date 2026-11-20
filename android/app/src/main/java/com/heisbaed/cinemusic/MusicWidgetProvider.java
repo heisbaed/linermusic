@@ -19,7 +19,7 @@ public class MusicWidgetProvider extends AppWidgetProvider {
         int[] ids = manager.getAppWidgetIds(new ComponentName(context, MusicWidgetProvider.class));
         if (ids.length == 0) return;
         JSONObject state;
-        try { state = PlaybackService.instance == null ? PlaybackService.idleSnapshot() : new JSONObject(PlaybackService.instance.snapshot()); }
+        try { state = new JSONObject(CineConnect.get(context).snapshot()); }
         catch (Exception ignored) { state = PlaybackService.idleSnapshot(); }
         manager.updateAppWidget(ids, buildViews(context, state));
     }

@@ -1,4 +1,6 @@
 import { PairPage } from "./PairPage";
+import { Dashboard } from "./pages/Dashboard";
+import { initLandingAnalytics, trackApkDownload, trackLandingPageView } from "./lib/telemetry";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 
 import {
@@ -55,18 +57,18 @@ import { useEffect, useState, type CSSProperties } from "react";
 
 
 
-type Page = "home" | "experience" | "download" | "song" | "pair";
+type Page = "home" | "experience" | "download" | "song" | "pair" | "dashboard";
 
 
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-const APK_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.8/Cine-Music-Mobile-0.1.8.apk";
+const APK_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.13/Cine-Music-Mobile-0.1.13.apk";
 
-const APK_TV_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.8/Cine-Music-TV-0.1.8.apk";
-const APK_TV_SHA256 = "62dfa74c6801988e3feb43046d671d573c67832ba234587d4a268fab209ca49d";
-const APK_TV_SIZE = "12.28 MB";
-const APK_SHA256 = "9d6ff60cad4ec4e740e2e8d1d5340059d2469ac86c2417c39715227de6f1a934";
+const APK_TV_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.13/Cine-Music-TV-0.1.13.apk";
+const APK_TV_SHA256 = "86324f4db981aeaa45b7631fcb332ac4af788355b63ed3b0dc2fd754c315f097";
+const APK_TV_SIZE = "12.27 MB";
+const APK_SHA256 = "93be5921862931c8726fe04e373f6069bc85e4d6db150eeac7b2376f6af7bae9";
 function usePerformanceMode() {
 
   const [liteMode, setLiteMode] = useState(false);
@@ -1335,7 +1337,7 @@ function HomePage({ navigate }: { navigate: (page: Page, section?: string) => vo
 
           >
 
-            <span /> Android APK v0.1.8 · Available now
+            <span /> Android APK v0.1.13 · Available now
 
           </motion.div>
 
@@ -1909,11 +1911,11 @@ const faqs = [
 
     "Can I download Cine music right now?",
 
-    "Yes. Cine music v0.1.8 is available from the official GitHub release linked on this page. The current file is a debug-signed testing build.",
+    "Yes. Cine music v0.1.13 is available from the official GitHub release linked on this page. The current file is a debug-signed testing build.",
 
   ],
 
-  ["Which Android versions will be supported?", "Cine music v0.1.8 requires Android 8.0 or newer."],
+  ["Which Android versions will be supported?", "Cine music v0.1.13 requires Android 8.0 or newer."],
 
   [
 
@@ -1966,7 +1968,7 @@ function SongLinkPage({ songId }: { songId?: string }) {
 
             <a className="button primary" href={appUrl}>Open in app <ArrowRight /></a>
 
-            <a className="button secondary" href={APK_URL}>Download app <Download /></a>
+            <a className="button secondary" href={APK_URL} onClick={() => trackApkDownload("mobile")}>Download app <Download /></a>
 
           </div>
 
@@ -2034,7 +2036,7 @@ function DownloadPage() {
 
           </p>
 
-        <div className="hero-actions"><a className="button primary" href={APK_URL}><Download /> Mobile APK</a><a className="button secondary" href={APK_TV_URL}><Download /> Android TV APK</a></div></motion.div>
+        <div className="hero-actions"><a className="button primary" href={APK_URL} onClick={() => trackApkDownload("mobile")}><Download /> Mobile APK</a><a className="button secondary" href={APK_TV_URL} onClick={() => trackApkDownload("tv")}><Download /> Android TV APK</a></div></motion.div>
 
         <motion.div
 
@@ -2086,19 +2088,19 @@ function DownloadPage() {
 
             <p>
 
-              Cine music v0.1.8 brings streaming, background playback, offline downloads, search,
+              Cine music v0.1.13 brings streaming, background playback, offline downloads, search,
 
               playlists, synced lyrics, four themes and cloud sync to Android 8.0 and newer.
 
             </p>
 
-            <a className="button primary download-ready" href={APK_URL}>
+            <a className="button primary download-ready" href={APK_URL} onClick={() => trackApkDownload("mobile")}>
 
               <Download /> Download mobile app
 
             </a>
 
-            <span className="availability">v0.1.8 · 12.41 MB · Android 8.0+</span>
+            <span className="availability">v0.1.13 · 12.45 MB · Android 8.0+</span>
 
           </div>
 
@@ -2118,7 +2120,7 @@ function DownloadPage() {
 
                 <dt>Version</dt>
 
-                <dd>0.1.8</dd>
+                <dd>0.1.13</dd>
 
               </div>
 
@@ -2126,7 +2128,7 @@ function DownloadPage() {
 
                 <dt>File size</dt>
 
-                <dd>12.41 MB</dd>
+                <dd>12.45 MB</dd>
 
               </div>
 
@@ -2182,7 +2184,7 @@ function DownloadPage() {
 
         </motion.div>
 
-      <article className="package-card tv-download-card" id="tv-download"><div className="package-main"><div className="package-title"><img src="/assets/cine-music-logo.png" alt="" /><div><small>ANDROID TV APPLICATION</small><h2>Cine music TV</h2></div><span className="status-pill">Available now</span></div><p>Made for the TV remote, with artwork, lyrics, queues and shared playback control from your phone.</p><a className="button primary download-ready" href={APK_TV_URL}><Download /> Download TV app</a><span className="availability">v0.1.8 · {APK_TV_SIZE} · Android TV 8.0+</span></div><div className="package-info"><h3>TV package information</h3><dl><div><dt>Version</dt><dd>0.1.8</dd></div><div><dt>Platform</dt><dd>Android TV</dd></div><div><dt>SHA-256</dt><dd className="checksum">{APK_TV_SHA256}</dd></div></dl><p>TV listening uses streaming and shared playback. Music downloads are available in the mobile app.</p></div></article>
+      <article className="package-card tv-download-card" id="tv-download"><div className="package-main"><div className="package-title"><img src="/assets/cine-music-logo.png" alt="" /><div><small>ANDROID TV APPLICATION</small><h2>Cine music TV</h2></div><span className="status-pill">Available now</span></div><p>Made for the TV remote, with artwork, lyrics, queues and shared playback control from your phone.</p><a className="button primary download-ready" href={APK_TV_URL} onClick={() => trackApkDownload("tv")}><Download /> Download TV app</a><span className="availability">v0.1.13 · {APK_TV_SIZE} · Android TV 8.0+</span></div><div className="package-info"><h3>TV package information</h3><dl><div><dt>Version</dt><dd>0.1.13</dd></div><div><dt>Platform</dt><dd>Android TV</dd></div><div><dt>SHA-256</dt><dd className="checksum">{APK_TV_SHA256}</dd></div></dl><p>TV listening uses streaming and shared playback. Music downloads are available in the mobile app.</p></div></article>
 </section>
 
 
@@ -2191,7 +2193,7 @@ function DownloadPage() {
 
         <motion.div {...reveal} className="section-heading">
 
-          <span className="kicker">WHAT’S IN V0.1.8</span>
+          <span className="kicker">WHAT’S IN V0.1.13</span>
 
           <h2>
 
@@ -2433,7 +2435,7 @@ function Footer({ navigate }: { navigate: (page: Page, section?: string) => void
 
         <span>Developed by Osborne's Digital Solutions · <a href="mailto:osbornesecards@gmail.com">osbornesecards@gmail.com</a></span>
 
-        <span>Android APK v0.1.8 · Available now</span>
+        <span>Android APK v0.1.13 · Available now</span>
 
       </div>
 
@@ -2459,13 +2461,13 @@ function MobileAction() {
 
           <strong>Cine music for Android</strong>
 
-          <small>v0.1.8 · 12.41 MB</small>
+          <small>v0.1.13 · 12.45 MB</small>
 
         </p>
 
       </div>
 
-      <a href={APK_URL}>
+      <a href={APK_URL} onClick={() => trackApkDownload("mobile")}>
 
         Download <Download />
 
@@ -2494,6 +2496,8 @@ export default function App() {
     if (/^\/download\/?$/.test(p)) return { page: "download" as Page, section: undefined, songId: undefined };
 
     if (/^\/(pair|tv-connect)\/?$/.test(p)) return { page: "pair" as Page, section: undefined, songId: undefined };
+
+    if (/^\/dashboard\/?$/.test(p)) return { page: "dashboard" as Page, section: undefined, songId: undefined };
 
     const [pageName, section] = window.location.hash.replace("#", "").split("/");
 
@@ -2537,6 +2541,26 @@ export default function App() {
 
   useEffect(() => {
 
+    if (window.location.pathname.match(/^\/dashboard\/?$/)) return;
+
+    initLandingAnalytics();
+
+  }, []);
+
+
+
+  useEffect(() => {
+
+    if (page === "dashboard") return;
+
+    trackLandingPageView(`/${page}${targetSection ? `/${targetSection}` : ""}`);
+
+  }, [page, targetSection]);
+
+
+
+  useEffect(() => {
+
     const frame = requestAnimationFrame(() => {
 
       if (targetSection) {
@@ -2572,6 +2596,8 @@ export default function App() {
   };
 
 
+
+  if (page === "dashboard") return <Dashboard />;
 
   return (
 

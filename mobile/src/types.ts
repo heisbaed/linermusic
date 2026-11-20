@@ -82,9 +82,11 @@ export interface NativeApi {
   appReady?(): void;
   isAppInstalled?(): boolean;
   checkForUpdates?(): void;
+  autoCheckForUpdates?(): void;
   setCrossfade?(enabled: boolean, durationSeconds: number): void;
   setGapless?(enabled: boolean): void;
   isTv?(): boolean;
+  appVersion?(): string;
   consumeTvLink?(): string;
   hasTvVoice?(): boolean;
   startTvVoice?(): void;

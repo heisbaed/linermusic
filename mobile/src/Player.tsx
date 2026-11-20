@@ -17,6 +17,7 @@ import { lyricOffset } from './smartFeatures';
 import './player.css';
 
 const lyricRequests = new Map<string, Promise<Response>>();
+const sessionLyrics = new Map<string, { text: string; savedAt: number }>();
 
 function requestLyrics(url: string): Promise<Response> {
   let pending = lyricRequests.get(url);
@@ -55,7 +56,7 @@ export function useLyrics(track: Song | null, enabled: boolean) {
     if (!track || !enabled) return;
     const controller = new AbortController();
     // Try cache first with expiration (lyrics expire after 7 days)
-    const stored = loadSaved<{ text: string; savedAt: number } | string | null>('lyrics:' + track.id, null);
+    const stored = sessionLyrics.get(track.id) ?? loadSaved<{ text: string; savedAt: number } | string | null>('lyrics:' + track.id, null);
     const cached = typeof stored === 'string' ? { text: stored, savedAt: 0 } : stored;
     app.playback.setPlayerLyrics?.(cached?.text ? { text: cached.text } : null);
     if (cached && cached.text) {
@@ -79,6 +80,11 @@ export function useLyrics(track: Song | null, enabled: boolean) {
     void fetchLyrics(track).then(data => {
       if (controller.signal.aborted) return;
       const text = data?.syncedLyrics || data?.plainLyrics || '';
+      if (text) {
+        sessionLyrics.delete(track.id);
+        sessionLyrics.set(track.id, { text, savedAt: Date.now() });
+        while (sessionLyrics.size > 50) sessionLyrics.delete(sessionLyrics.keys().next().value!);
+      }
       if (text && !isTvEnvironment()) {
         save('lyrics:' + track.id, { text, savedAt: Date.now() });
       }

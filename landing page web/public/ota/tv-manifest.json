@@ -1,9 +1,9 @@
 {
-  "version": "0.1.8",
-  "versionCode": 11,
+  "version": "0.1.13",
+  "versionCode": 16,
   "platform": "tv",
-  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.8/Cine-Music-TV-0.1.8.apk",
-  "fileSize": 12284779,
-  "sha256": "62dfa74c6801988e3feb43046d671d573c67832ba234587d4a268fab209ca49d",
-  "releaseNotes": "Separate mobile and TV apps with shared playback, remote controls, updated player layout and animated brand splash."
+  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.13/Cine-Music-TV-0.1.13.apk",
+  "fileSize": 12271430,
+  "sha256": "86324f4db981aeaa45b7631fcb332ac4af788355b63ed3b0dc2fd754c315f097",
+  "releaseNotes": "Resets Smart Shuffle recommendations when changing music, rejects stale recommendation requests, reduces TV lyrics rendering work, and caches lyrics during the session. Synchronizes phone notification and widget controls with linked TV playback. Adds bounded source-session recovery and platform checks for APK updates."
 }

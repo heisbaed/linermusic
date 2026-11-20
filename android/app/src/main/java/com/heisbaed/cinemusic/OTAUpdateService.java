@@ -10,7 +10,7 @@ import java.util.concurrent.*;
 public class OTAUpdateService extends Service {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile HttpURLConnection connection;
-    private boolean busy;
+    private volatile boolean busy;
     public void onCreate() {
         super.onCreate();
         ((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).createNotificationChannel(new NotificationChannel("ota_updates", "App updates", NotificationManager.IMPORTANCE_LOW));
@@ -24,9 +24,9 @@ public class OTAUpdateService extends Service {
         return n.build();
     }
     public int onStartCommand(Intent intent,int flags,int startId) {
+        if (busy) return START_NOT_STICKY;
         startForeground(3,notice("Preparing update",-1,false));
         if(intent==null || !"download".equals(intent.getAction())) { stopForeground(STOP_FOREGROUND_REMOVE);stopSelf();return START_NOT_STICKY; }
-        if(busy)return START_NOT_STICKY;
         busy=true;
         String url=intent.getStringExtra("url"), sha=intent.getStringExtra("sha256");long size=intent.getLongExtra("size",0);
         worker.execute(()->{

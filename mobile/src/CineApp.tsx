@@ -42,6 +42,7 @@ import type { Song } from './types';
 
 import { control, subscribe } from './native';
 import { isOnline, onConnectivityChange } from './network';
+import { trackEvent, trackPageView } from './analytics';
 
 
 
@@ -103,7 +104,7 @@ export default function CineApp() {
   const [theme, setThemeState] = useState<Theme>(() => {
     const migrated = loadSaved('pink-default-v1', false); const value = migrated ? loadSaved<Theme>('cine-theme-v2', 'default') : 'default'; if (!migrated) { save('cine-theme-v2', 'default'); save('pink-default-v1', true); } return THEMES.some(item => item.id === value) ? value : 'default';
   });
-  const setTheme = (value: Theme) => setThemeState(value);
+  const setTheme = (value: Theme) => { trackEvent('theme_change', { path: 'settings', label: value }); setThemeState(value); };
 
   const [prefs, setPrefs] = useState(initialPreferences);
 
@@ -143,6 +144,7 @@ export default function CineApp() {
   const access = useRef(canAccess); access.current = canAccess;
 
   const previousAccount = useRef(account.user?.localId);
+  const previousVerified = useRef(verified);
 
   const live = useRef({ routes, tab, sheet, playerOpen, lyricsOpen });
 
@@ -352,6 +354,26 @@ export default function CineApp() {
   }, [account.user?.localId]);
 
   useEffect(() => {
+    if (verified === previousVerified.current) return;
+    previousVerified.current = verified;
+    trackEvent(verified ? 'sign_in' : 'sign_out', { path: 'account' });
+  }, [verified]);
+
+  useEffect(() => {
+    if (!canAccess) return;
+    const route = routes.at(-1)?.route;
+    trackPageView(`mobile/${route ? route.kind : tab}`);
+  }, [tab, routes.at(-1)?.key, canAccess]);
+
+  useEffect(() => {
+    if (lyricsOpen) trackEvent('lyrics_view', { path: 'player' });
+  }, [lyricsOpen]);
+
+  useEffect(() => {
+    if (tvLink) trackEvent('connect_pair', { path: 'connect', label: 'phone-tv' });
+  }, [tvLink?.id]);
+
+  useEffect(() => {
     save('cine-theme-v2', theme);
     const themes = THEMES;
     const background = themes.find(item => item.id === theme)?.background || themes[0].background;
@@ -390,7 +412,7 @@ export default function CineApp() {
 
     isFavorite: id => account.library.favorites.some(song => song.id === id), addToPlaylist, setAddToPlaylist,
 
-    checkForUpdates: () => { try { if (window.CineAndroid?.checkForUpdates) window.CineAndroid.checkForUpdates(); else toast('Install the Android app to download and install updates.'); } catch { toast('Could not open Updates. Please try again.'); } },
+    checkForUpdates: () => { trackEvent('ota_check', { path: 'updates' }); try { if (window.CineAndroid?.checkForUpdates) window.CineAndroid.checkForUpdates(); else toast('Install the Android app to download and install updates.'); } catch { toast('Could not open Updates. Please try again.'); } },
 
   };
 

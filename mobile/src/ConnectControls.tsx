@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { subscribe } from './native';
 import { Icon } from './Icons';
+import { trackEvent } from './analytics';
 import './connect.css';
 
 interface PlaybackDevice { id: string; name: string; kind: 'phone' | 'tv'; thisDevice: boolean }
@@ -40,7 +41,7 @@ export function ConnectControls() {
     <div className="connect-devices" role="group" aria-label="Playback devices">
       {state.devices.map(device => <button type="button" className="connect-device" key={device.id}
         aria-pressed={state.activeDeviceId === device.id} disabled={!state.online}
-        onClick={() => window.CineAndroid?.selectPlaybackDevice?.(device.id)}>
+        onClick={() => { trackEvent('connect_select', { path: 'connect', label: device.kind + (device.thisDevice ? '-self' : '') }); window.CineAndroid?.selectPlaybackDevice?.(device.id); }}>
         <Icon name={device.kind === 'tv' ? 'tv' : 'phone'} size={24} />
         <span><strong>{device.name}</strong><small>{device.thisDevice ? 'This device' : device.kind === 'tv' ? 'TV' : 'Phone'}</small></span>
         {state.activeDeviceId === device.id && <Icon name="check" size={20} />}

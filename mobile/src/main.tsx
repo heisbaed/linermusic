@@ -3,12 +3,15 @@ import './startup.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { initTvSpatialNav, isTvEnvironment } from './spatialNav';
+import { initAnalytics } from './analytics';
 
 if (isTvEnvironment()) {
   document.documentElement.classList.add('is-tv');
   document.body.classList.add('is-tv');
 }
 if (isTvEnvironment()) initTvSpatialNav();
+initAnalytics();
+window.setTimeout(() => { try { window.CineAndroid?.autoCheckForUpdates?.(); } catch {} }, 5000);
 
 const App = React.lazy(() => import.meta.env.VITE_CINE_PLATFORM === 'tv' ? import('./TvApp')
   : import.meta.env.VITE_CINE_PLATFORM === 'mobile' ? import('./CineApp')

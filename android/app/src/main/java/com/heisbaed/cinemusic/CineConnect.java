@@ -114,6 +114,7 @@ final class CineConnect {
         localJson = value.toString();
         if (!remote()) {
             viewJson = localJson;
+            if (PlaybackService.instance != null) PlaybackService.instance.present(value);
             Events.send(context, "player", value);
         }
     }
@@ -491,6 +492,10 @@ final class CineConnect {
             view = value;
         }
         viewJson = view.toString();
+        if (PlaybackService.instance != null) PlaybackService.instance.present(view);
+        else if (foreground && remote()) {
+            try { context.startForegroundService(new Intent(context, PlaybackService.class).setAction("remote")); } catch (Exception ignored) {}
+        }
         Events.send(context, "player", view);
         JSONArray list = new JSONArray();
         Iterator<String> ids = devices.keys();

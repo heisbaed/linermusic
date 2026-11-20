@@ -1,15 +1,23 @@
 import { ConnectControls, ConnectLabel } from './ConnectControls';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from 'react';
 import { useApp } from './AppContext';
 import { Icon } from './Icons';
 import { Cover, Sheet } from './ui';
 import { formatTime } from './library';
 import { useLyrics, useLivePosition } from './Player';
 import { focusFirstActionable } from './spatialNav';
-import { parseTvLyrics } from './tvLyrics';
+import { parseTvLyrics, type TvLyricLine } from './tvLyrics';
 import { displaySongTitle } from './catalogQuality';
 import type { TvOverlay } from './TvApp';
 import './tv-player.css';
+
+const LyricLine = memo(function LyricLine({ line, current, wordIndex, activeRef }: {
+  line: TvLyricLine; current: boolean; wordIndex: number; activeRef?: Ref<HTMLParagraphElement>;
+}) {
+  return <p ref={activeRef} aria-current={current ? 'true' : undefined} className={`tv-lyric ${current ? 'current' : ''}`}>
+    {current && line.words.length ? line.words.map((word, i) => <span key={i} className={i <= wordIndex ? 'sung' : ''}>{word.text}</span>) : line.text}
+  </p>;
+});
 
 export function TvPlayer({ mode, onMode, onBack }: {
   mode: TvOverlay; onMode: (mode: TvOverlay) => void; onBack: () => void;
@@ -24,10 +32,10 @@ export function TvPlayer({ mode, onMode, onBack }: {
   const [devicesOpen, setDevicesOpen] = useState(false);
   const { player, queue, seek, previous, next, toggle } = app.playback;
   const { track, status, durationMs } = player;
-  const lyrics = useLyrics(track, mode === 'lyrics');
+  const lyrics = useLyrics(track, mode !== 'queue');
   const lines = useMemo(() => parseTvLyrics(lyrics.text), [lyrics.text]);
   const wordTimed = useMemo(() => lines.some(line => line.words.length > 0), [lines]);
-  const position = useLivePosition(player, true, wordTimed ? 100 : 250);
+  const position = useLivePosition(player, true, mode === 'lyrics' && wordTimed ? 100 : 500);
   const live = useRef({ position, seek });
   live.current = { position, seek };
   const active = lines.reduce((index, line, i) => line.time * 1000 <= position ? i : index, -1);
@@ -131,12 +139,9 @@ export function TvPlayer({ mode, onMode, onBack }: {
       {mode === 'lyrics' && <section className="tv-lyrics-card" aria-label="Synced lyrics">
         <header><h2>Lyrics</h2></header>
         <div className="tv-lyrics-viewport" ref={lyricViewport}><div className="tv-lyrics-column" ref={lyricColumn}>
-          {lines.length ? lines.map((line, index) => <p key={index} ref={index === Math.max(0, active) ? activeLine : undefined}
-            aria-current={index === active ? 'true' : undefined} className={`tv-lyric ${index === active ? 'current' : ''}`}
->
-            {index === active && line.words.length ? line.words.map((word, i) =>
-              <span key={i} className={word.time * 1000 <= position ? 'sung' : ''}>{word.text}</span>) : line.text}
-          </p>) : lyrics.text ? <p className="tv-unsynced">{lyrics.text}</p>
+          {lines.length ? lines.map((line, index) => <LyricLine key={index} line={line} current={index === Math.max(0, active)}
+            activeRef={index === Math.max(0, active) ? activeLine : undefined}
+            wordIndex={index === Math.max(0, active) ? line.words.reduce((last, word, i) => word.time * 1000 <= position ? i : last, -1) : -1} />) : lyrics.text ? <p className="tv-unsynced">{lyrics.text}</p>
             : <div className="tv-lyrics-message"><Icon name="lyrics" size={42} /><p role="status">{lyrics.status === 'loading' ? 'Finding lyrics…' : lyrics.error || 'Lyrics are unavailable for this song.'}</p>
             </div>}
         </div></div>

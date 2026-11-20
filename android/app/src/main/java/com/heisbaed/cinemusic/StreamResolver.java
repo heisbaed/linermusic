@@ -188,6 +188,12 @@ final class StreamResolver {
                 } catch (Exception error) {
                     request.check();
                     failures.add(profile[0] + " " + profile[1] + ": " + safe(error.getMessage()));
+                    if (!refreshed && attempt == 0 && error.getMessage() != null
+                        && (error.getMessage().contains("HTTP 403") || error.getMessage().contains("HTTP 410"))) {
+                        refreshed = true;
+                        visitor = visitorData(request, true);
+                        continue;
+                    }
                     break;
                 }
             }

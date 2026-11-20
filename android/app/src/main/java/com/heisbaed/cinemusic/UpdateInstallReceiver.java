@@ -25,7 +25,12 @@ public class UpdateInstallReceiver extends BroadcastReceiver {
             : status == PackageInstaller.STATUS_FAILURE_ABORTED ? "Installation cancelled. Tap Check again to retry."
             : "Android could not install the update. " + intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
         prefs.edit().putString("install_message", message).remove("install_session").apply();
-        if (status == PackageInstaller.STATUS_SUCCESS) new java.io.File(context.getCacheDir(), "ota/update.apk").delete();
+        if (status == PackageInstaller.STATUS_SUCCESS) {
+            new java.io.File(context.getCacheDir(), "ota/update.apk").delete();
+            prefs.edit().remove("dismissed_update").apply();
+            android.app.NotificationManager notifications = (android.app.NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notifications != null) notifications.cancel(3);
+        }
         Events.send(context, "updateInstall", Events.json("message", message, "success", status == PackageInstaller.STATUS_SUCCESS));
     }
 }

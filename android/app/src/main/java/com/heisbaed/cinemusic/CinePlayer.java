@@ -25,6 +25,8 @@ final class CinePlayer {
     private MediaPlayer.OnInfoListener info;
     private MediaPlayer.OnSeekCompleteListener seeked;
     private boolean ready;
+    private String failureDetail = "";
+    String failureDetail() { return failureDetail; }
     private boolean playWhenReady = true;
     private float volume = 1f;
 
@@ -68,6 +70,14 @@ final class CinePlayer {
                 } else if(state==Player.STATE_ENDED && completed!=null)completed.onCompletion(null);
             }
             @Override public void onPlayerError(PlaybackException error) {
+                failureDetail = "Media3 error " + error.errorCode;
+                Throwable cause = error;
+                for (int depth = 0; cause != null && depth < 6; depth++, cause = cause.getCause()) {
+                    if (cause instanceof DefaultHttpDataSource.InvalidResponseCodeException) {
+                        failureDetail += "; HTTP " + ((DefaultHttpDataSource.InvalidResponseCodeException) cause).responseCode;
+                        break;
+                    }
+                }
                 if(failed!=null)failed.onError(null,MediaPlayer.MEDIA_ERROR_UNKNOWN,error.errorCode);
             }
             @Override public void onPositionDiscontinuity(Player.PositionInfo oldPosition,Player.PositionInfo newPosition,int reason) {

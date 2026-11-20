@@ -9,6 +9,7 @@ import { TvQr } from './TvAuth';
 import { searchMusicCatalog } from './musicSearch';
 import { songFrom } from './Browse';
 import { subscribe } from './native';
+import { trackEvent } from './analytics';
 
 export function TvSearchScreen({ active = true }: { active?: boolean }) {
   const app = useApp();
@@ -29,7 +30,7 @@ export function TvSearchScreen({ active = true }: { active?: boolean }) {
     request.current?.abort();
     const task = new AbortController();
     request.current = task;
-    setQuery(text); setSubmitted(text); setResults([]); setStatus('loading');
+    setQuery(text); setSubmitted(text); setResults([]); setStatus('loading'); trackEvent('search', { path: 'search', label: 'tv' });
     try {
       if (!app.online) throw new Error('Offline');
       const found = await searchMusicCatalog(text, 'all', task.signal);

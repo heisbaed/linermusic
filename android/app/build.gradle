@@ -31,12 +31,12 @@ android {
     defaultConfig {
         def cinePlatform = providers.gradleProperty('cinePlatform').getOrElse('mobile')
         buildConfigField 'String', 'CINE_PLATFORM', '"' + cinePlatform + '"'
-        manifestPlaceholders = [cineLauncherCategory: cinePlatform == 'tv' ? 'android.intent.category.LEANBACK_LAUNCHER' : 'android.intent.category.LAUNCHER', cineAppLabel: cinePlatform == 'tv' ? 'Cine music TV' : 'Cine music']
+        manifestPlaceholders = [cinePlatform: cinePlatform, cineLauncherCategory: cinePlatform == 'tv' ? 'android.intent.category.LEANBACK_LAUNCHER' : 'android.intent.category.LAUNCHER', cineAppLabel: cinePlatform == 'tv' ? 'Cine music TV' : 'Cine music']
         applicationId 'com.heisbaed.cinemusic'
         minSdk 26
         targetSdk 36
-        versionCode providers.gradleProperty('cineVersionCode').map { it.toInteger() }.getOrElse(11)
-        versionName providers.gradleProperty('cineVersionName').getOrElse('0.1.8')
+        versionCode providers.gradleProperty('cineVersionCode').map { it.toInteger() }.getOrElse(16)
+        versionName providers.gradleProperty('cineVersionName').getOrElse('0.1.13')
         testInstrumentationRunner 'com.heisbaed.cinemusic.VaultChecks'
     }
     compileOptions {

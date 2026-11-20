@@ -7,6 +7,7 @@ import { Icon, type IconName } from './Icons';
 import { Action, ConfirmDialog, Cover, Notice, PageHeader, SearchField, Sheet, SongRows, SortControl } from './ui';
 import type { Playlist, Song } from './types';
 import { displaySongTitle } from './catalogQuality';
+import { trackEvent } from './analytics';
 import { searchMusicCatalog } from './musicSearch';
 import { figmaArtwork } from './figmaAssets';
 import { mergePlaylistSongDraft } from './playlistDraft';
@@ -139,6 +140,7 @@ export function SearchScreen() {
   const [error, setError] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchTrack = useRef<ReturnType<typeof setTimeout> | null>(null);
   const request = useRef<AbortController | null>(null);
   const sequence = useRef(0);
   const runRef = useRef<(text: string, type?: SearchType, save?: boolean) => void>(() => {});
@@ -154,7 +156,7 @@ export function SearchScreen() {
       if (text) runRef.current(text, 'all');
     };
     window.addEventListener('cine:browse-search', onSearch);
-    return () => { window.removeEventListener('cine:browse-search', onSearch); request.current?.abort(); if (debounce.current) clearTimeout(debounce.current); };
+    return () => { window.removeEventListener('cine:browse-search', onSearch); request.current?.abort(); if (debounce.current) clearTimeout(debounce.current); if (searchTrack.current) clearTimeout(searchTrack.current); };
   }, []);
 
   function remember(entry: SearchHistory) {
@@ -173,7 +175,13 @@ export function SearchScreen() {
     setError('');
     setSubmitted(value);
     setLoading(false);
-    if (!value) { setResults([]); setResultsFor(''); return; }
+    if (!value) { setResults([]); setResultsFor(''); if (searchTrack.current) { clearTimeout(searchTrack.current); searchTrack.current = null; } return; }
+    if (searchTrack.current) clearTimeout(searchTrack.current);
+    const trackedType = type;
+    searchTrack.current = setTimeout(() => {
+      trackEvent('search', { path: 'search', label: trackedType });
+      searchTrack.current = null;
+    }, 800);
     if (save) { remember({ query: value }); setSuggestionsOpen(false); }
     const key = `${type}:${value.toLocaleLowerCase()}`;
     const cached = searchCache.get(key);
@@ -202,6 +210,7 @@ export function SearchScreen() {
 
   function changeQuery(value: string) {
     if (debounce.current) clearTimeout(debounce.current);
+    if (searchTrack.current) { clearTimeout(searchTrack.current); searchTrack.current = null; }
     request.current?.abort();
     sequence.current++;
     setQuery(value);

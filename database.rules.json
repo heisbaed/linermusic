@@ -2,6 +2,63 @@
   "rules": {
     ".read": false,
     ".write": false,
+    "analytics": {
+      "$surface": {
+        "events": {
+          ".read": "auth != null && auth.token.email === 'charlesbabuu0@gmail.com'",
+          ".indexOn": ["timestamp"],
+          "$eventId": {
+            ".write": "!data.exists() && newData.exists() && $surface.matches(/^(mobile|tv|landing)$/)",
+            ".validate": "newData.hasChildren(['id','name','surface','path','timestamp','sessionId','device','platform','schemaVersion','installId'])",
+            "id": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128"
+            },
+            "name": {
+              ".validate": "newData.isString() && newData.val().matches(/^(app_open|app_install|session_start|session_heartbeat|session_end|page_view|search|play|pause|resume|skip|complete|download_start|download_complete|download_failed|playlist_add|lyrics_view|radio_open|radio_play|connect_pair|connect_select|theme_change|sign_in|sign_out|ota_check|apk_download)$/)"
+            },
+            "surface": {
+              ".validate": "newData.isString() && newData.val() === $surface"
+            },
+            "path": {
+              ".validate": "newData.isString() && newData.val().length <= 80"
+            },
+            "timestamp": {
+              ".validate": "newData.isNumber() && newData.val() > 1577836800000 && newData.val() <= now + 300000"
+            },
+            "sessionId": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128"
+            },
+            "device": {
+              ".validate": "newData.isString() && newData.val().matches(/^(mobile|tablet|desktop)$/)"
+            },
+            "platform": {
+              ".validate": "newData.isString() && newData.val().matches(/^(android|android-tv|web)$/)"
+            },
+            "schemaVersion": {
+              ".validate": "newData.isNumber() && newData.val() === 2"
+            },
+            "installId": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128"
+            },
+            "version": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "label": {
+              ".validate": "newData.isString() && newData.val().length <= 80"
+            },
+            "durationMs": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 600000"
+            },
+            "mediaPositionMs": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
+    },
     "users": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
