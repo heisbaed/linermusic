@@ -4,7 +4,7 @@
 
 Top TV navigation; personalized Home; denser shared layouts; idle full-art listening with a persistent bottom-left title; unboxed Lyrics and Up Next over blurred artwork; higher-resolution artwork and known artist fallback; theme-linked icons, logos and TV banners; next-song preparation independent of crossfade with fast-Next reuse; Dj Cine with configured Firebase AI Logic and installed-device narration.
 
-Both web interfaces, native APKs and the landing page compile. Mobile and TV 0.1.16 were installed successfully via ADB on R58M34PT7SN and 192.168.10.105:44323. Separate APKs and version-code-19 update feeds are prepared; public publishing is in progress. No new-build UI/playback/AI tests or screenshots, per the owner's instruction. Paid billing remains disabled by this work. See RELEASE-0.1.16.md for exact behavior and dependencies.
+Both web interfaces, native APKs and the landing page compile. Mobile and TV 0.1.16 were installed successfully via ADB on R58M34PT7SN and 192.168.10.105:44323. Published both APKs and SHA256SUMS at https://github.com/heisbaed/linermusic/releases/tag/v0.1.16. Deployed the landing page and separate version-code-19 update feeds to https://cinemusic.web.app. Publishing/deployment tools reported success; no independent download or runtime checks were performed. No new-build UI/playback/AI tests or screenshots, per the owner's instruction. Paid billing remains disabled by this work. See RELEASE-0.1.16.md for exact behavior and dependencies.
 
 ---
 
