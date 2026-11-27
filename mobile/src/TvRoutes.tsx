@@ -1,5 +1,6 @@
 import { ConnectControls } from './ConnectControls';
 import { AppIconSettings } from './AppIconSettings';
+import { DjCine } from './DjCine';
 import { useEffect, useState, type ReactNode } from 'react';
 import { TV_THEMES, useApp } from './AppContext';
 import { songFrom } from './Browse';
@@ -101,6 +102,7 @@ function TvCollectionDetail({ favorites }: { favorites: boolean }) {
 
 export function TvRouteScreen({ route }: { route: TvRoute }) {
   const app = useApp();
+  if (route.kind === 'dj') return <DjCine seed={route.seed} />;
   if (route.kind === 'catalog') return <Catalog {...route} />;
   if (route.kind === 'playlist') {
     const playlist = app.account.library.playlists.find(item => item.id === route.id);

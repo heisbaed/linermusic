@@ -1,0 +1,21 @@
+/* A shared compact scale, while preserving 48 dp actions and growing text rows. */
+.cine-app .song-row{min-height:64px;padding:0;border-radius:8px}
+.cine-app .song-main{min-height:64px;padding:8px 0;gap:12px}
+.cine-app .song-main>.cover{width:44px;height:44px;flex:none;border-radius:8px}
+.cine-app .song-main .row-copy strong{font-size:16px;line-height:1.35}
+.cine-app .song-main .row-copy small{font-size:13px;line-height:1.4}
+.cine-app .song-row>.icon-action{width:48px;min-width:48px;height:48px;min-height:48px;padding:0}
+.cine-app .song-row>.icon-action :is(svg,.cine-icon-mask){width:20px!important;height:20px!important}
+.cine-app .browse-library-links .browse-destination{min-height:64px;padding:8px 0;gap:12px}
+.cine-app .browse-library-links .browse-download-destination{min-height:80px;padding:12px;border-radius:12px}
+.cine-app .browse-library .browse-playlist-rail .shelf-item{flex-basis:clamp(124px,36vw,160px)}
+.cine-app .home-record{flex-basis:36%;max-width:160px}
+.cine-app .browse-detail-heading>.cover.cover-large{width:min(52vw,200px)}
+.cine-app .radio-hero>.cover{width:min(48vw,190px)}
+.cine-app .account-row{min-height:56px;padding:8px 0}
+.cine-app .appearance-choice{min-height:72px;padding:8px 0}
+.cine-app .profile-avatar{width:88px;height:88px}
+.cine-app .app-icon-options button{padding:12px 8px;font-size:14px}
+.cine-app .app-icon-options img{width:56px;height:56px;border-radius:12px}
+.cine-app .home-spotlight-art{width:50%;max-width:200px;margin:16px auto}
+@media(prefers-reduced-motion:reduce){.cine-app .song-row{transition:none}}

@@ -15,6 +15,7 @@ import { isOnline, onConnectivityChange } from './network';
 import { loadSaved, save, toggleFavorite } from './library';
 import { focusElement } from './spatialNav';
 import { Brand } from './ui';
+import { syncThemeIcon } from './themeIcons';
 import { trackEvent, trackPageView } from './analytics';
 import './tv.css';
 import './tv-browse-polish.css';
@@ -74,12 +75,13 @@ export default function TvApp() {
   useEffect(() => onConnectivityChange(() => setOnline(isOnline())), []);
   useEffect(() => {
     save('cine-tv-theme-v2', theme);
+    if (!syncThemeIcon(theme)) toast('The theme changed, but the launcher icon could not update. Try again in Settings.');
     const background = TV_THEMES.find(item => item.id === theme)?.background || TV_THEMES[0].background;
     window.CineAndroid?.setSystemBars(background, theme === 'default');
   }, [theme]);
   useEffect(() => { save('tv-preferences', prefs); }, [prefs]);
   useEffect(() => {
-    if (!verified) control('stop');
+    if (!verified) { control('stop'); window.CineAndroid?.stopDjVoice?.(); }
     setTab('home'); setRoutes([]); setOverlay(null);
   }, [verified, account.user?.localId]);
   useEffect(() => {

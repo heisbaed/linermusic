@@ -118,6 +118,7 @@ final class CinePlayer {
     void pause() { playWhenReady=false; if(stream!=null)stream.pause(); else if(local!=null)local.pause(); }
     boolean isPlaying() { return stream!=null?stream.isPlaying():local!=null&&local.isPlaying(); }
     long getCurrentPosition() { return stream!=null?stream.getCurrentPosition():local.getCurrentPosition(); }
+    long getBufferedPosition() { return stream!=null?stream.getBufferedPosition():getDuration(); }
     long getDuration() { return stream!=null?Math.max(0,stream.getDuration()):local.getDuration(); }
     int getAudioSessionId() { return stream!=null?stream.getAudioSessionId():local.getAudioSessionId(); }
     AudioDeviceInfo getRoutedDevice() { return local==null?null:local.getRoutedDevice(); }

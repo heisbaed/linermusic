@@ -583,6 +583,14 @@ public class MainActivity extends Activity {
 
 
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 7421) {
+            if (resultCode == RESULT_OK && data != null) {
+                ArrayList<String> matches = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
+                if (matches != null && !matches.isEmpty()) emit("djVoiceResult", Events.json("text", matches.get(0)));
+                else emit("djVoiceCancelled", Events.json());
+            } else emit("djVoiceCancelled", Events.json());
+            return;
+        }
         if (requestCode == TV_VOICE) {
             if (resultCode == RESULT_OK && data != null) {
                 ArrayList<String> matches = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
@@ -1126,7 +1134,7 @@ public class MainActivity extends Activity {
 
 
 
-                || host.equals("securetoken.googleapis.com") || (!databaseHost.isEmpty() && host.equals(databaseHost));
+                || host.equals("securetoken.googleapis.com") || host.equals("firebasevertexai.googleapis.com") || host.equals("firebaseinstallations.googleapis.com") || host.equals("firebaseappcheck.googleapis.com") || (!databaseHost.isEmpty() && host.equals(databaseHost));
 
 
 
@@ -2131,6 +2139,11 @@ public class MainActivity extends Activity {
 
 
         @JavascriptInterface public String appIcon() { return LauncherIcons.get(MainActivity.this); }
+        @JavascriptInterface public String djVoiceInfo() { return DjSpeech.get(MainActivity.this).info().toString(); }
+        @JavascriptInterface public void speakDj(String id, String text, String language) { if(id!=null&&id.length()<100&&("en".equals(language)||"sw".equals(language)))DjSpeech.get(MainActivity.this).speak(id,text,language); }
+        @JavascriptInterface public void stopDjVoice() { DjSpeech.stopIfActive(); }
+        @JavascriptInterface public boolean hasDjVoiceInput() { return tvVoiceIntent().resolveActivity(getPackageManager()) != null; }
+        @JavascriptInterface public void listenDj(String language) { runOnUiThread(()->{try{startActivityForResult(tvVoiceIntent().putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,"Tell Dj Cine what you would like to hear").putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,"sw".equals(language)?"sw-TZ":"en-US"),7421);}catch(Exception ignored){emit("djVoiceCancelled",Events.json());}}); }
         @JavascriptInterface public boolean setAppIcon(String name) { return LauncherIcons.set(MainActivity.this, name); }
         @JavascriptInterface public String downloadJobs() { return isTvDevice() ? "[]" : DownloadService.jobs(MainActivity.this).toString(); }
 

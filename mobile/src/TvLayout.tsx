@@ -94,11 +94,11 @@ export function TvShelf({ title, children }: { title: string; children: ReactNod
   return <section className="tv-shelf"><h2>{title}</h2><div className="tv-shelf-row" data-tv-shelf-id={title}>{children}</div></section>;
 }
 
-export function TvCard({ title, subtitle, art, kind, id, action }: {
-  title: string; subtitle?: string; art?: string; kind?: 'album' | 'artist' | 'playlist'; id: string; action: () => void;
+export function TvCard({ title, subtitle, art, kind, id, action, song }: {
+  title: string; subtitle?: string; art?: string; kind?: 'album' | 'artist' | 'playlist'; id: string; action: () => void; song?: Partial<Song>;
 }) {
   return <button type="button" className="tv-card" data-tv-key={id} onClick={action} aria-label={subtitle ? `${title}, ${subtitle}` : title}>
-    <Cover song={{ title, cover: art }} kind={kind} /><strong>{title}</strong>{subtitle && <small>{subtitle}</small>}
+    <Cover song={song || { id, title, cover: art, ...(kind === 'artist' ? {artistId:id} : kind === 'album' ? {albumId:id} : {}) }} kind={kind} /><strong>{title}</strong>{subtitle && <small>{subtitle}</small>}
   </button>;
 }
 

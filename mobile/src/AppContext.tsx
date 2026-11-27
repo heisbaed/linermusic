@@ -10,6 +10,7 @@ export type Collection = 'favorites' | 'recent' | 'downloads' | 'playlists' | 'a
 export type ShuffleMode = 'off' | 'on' | 'smart';
 export type Utility = 'sound' | 'devices' | 'timer';
 export type Route =
+  | { kind: 'dj'; seed?: Song }
   | { kind: 'collection'; collection: Collection }
   | { kind: 'playlist'; id: string }
   | { kind: 'catalog'; type: 'album' | 'artist' | 'playlist'; id: string }
@@ -19,7 +20,9 @@ export type Route =
 
 export const TV_THEMES: { id: Theme; name: string; description: string; background: string; surface: string; accent: string }[] = [
   { id: 'default', name: 'Pink Liquid Glass', description: 'Liquid pink glass with rose highlights.', background: '#FFF3F7', surface: '#FFFAFD', accent: '#A82D65' },
-  { id: 'dark', name: 'Dark cinema', description: 'Dark surfaces with rose highlights.', background: '#170F17', surface: '#3C2637', accent: '#FFA5CB' },
+  { id: 'dark', name: 'Dark', description: 'Charcoal and soft ivory.', background: '#101112', surface: '#202224', accent: '#DADCD6' },
+  { id: 'green', name: 'Dark green', description: 'Forest surfaces and fresh green accents.', background: '#071F19', surface: '#12392E', accent: '#CBF595' },
+  { id: 'light', name: 'Smoke white', description: 'Smoke-white surfaces and quiet olive accents.', background: '#F2F0EC', surface: '#FFFFFF', accent: '#555F48' },
 ];
 
 export interface SavedArtist { id: string; name: string; cover?: string }
@@ -128,7 +131,7 @@ export const THEMES: { id: Theme; name: string; description: string; background:
 ];
 
 export function tvThemeId(value: unknown): Theme {
-  return value === 'dark' ? 'dark' : 'default';
+  return TV_THEMES.some(theme=>theme.id===value) ? value as Theme : 'default';
 }
 
 export const AppContext = createContext<AppState | null>(null);

@@ -23,6 +23,10 @@ public class PlaybackService extends Service {
     private volatile String snapshotJson = idleSnapshot().toString();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService loader = Executors.newSingleThreadExecutor();
+    private final ExecutorService lookaheadLoader = Executors.newSingleThreadExecutor();
+    private Future<?> lookaheadTask;
+    private volatile int lookaheadEpoch;
+    private final AtomicReference<HttpURLConnection> lookaheadConnection = new AtomicReference<>();
     private final AtomicReference<HttpURLConnection> resolvingConnection = new AtomicReference<>();
     private Future<?> loadTask;
     private AudioDeviceCallback audioDeviceCallback;
@@ -60,6 +64,8 @@ public class PlaybackService extends Service {
     private JSONObject preloadTrack;
     private boolean preloadReady;
     private boolean preloadTried;
+    private int preloadFailures;
+    private long preloadRetryAt;
     private int preloadEpoch;
     private Future<?> preloadTask;
     private final AtomicReference<HttpURLConnection> preloadResolvingConnection = new AtomicReference<>();
@@ -74,20 +80,19 @@ public class PlaybackService extends Service {
         crossfadeEnabled = enabled;
         crossfadeDuration = Math.max(0, Math.min(12, durationSeconds));
         if (!enabled) cancelCrossfade();
-        cancelPreload();
-        preloadTried = false;
         publish();
     }
     private void setGapless(boolean enabled) {
         gaplessEnabled = enabled;
-        cancelPreload();
-        preloadTried = false;
         publish();
     }
     private void setAudioQuality(String quality) {
-        audioQuality = normalizeQuality(quality);
+        String selected = normalizeQuality(quality);
+        if (selected.equals(audioQuality)) return;
+        audioQuality = selected;
         cancelPreload();
         preloadTried = false;
+        preloadFailures = 0; preloadRetryAt = 0;
         publish();
     }
     private static String normalizeQuality(String quality) {
@@ -241,6 +246,7 @@ public class PlaybackService extends Service {
         cancelCrossfade();
         cancelPreload();
         preloadTried = false;
+        preloadFailures = 0; preloadRetryAt = 0;
         resumeAfterBluetoothDisconnect = false; lastRoutePauseAt = 0;
         if (sleepTrackId != null && !sleepTrackId.equals(next.optString("id"))) clearSleepTimer();
         track = next; error = ""; status = "loading"; prepared = false; playWhenReady = true; generation++;
@@ -325,20 +331,20 @@ public class PlaybackService extends Service {
             status = "paused"; playWhenReady = false; publish(); updateNotification();
             return;
         }
-        if (preloadReady && preloadPlayer != null && preloadTrack != null) { transitionToPreloaded(); return; }
+        if (preloadReady && preloadPlayer != null && preloadTrack != null) { transitionToPreloaded(false); return; }
         status = "ended"; playWhenReady = false; publish(); updateNotification();
         advance(1, true);
     }
     private void maybePreloadNext() {
-        if (preloadPlayer != null || preloadTried || !prepared || player == null || track == null || !isPlaying()) return;
-        boolean crossfade = crossfadeEnabled && crossfadeDuration > 0;
-        if (!gaplessEnabled && !crossfade) return;
+        if (preloadPlayer != null || preloadTried || preloadFailures >= 2 || SystemClock.elapsedRealtime() < preloadRetryAt || !prepared || player == null || track == null || !isPlaying()) return;
         if (sleepTrackId != null) return;
         long duration = 0, position = 0;
         try { duration = player.getDuration(); position = player.getCurrentPosition(); } catch (Exception ignored) {}
         if (duration > 0) {
-            float window = crossfade ? Math.max(25f, crossfadeDuration + 10f) : 25f;
-            if (duration - position > window * 1000f) return;
+            // Preparation is independent of Gapless/Crossfade. Let the active
+            // stream settle first and retain its buffer before warming one next item.
+            if (position < 1000 && duration - position > 20000) return;
+            if (duration - position > 25000 && player.getBufferedPosition() - position < 5000) return;
         }
         JSONObject candidate;
         try { candidate = nextTrack(1, true); } catch (Exception error) { candidate = null; }
@@ -353,7 +359,7 @@ public class PlaybackService extends Service {
             long duration = player.getDuration();
             long position = player.getCurrentPosition();
             if (duration <= 0 || duration - position > crossfadeDuration * 1000L) return;
-            transitionToPreloaded();
+            transitionToPreloaded(true);
         } catch (Exception ignored) {}
     }
     private void preload(JSONObject next) {
@@ -370,6 +376,7 @@ public class PlaybackService extends Service {
             if (epoch != preloadEpoch || preloadPlayer != media) return;
             preloadPreparedMs = SystemClock.elapsedRealtime() - preloadStartedAt;
             preloadReady = true;
+            warmFollowing(next);
         });
         media.setOnErrorListener((value, what, extra) -> { if (epoch == preloadEpoch && preloadPlayer == media) dropPreload(media); return true; });
         attachPreloadSource(media, next, epoch);
@@ -419,7 +426,7 @@ public class PlaybackService extends Service {
             }
         } catch (Exception error) { dropPreload(media); }
     }
-    private void transitionToPreloaded() {
+    private void transitionToPreloaded(boolean allowCrossfade) {
         cancelSleepFade();
         CinePlayer incoming = preloadPlayer;
         JSONObject incomingTrack = preloadTrack;
@@ -434,10 +441,11 @@ public class PlaybackService extends Service {
                 if (remaining >= 0) fadeSeconds = Math.min(fadeSeconds, remaining / 1000f);
             } catch (Exception ignored) {}
         }
-        boolean crossfade = crossfadeEnabled && fadeSeconds >= 0.25f && shouldPlay && outgoing != null;
+        boolean crossfade = allowCrossfade && crossfadeEnabled && fadeSeconds >= 0.25f && shouldPlay && outgoing != null;
         preloadEpoch++;
         preloadPlayer = null; preloadTrack = null; preloadReady = false; preloadTask = null; preloadMemory = null;
         preloadTried = false;
+        preloadFailures = 0; preloadRetryAt = 0;
         generation++;
         int epoch = generation;
         player = incoming; track = incomingTrack; prepared = true; playWhenReady = shouldPlay;
@@ -489,6 +497,7 @@ public class PlaybackService extends Service {
         if (prepared && player != null) player.setVolume(1, 1);
     }
     private void cancelPreload() {
+        cancelLookahead();
         preloadEpoch++;
         if (preloadTask != null) { preloadTask.cancel(true); preloadTask = null; }
         HttpURLConnection connection = preloadResolvingConnection.getAndSet(null);
@@ -497,13 +506,57 @@ public class PlaybackService extends Service {
         if (preloadMemory != null) { try { preloadMemory.close(); } catch (Exception ignored) {} preloadMemory = null; }
         preloadTrack = null; preloadReady = false;
     }
+    private void cancelLookahead() {
+        lookaheadEpoch++;
+        if (lookaheadTask != null) { lookaheadTask.cancel(true); lookaheadTask = null; }
+        HttpURLConnection connection = lookaheadConnection.getAndSet(null);
+        if (connection != null) connection.disconnect();
+    }
+    private void warmFollowing(JSONObject reserved) {
+        cancelLookahead();
+        if ("one".equals(repeat)) return;
+        final int epoch = lookaheadEpoch;
+        final String quality = audioQuality;
+        final ArrayList<String> ids = new ArrayList<>();
+        int at = -1;
+        for (int i = 0; i < queue.length(); i++) {
+            JSONObject item = queue.optJSONObject(i);
+            if (item != null && reserved.optString("id").equals(item.optString("id"))) { at = i; break; }
+        }
+        if (at < 0) return;
+        for (int step = 1; step < queue.length() && ids.size() < 2; step++) {
+            int index = at + step;
+            if (index >= queue.length()) { if (!"all".equals(repeat) && !shuffle) break; index %= queue.length(); }
+            JSONObject item = queue.optJSONObject(index); if (item == null) continue;
+            String id = item.optString("id");
+            if (id.isEmpty() || id.equals(reserved.optString("id")) || (track != null && id.equals(track.optString("id"))) || (shuffle && shufflePlayed.contains(id))) continue;
+            ids.add(id);
+        }
+        if (ids.isEmpty()) return;
+        lookaheadTask = lookaheadLoader.submit(() -> {
+            try {
+                for (String id : ids) {
+                    if (epoch != lookaheadEpoch || Thread.currentThread().isInterrupted()) return;
+                    if (new OfflineVault(this).contains(id)) continue;
+                    // Resolve/probe only; audio buffering is limited to the reserved next player.
+                    try { StreamResolver.resolve(id, quality, () -> epoch != lookaheadEpoch || Thread.currentThread().isInterrupted(), connection -> {
+                        lookaheadConnection.set(connection);
+                        if (epoch != lookaheadEpoch || Thread.currentThread().isInterrupted()) {
+                            if (lookaheadConnection.compareAndSet(connection,null)) connection.disconnect();
+                        }
+                    }); } catch (Exception ignored) { /* Actual playback retains its normal recovery path. */ }
+                    finally { HttpURLConnection connection = lookaheadConnection.getAndSet(null); if (connection != null) connection.disconnect(); }
+                }
+            } finally { /* Cancellation is generation-fenced and never changes current playback. */ }
+        });
+    }
     private void dropPreload(CinePlayer expected) {
         if (expected != null && preloadPlayer != expected) return;
-        if (preloadPlayer != null) { try { preloadPlayer.release(); } catch (Exception ignored) {} preloadPlayer = null; }
-        if (preloadMemory != null) { try { preloadMemory.close(); } catch (Exception ignored) {} preloadMemory = null; }
-        HttpURLConnection connection = preloadResolvingConnection.getAndSet(null);
-        if (connection != null) connection.disconnect();
-        preloadTask = null; preloadTrack = null; preloadReady = false;
+        if (preloadTrack != null) StreamResolver.invalidate(preloadTrack.optString("id"));
+        cancelPreload();
+        preloadFailures++;
+        preloadRetryAt = SystemClock.elapsedRealtime() + 15000;
+        preloadTried = false;
     }
     private void cancelLoad() {
         if (loadTask != null) { loadTask.cancel(true); loadTask = null; }
@@ -512,12 +565,29 @@ public class PlaybackService extends Service {
     }
     void setQueue(JSONArray songs, boolean shuffle, String repeat) {
         if (track == null || songs == null || !songs.toString().contains(track.optString("id"))) shufflePlayed.clear();
+        String nextRepeat = Arrays.asList("off", "all", "one").contains(repeat) ? repeat : "off";
+        boolean keepWarm = validWarmQueue(songs, shuffle, nextRepeat);
         this.queue = songs == null ? new JSONArray() : songs;
-        cancelPreload();
-        preloadTried = false;
+        if (!keepWarm) { cancelPreload(); preloadTried = false; preloadFailures = 0; preloadRetryAt = 0; }
         this.shuffle = shuffle;
-        this.repeat = Arrays.asList("off", "all", "one").contains(repeat) ? repeat : "off";
+        this.repeat = nextRepeat;
         publish();
+    }
+    private boolean validWarmQueue(JSONArray songs, boolean nextShuffle, String nextRepeat) {
+        if (preloadTrack == null || track == null || songs == null || shuffle != nextShuffle || !repeat.equals(nextRepeat)) return false;
+        String current = track.optString("id"), warm = preloadTrack.optString("id");
+        if ("one".equals(nextRepeat)) return warm.equals(current);
+        int at = -1, warmAt = -1;
+        for (int i = 0; i < songs.length(); i++) {
+            JSONObject item = songs.optJSONObject(i); if (item == null) continue;
+            if (current.equals(item.optString("id"))) at = i;
+            if (warm.equals(item.optString("id"))) warmAt = i;
+        }
+        if (warmAt < 0) return false;
+        if (nextShuffle) return !warm.equals(current) || songs.length() == 1;
+        int expected = at + 1;
+        if (expected >= songs.length() && "all".equals(nextRepeat)) expected = 0;
+        return warmAt == expected;
     }
     static JSONObject idleSnapshot() {
         return Events.json("track", JSONObject.NULL, "status", "idle", "positionMs", 0, "durationMs", 0,
@@ -640,6 +710,10 @@ public class PlaybackService extends Service {
         if (track == null) return;
         try {
             if (direction < 0 && prepared && player.getCurrentPosition() > PREVIOUS_RESTART_MS) { commandLocal("seek", 0); return; }
+            if (direction > 0 && preloadReady && preloadPlayer != null && preloadTrack != null && (ended || !"one".equals(repeat))) {
+                if (!ended) playWhenReady = true;
+                transitionToPreloaded(false); return;
+            }
             JSONObject next = nextTrack(direction, ended);
             if (next == null) { if (direction < 0 && prepared) commandLocal("seek", 0); else publish(); return; }
             load(next);
@@ -886,7 +960,7 @@ public class PlaybackService extends Service {
     @Override public IBinder onBind(Intent intent) { return null; }
     @Override public void onDestroy() {
         cancelTvRecovery();
-        generation++; cancelLoad(); cancelSleepFade(); cancelCrossfade(); cancelPreload(); handler.removeCallbacksAndMessages(null); loader.shutdownNow();
+        generation++; cancelLoad(); cancelSleepFade(); cancelCrossfade(); cancelPreload(); handler.removeCallbacksAndMessages(null); loader.shutdownNow(); lookaheadLoader.shutdownNow();
         releaseEqualizer(); if (player != null) player.release(); audio.abandonAudioFocusRequest(focus); session.release();
         if (audioDeviceCallback != null) audio.unregisterAudioDeviceCallback(audioDeviceCallback);
         unregisterReceiver(noisy); instance = null; MusicWidgetProvider.updateAll(this); super.onDestroy();

@@ -32,6 +32,8 @@ import { useDownloads } from './useDownloads';
 import { HomeScreen, SearchScreen, LibraryScreen, CollectionScreen, CatalogScreen, PlaylistScreen, PlaylistForm } from './Browse';
 
 import { AccountScreen } from './Account';
+import { DjCine } from './DjCine';
+import { syncThemeIcon } from './themeIcons';
 
 import { FirebaseAuth } from './FirebaseAuth';
 
@@ -56,6 +58,7 @@ type SheetState = { kind: 'queue' } | { kind: 'menu'; song: Song } | { kind: Uti
 import './cine.css';
 import './design.css';
 import './liquid.css';
+import './layout-density.css';
 
 function initialPreferences(): Preferences {
 
@@ -339,7 +342,7 @@ export default function CineApp() {
 
     // A valid offline session is still authenticated. Only losing authentication stops audio.
 
-    if (!verified) control('stop');
+    if (!verified) { control('stop'); window.CineAndroid?.stopDjVoice?.(); }
 
   }, [verified]);
 
@@ -377,6 +380,7 @@ export default function CineApp() {
 
   useEffect(() => {
     save('cine-theme-v2', theme);
+    if (!syncThemeIcon(theme)) toast('The theme changed, but the launcher icon could not update. Try again in Appearance.');
     const themes = THEMES;
     const background = themes.find(item => item.id === theme)?.background || themes[0].background;
     document.body.style.backgroundColor = background;
@@ -447,6 +451,7 @@ export default function CineApp() {
 
 
 function renderRoute(route: Route) {
+  if (route.kind === 'dj') return <DjCine seed={route.seed} />;
   if (route.kind === 'collection') return <CollectionScreen collection={route.collection} />;
   if (route.kind === 'catalog') return <CatalogScreen type={route.type} id={route.id} />;
   if (route.kind === 'playlist') return <PlaylistScreen id={route.id} />;

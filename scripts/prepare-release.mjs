@@ -6,7 +6,7 @@ const manifests={}, sums=[];
 for(const platform of ['mobile','tv']){
  const name=`Cine-Music-${platform==='tv'?'TV':'Mobile'}-${version}.apk`;
  const apk=await fs.readFile('releases/'+name), sha256=crypto.createHash('sha256').update(apk).digest('hex');
- const manifest={version,versionCode,platform,downloadUrl:`https://github.com/heisbaed/linermusic/releases/download/v${version}/${name}`,fileSize:apk.length,sha256,releaseNotes:'Daily Mix rotation, broader song search, seed-anchored radio, automatic cached genre metadata, compact mobile lists, mobile Library Settings, denser TV browsing with full-screen cover artwork, and a redesigned widget.'};
+ const manifest={version,versionCode,platform,downloadUrl:`https://github.com/heisbaed/linermusic/releases/download/v${version}/${name}`,fileSize:apk.length,sha256,releaseNotes:'Dj Cine with Firebase AI Logic and optional installed-device narration; top TV navigation and refreshed Home; compact layouts, full-art idle player, unboxed lyrics/queue with blurred backgrounds, artwork fallback, theme-matched icons, and early next-song preparation independent of crossfade.'};
  manifests[platform]=manifest;sums.push(`${sha256}  ${name}`);
  await fs.writeFile(`landing page web/public/ota/${platform==='tv'?'tv-manifest.json':'manifest.json'}`,JSON.stringify(manifest,null,2)+'\n');
 }

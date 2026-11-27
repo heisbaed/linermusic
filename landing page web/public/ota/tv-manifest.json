@@ -1,9 +1,9 @@
 {
-  "version": "0.1.15",
-  "versionCode": 18,
+  "version": "0.1.16",
+  "versionCode": 19,
   "platform": "tv",
-  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.15/Cine-Music-TV-0.1.15.apk",
-  "fileSize": 12738910,
-  "sha256": "440d6f718c57d36a5f1592ba1142766b7902de46de32ec73d0a9e307cf3f451f",
-  "releaseNotes": "Daily Mix rotation, broader song search, seed-anchored radio, automatic cached genre metadata, compact mobile lists, mobile Library Settings, denser TV browsing with full-screen cover artwork, and a redesigned widget."
+  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.16/Cine-Music-TV-0.1.16.apk",
+  "fileSize": 12595155,
+  "sha256": "ed2bc47907ba52d61557371bab301519abd62c1f246f1a56a928efa326175b63",
+  "releaseNotes": "Dj Cine with Firebase AI Logic and optional installed-device narration; top TV navigation and refreshed Home; compact layouts, full-art idle player, unboxed lyrics/queue with blurred backgrounds, artwork fallback, theme-matched icons, and early next-song preparation independent of crossfade."
 }

@@ -42,6 +42,11 @@ export interface DownloadJob {
 }
 export interface Playlist { id: string; name: string; songs: Song[]; description?: string; isPublic?: boolean; cover?: string }
 export interface NativeApi {
+  djVoiceInfo?(): string;
+  speakDj?(id: string, text: string, language: string): void;
+  stopDjVoice?(): void;
+  hasDjVoiceInput?(): boolean;
+  listenDj?(language: string): void;
   appIcon?(): string;
   setAppIcon?(name: string): boolean;
   countryCode?(): string;

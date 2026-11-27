@@ -4,6 +4,8 @@ import { figmaAssets } from './figmaAssets';
 import { THEMES, TV_THEMES, useApp } from './AppContext';
 import { formatTime } from './library';
 import { isTvEnvironment } from './spatialNav';
+import { useTvArtwork } from './tvArtwork';
+import { themeIcons } from './themeIcons';
 import type { Song } from './types';
 import { createPortal } from 'react-dom';
 import albumDark from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_placeholder_album_dark.svg';
@@ -17,7 +19,7 @@ const activeSheets: HTMLElement[] = [];
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   const { theme } = useApp();
-  const src = isTvEnvironment() ? '/cine-tv-logo.png' : figmaAssets[theme].logo;
+  const src = `/app-icons/${themeIcons[theme]}.svg`;
   return compact ? <img className="brand-symbol" src={src} alt="Cine music" draggable={false} />
     : <span className="brand-wordmark"><img src={src} alt="" draggable={false} /><span>Cine music</span></span>;
 }
@@ -36,12 +38,26 @@ export function Cover({ song, large = false, kind = 'album', className = '' }: {
   song?: Partial<Song> | null; large?: boolean; kind?: 'album' | 'artist' | 'playlist' | 'song'; className?: string;
 }) {
   const { theme } = useApp();
-  const [failed, setFailed] = useState('');
+  const identity=[song?.id,song?.cover,song?.albumId,song?.artistId].join('|');
+  const [failed, setFailed] = useState<{key:string;url:string}|null>(null);
+  const [weak, setWeak] = useState('');
+  const [visible,setVisible] = useState(large);
+  const frame=useRef<HTMLSpanElement>(null);
+  const tv=isTvEnvironment();
+  const preferred=useTvArtwork(song,tv&&visible,large,weak===identity||failed?.key===identity);
+  useEffect(()=>{
+    if(!tv||large||!frame.current)return;
+    const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)){setVisible(true);observer.disconnect();}},{rootMargin:'80px'});
+    observer.observe(frame.current);return()=>observer.disconnect();
+  },[tv,large,song?.id,song?.cover]);
   const light = theme === 'light' || theme === 'default';
   const placeholder = kind === 'artist' ? (light ? artistLight : artistDark) : kind === 'playlist' ? (light ? playlistLight : playlistDark) : light ? albumLight : albumDark;
-  const src = song?.cover && failed !== song.cover ? song.cover : placeholder;
-  return <span className={`cover ${large ? 'cover-large' : ''} ${kind === 'artist' ? 'cover-round' : ''} ${className}`}>
-    <img src={src} alt="" loading={large ? 'eager' : 'lazy'} decoding="async" draggable={false} onError={() => { if (song?.cover) setFailed(song.cover); }} />
+  const address=tv?preferred:song?.cover;
+  const src = address && !(failed?.key===identity&&failed.url===address) ? address : placeholder;
+  return <span ref={frame} className={`cover ${large ? 'cover-large' : ''} ${kind === 'artist' ? 'cover-round' : ''} ${className}`}>
+    <img src={src} alt="" loading={large ? 'eager' : 'lazy'} decoding="async" draggable={false}
+      onLoad={event=>{const image=event.currentTarget;if(tv&&address&&Math.min(image.naturalWidth,image.naturalHeight)<(large?600:200))setWeak(identity);}}
+      onError={() => { if (address) setFailed({key:identity,url:address}); }} />
   </span>;
 }
 

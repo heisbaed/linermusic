@@ -19,17 +19,17 @@ points = [p for shape in shapes for p in shape]
 left, top = min(p[0] for p in points), min(p[1] for p in points)
 width, height = max(p[0] for p in points)-left, max(p[1] for p in points)-top
 concepts = [
-    ('A', 'Forest original', '#08231E', ['#12CBD1', '#55E8DB', '#8D67E8']),
-    ('B', 'Forest mint', '#08231E', ['#73DAC2', '#BCF2DA', '#55BCA6']),
-    ('C', 'Midnight rose', '#091429', ['#E65E9F', '#F8ACCD', '#BC417C']),
-    ('D', 'Charcoal ivory', '#14191B', ['#DCE5DF', '#F6F7F0', '#A7BDB4']),
+    ('A', 'Dark green', '#071F19', ['#CBF595', '#EDFFCB', '#8CC77D']),
+    ('B', 'Smoke white', '#F2F0EC', ['#555F48', '#7B8A68', '#374A40']),
+    ('C', 'Pink glass', '#FFF3F7', ['#A82D65', '#D86498', '#76234B']),
+    ('D', 'Dark', '#101112', ['#DADCD6', '#F5F6F0', '#A7BDB4']),
 ]
 board = Image.new('RGB', (1440, 760), '#0D1518')
 draw = ImageDraw.Draw(board)
 font = 'C:/Windows/Fonts/segoeui.ttf'
 bold = 'C:/Windows/Fonts/seguisb.ttf'
 draw.text((60, 34), 'Cine music / Icon directions', font=ImageFont.truetype(bold, 34), fill='#F4F6F3')
-draw.text((60, 86), 'Original emblem. Dark backgrounds. Crisp edges. No glow.', font=ImageFont.truetype(font, 21), fill='#A9BBB5')
+draw.text((60, 86), 'Original emblem. Matching app themes. Crisp edges. No glow.', font=ImageFont.truetype(font, 21), fill='#A9BBB5')
 for i, (key, title, background, colors) in enumerate(concepts):
     n, supersample = 1024, 2
     image = Image.new('RGB', (n*supersample, n*supersample), background)
@@ -44,7 +44,17 @@ for i, (key, title, background, colors) in enumerate(concepts):
     public = root / 'mobile/public/app-icons'
     public.mkdir(parents=True, exist_ok=True)
     image.resize((256,256), Image.Resampling.LANCZOS).save(public / f'{slug}.png')
+    logo = ET.Element('svg', {'xmlns':'http://www.w3.org/2000/svg','viewBox':'0 0 1200 1200'})
+    logo_group = ET.SubElement(logo,'g',{'transform':f'translate({(1200-width)/2-left} {(1200-height)/2-top})'})
+    for path, color in zip(vector.iter('{http://www.w3.org/2000/svg}path'), colors):
+        ET.SubElement(logo_group,'path',{'d':path.attrib['d'],'fill':color})
+    ET.ElementTree(logo).write(public / f'{slug}.svg',encoding='utf-8',xml_declaration=True)
     resources = root / 'android/app/src/main/res'
+    banner = Image.new('RGB',(640,360),background)
+    banner.paste(image.resize((196,196),Image.Resampling.LANCZOS),(24,82))
+    banner_draw = ImageDraw.Draw(banner)
+    banner_draw.text((226,137),'Cine music',font=ImageFont.truetype(bold,58),fill=colors[0])
+    banner.save(resources / f'drawable/cine_tv_banner_{slug}.png')
     for density, size in [('ldpi',36),('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)]:
         image.resize((size,size),Image.Resampling.LANCZOS).save(resources / f'mipmap-{density}/ic_cine_{slug}.png')
     android = 'http://schemas.android.com/apk/res/android'

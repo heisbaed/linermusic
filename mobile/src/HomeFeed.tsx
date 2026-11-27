@@ -8,6 +8,7 @@ import { innertubeCatalog } from '@/shared/media/innertube/innertubeCatalog';
 import type { Song } from './types';
 import './home-feed.css';
 import { DailyMix } from './DailyMix';
+import { DjCineLauncher } from './DjCine';
 import { isHidden } from './smartFeatures';
 import { formatTime } from './library';
 
@@ -56,6 +57,7 @@ export function HomeFeed() {
     {filter !== 'playlists' && <>
       {checkpoint && checkpoint.song.id !== app.playback.player.track?.id && (app.online || app.downloads.some(song => song.id === checkpoint.song.id)) && <button className="home-resume" onClick={() => { void app.playback.play(checkpoint.song, app.online ? checkpoint.queue : checkpoint.queue.filter(song => app.downloads.some(item => item.id === song.id)), checkpoint.context, checkpoint.positionMs); }}><Cover song={checkpoint.song} /><span className="row-copy"><strong>Continue {checkpoint.song.title}</strong><small>{checkpoint.song.artist} · {formatTime(checkpoint.positionMs)}</small></span><Icon name="play" size={20} /></button>}
       <DailyMix />
+      <DjCineLauncher />
       {!!recent.length && <div className="home-shortcuts" aria-label="Jump back in">{recent.map(song => <button key={song.id} onClick={() => void app.playback.play(song, recent, 'Jump back in')}><Cover song={song}/><strong>{song.title}</strong><Icon name="play" size={15}/></button>)}</div>}
       {app.online && featured && <article className="home-spotlight">
         <img className="home-spotlight-wash" src={featured.cover?.url} alt=""/>
