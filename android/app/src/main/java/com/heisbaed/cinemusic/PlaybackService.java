@@ -268,7 +268,7 @@ public class PlaybackService extends Service {
         bindActiveCallbacks(media, epoch);
         if (tv) watchTvBuffer(epoch, 22_000);
         publish(); updateNotification();
-        if (!tv && new OfflineVault(this).contains(next.getString("id"))) {
+        if (new OfflineVault(this).contains(next.getString("id"))) {
             next.put("offline", true);
             String id = next.getString("id");
             loadTask = loader.submit(() -> {
@@ -276,7 +276,7 @@ public class PlaybackService extends Service {
                     byte[] bytes = new OfflineVault(this).open(id);
                     handler.post(() -> {
                         if (epoch != generation) { Arrays.fill(bytes, (byte)0); return; }
-                        try { media.setDataSource(new MemoryAudio(bytes)); media.prepareAsync(); }
+                        try { media.setDataSource(this, new MemoryAudio(bytes)); media.prepareAsync(); }
                         catch (Exception error) { Arrays.fill(bytes, (byte)0); fail("Offline download could not be opened. Remove it and download it again."); }
                     });
                 } catch (Exception error) { handler.post(() -> { if (epoch == generation) fail("Offline download could not be opened. Remove it and download it again."); }); }
@@ -376,7 +376,7 @@ public class PlaybackService extends Service {
     }
     private void attachPreloadSource(CinePlayer media, JSONObject next, int epoch) {
         try {
-            if (!tv && new OfflineVault(this).contains(next.getString("id"))) {
+            if (new OfflineVault(this).contains(next.getString("id"))) {
                 next.put("offline", true);
                 String id = next.getString("id");
                 preloadTask = loader.submit(() -> {
@@ -387,7 +387,7 @@ public class PlaybackService extends Service {
                             try {
                                 MemoryAudio source = new MemoryAudio(bytes);
                                 preloadMemory = source;
-                                media.setDataSource(source); media.prepareAsync();
+                                media.setDataSource(this, source); media.prepareAsync();
                             } catch (Exception error) { Arrays.fill(bytes, (byte)0); dropPreload(media); }
                         });
                     } catch (Exception error) { handler.post(() -> { if (epoch == preloadEpoch && preloadPlayer == media) dropPreload(media); }); }
@@ -791,6 +791,10 @@ public class PlaybackService extends Service {
         tvRetry = null; tvStall = null;
     }
     private void recoverStream() {
+        if (track != null && track.optBoolean("offline")) {
+            fail("This download could not be played. Remove it and download it again while connected.");
+            return;
+        }
         if (tv) {
             if (tvRetry != null) return;
             if (track == null || recoveryAttempts >= 3) {

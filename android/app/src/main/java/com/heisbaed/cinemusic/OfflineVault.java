@@ -54,15 +54,21 @@ final class OfflineVault {
             try (FileOutputStream output = new FileOutputStream(partial)) {
                 output.write(cipher.getIV().length); output.write(cipher.getIV());
                 byte[] buffer = new byte[64 * 1024]; long read = 0; int count;
+                ByteArrayOutputStream header = new ByteArrayOutputStream(16);
                 while ((count = input.read(buffer)) != -1) {
                     if (Thread.currentThread().isInterrupted()) throw new InterruptedIOException("Download cancelled");
                     read += count;
+                    if (header.size() < 16) header.write(buffer, 0, Math.min(count, 16 - header.size()));
                     if (read > MAX_BYTES) throw new IOException("This track is too large for offline playback (64 MB limit).");
                     byte[] encrypted = cipher.update(buffer, 0, count);
                     if (encrypted != null) output.write(encrypted);
                     progress.update(read, total);
                 }
                 if (read == 0 || (total > 0 && read != total)) throw new IOException("Download was incomplete. Please retry.");
+                byte[] signature = header.toByteArray();
+                boolean mp4 = signature.length >= 12 && signature[4] == 'f' && signature[5] == 't' && signature[6] == 'y' && signature[7] == 'p';
+                boolean webm = signature.length >= 4 && (signature[0] & 255) == 0x1a && (signature[1] & 255) == 0x45 && (signature[2] & 255) == 0xdf && (signature[3] & 255) == 0xa3;
+                if (!mp4 && !webm) throw new IOException("The source did not return a supported audio file. Please retry.");
                 output.write(cipher.doFinal()); output.getFD().sync();
                 track.put("downloadBytes", read); track.put("downloadedAt", System.currentTimeMillis());
             }

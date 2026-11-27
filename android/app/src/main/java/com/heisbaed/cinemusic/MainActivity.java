@@ -2130,6 +2130,8 @@ public class MainActivity extends Activity {
 
 
 
+        @JavascriptInterface public String appIcon() { return LauncherIcons.get(MainActivity.this); }
+        @JavascriptInterface public boolean setAppIcon(String name) { return LauncherIcons.set(MainActivity.this, name); }
         @JavascriptInterface public String downloadJobs() { return isTvDevice() ? "[]" : DownloadService.jobs(MainActivity.this).toString(); }
 
 

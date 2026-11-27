@@ -17,14 +17,13 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.faketouch" android:required="false" />
     <queries><intent><action android:name="android.speech.action.RECOGNIZE_SPEECH" /></intent></queries>
-    <application android:banner="@drawable/cine_tv_banner" android:label="${cineAppLabel}" android:icon="@mipmap/ic_cine_launcher" android:roundIcon="@mipmap/ic_cine_launcher_round"
+    <application android:banner="@drawable/cine_tv_banner" android:label="${cineAppLabel}" android:icon="@mipmap/ic_cine_forest" android:roundIcon="@mipmap/ic_cine_forest"
         android:theme="@style/AppTheme" android:allowBackup="false"
         android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules"
         android:usesCleartextTraffic="false" android:supportsRtl="true">
         <meta-data android:name="com.heisbaed.cinemusic.PLATFORM" android:value="${cinePlatform}" />
         <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop"
             android:theme="@style/Theme.CineMusic.Starting" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize">
-            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="${cineLauncherCategory}" /></intent-filter>
             
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -51,6 +50,10 @@
                 <data android:scheme="https" android:host="cinemusic.web.app" android:path="/tv-connect" />
             </intent-filter>
         </activity>
+        <activity-alias android:name=".Icon_forest" android:targetActivity=".MainActivity" android:exported="true" android:enabled="true" android:icon="@mipmap/ic_cine_forest" android:label="${cineAppLabel}"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="${cineLauncherCategory}"/></intent-filter></activity-alias>
+        <activity-alias android:name=".Icon_mint" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@mipmap/ic_cine_mint" android:label="${cineAppLabel}"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="${cineLauncherCategory}"/></intent-filter></activity-alias>
+        <activity-alias android:name=".Icon_rose" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@mipmap/ic_cine_rose" android:label="${cineAppLabel}"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="${cineLauncherCategory}"/></intent-filter></activity-alias>
+        <activity-alias android:name=".Icon_ivory" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@mipmap/ic_cine_ivory" android:label="${cineAppLabel}"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="${cineLauncherCategory}"/></intent-filter></activity-alias>
         <!-- WorkManager not used; disable its auto-initializer from androidx.startup. -->
         <provider
             android:name="androidx.startup.InitializationProvider"

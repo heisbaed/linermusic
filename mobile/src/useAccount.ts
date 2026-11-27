@@ -21,7 +21,7 @@ const bundledArtwork = new Set<string>(Object.values(figmaArtwork));
 function image(value: unknown): string | undefined { return typeof value === 'string' && value.length < 180_000 && (bundledArtwork.has(value) || /^https:\/\//.test(value) || /^data:image\/(jpeg|png|webp);base64,/.test(value)) ? value : undefined; }
 function text(value: unknown, max = 500): string { return typeof value === 'string' ? value.slice(0, max) : ''; }
 function song(value: unknown): value is Song { return record(value) && typeof value.id === 'string' && value.id.length < 256 && typeof value.title === 'string' && typeof value.artist === 'string' && Number.isFinite(value.durationMs) && Number(value.durationMs) >= 0; }
-function cleanSong(value: Song): Song { return { id: value.id, title: value.title.slice(0, 500), artist: value.artist.slice(0, 500), durationMs: value.durationMs, cover: image(value.cover), artistId: typeof value.artistId === 'string' ? value.artistId : undefined, albumId: typeof value.albumId === 'string' ? value.albumId : undefined }; }
+function cleanSong(value: Song): Song { return { genres: Array.isArray(value.genres) ? [...new Set(value.genres.filter(item => typeof item === 'string' && item.length <= 60))].slice(0, 20) : undefined, id: value.id, title: value.title.slice(0, 500), artist: value.artist.slice(0, 500), durationMs: value.durationMs, cover: image(value.cover), artistId: typeof value.artistId === 'string' ? value.artistId : undefined, albumId: typeof value.albumId === 'string' ? value.albumId : undefined }; }
 function unique<T extends { id: string }>(items: T[]): T[] { return [...new Map(items.map(item => [item.id, item])).values()]; }
 
 export function validateLibrary(value: unknown): LibraryData {

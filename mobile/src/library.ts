@@ -18,6 +18,7 @@ function backupSong(value: unknown): Song | null {
     cover: backupImage(value.cover),
     artistId: typeof value.artistId === 'string' ? value.artistId.slice(0, 256) : undefined,
     albumId: typeof value.albumId === 'string' ? value.albumId.slice(0, 256) : undefined,
+    ...(Array.isArray(value.genres) ? { genres: value.genres.filter((item): item is string => typeof item === 'string' && item.length <= 60).slice(0, 20) } : {}),
   };
 }
 function backupPlaylist(value: unknown): Playlist | null {
@@ -79,7 +80,7 @@ export function toggleFavorite(items: Song[], song: Song): Song[] { return items
 export function addToPlaylist(list: Playlist, song: Song): Playlist { return list.songs.some(item => item.id === song.id) ? list : { ...list, songs: [...list.songs, song] }; }
 export function playlistIsDownloaded(list: Playlist, downloads: { id: string }[], jobs: { id: string; status: string }[]): boolean {
   return list.songs.length > 0 && list.songs.every(song => downloads.some(item => item.id === song.id)
-    || jobs.some(job => job.id === song.id && job.status !== 'failed'));
+    || jobs.some(job => job.id === song.id && job.status === 'completed'));
 }
 export function parseLrc(text: string): { time: number; text: string }[] {
   let offset = 0;

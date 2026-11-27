@@ -1,9 +1,9 @@
 {
-  "version": "0.1.13",
-  "versionCode": 16,
+  "version": "0.1.14",
+  "versionCode": 17,
   "platform": "mobile",
-  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.13/Cine-Music-Mobile-0.1.13.apk",
-  "fileSize": 12453720,
-  "sha256": "93be5921862931c8726fe04e373f6069bc85e4d6db150eeac7b2376f6af7bae9",
-  "releaseNotes": "Resets Smart Shuffle recommendations when changing music, rejects stale recommendation requests, reduces TV lyrics rendering work, and caches lyrics during the session. Synchronizes phone notification and widget controls with linked TV playback. Adds bounded source-session recovery and platform checks for APK updates."
+  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.14/Cine-Music-Mobile-0.1.14.apk",
+  "fileSize": 12467774,
+  "sha256": "e72e064ff6e9873cd69c50ad115622df07bb1cd24ba5cbcef5380269b6c43372",
+  "releaseNotes": "Encrypted offline playback uses the streaming audio engine. Adds Liked Songs sorting and genre/type filters, four selectable launcher icons, and update progress with an Install button directly on the update screen. Includes stricter download completion checks."
 }

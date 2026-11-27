@@ -13,7 +13,8 @@ import { figmaArtwork } from './figmaAssets';
 import { mergePlaylistSongDraft } from './playlistDraft';
 import { deduplicatePlaylist } from './smartFeatures';
 import { CollectionSongs } from './CollectionSongs';
-import { formatTime, playlistBackupFileName, playlistBackupText, playlistIsDownloaded } from './library';
+import { songLabels, songSortChoices, sortCollectionSongs } from './collectionFilters';
+import { formatTime, playlistBackupFileName, playlistBackupText, playlistIsDownloaded, loadSaved, save } from './library';
 import './browse.css';
 import { SongRadio } from './SongRadio';
 import { suggestMusic, mergeSuggestions } from './searchSuggestions';
@@ -397,16 +398,18 @@ function DownloadJobs({ query }: { query: string }) {
 export function CollectionScreen({ collection }: { collection: Collection }) {
   const app = useApp();
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<'recent' | 'az' | 'artist' | 'duration'>('recent');
-  useEffect(() => { setQuery(''); setSort('recent'); }, [collection]);
-  const title = collection[0].toUpperCase() + collection.slice(1);
+  const sortKey = `collection-sort:${app.account.user?.localId || 'guest'}:${collection}`;
+  const [sort, setSort] = useState<string>(() => loadSaved(sortKey, 'recent'));
+  const [label, setLabel] = useState('All');
+  useEffect(() => { setQuery(''); setLabel('All'); setSort(loadSaved(sortKey, 'recent')); }, [sortKey]);
+  function chooseSort(value: string) { setSort(value); save(sortKey, value); }
+  const title = collection === 'favorites' ? 'Liked Songs' : collection[0].toUpperCase() + collection.slice(1);
   const library = app.account.library;
   const create = () => app.openRoute({ kind: 'playlist-form' });
   const localSongs = collection === 'downloads' ? app.downloads : library.favorites;
-  const songs = [...matchingSongs(localSongs, query)];
-  if (sort === 'az') songs.sort((a, b) => a.title.localeCompare(b.title));
-  if (sort === 'artist') songs.sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
-  if (sort === 'duration') songs.sort((a, b) => a.durationMs - b.durationMs);
+  const labels = [...new Set(localSongs.flatMap(songLabels))].sort((a, b) => a.localeCompare(b));
+  const activeLabel = labels.includes(label) ? label : 'All';
+  const songs = sortCollectionSongs(matchingSongs(localSongs, query).filter(song => activeLabel === 'All' || songLabels(song).includes(activeLabel)), sort);
   const text = query.trim().toLocaleLowerCase();
   const directories = collection === 'artists' ? library.artists.map(artist => ({ id: artist.id, title: artist.name, cover: artist.cover, subtitle: 'Artist' }))
     : collection === 'albums' ? library.albums.map(album => ({ ...album, subtitle: album.artist || 'Album' })) : [];
@@ -425,22 +428,23 @@ export function CollectionScreen({ collection }: { collection: Collection }) {
       <p className="browse-collection-summary">{count(localSongs.length)}{collection === 'downloads' && app.downloads.some(song => song.downloadBytes) ? ` · ${(app.downloads.reduce((sum, song) => sum + (song.downloadBytes || 0), 0) / 1_048_576).toFixed(1)} MB` : ''}</p>
       {collection === 'downloads' && <p className="browse-offline-caption"><Icon name="lock" size={14} />Completed songs, ready to play offline.</p>}
       <SearchField value={query} onChange={setQuery} placeholder={`Search ${collection}`} label={`Search ${collection}`} />
-      <SortControl value={sort} onChange={value => setSort(value as typeof sort)} label={`Sort ${title}`} options={[{value:'recent',label:'Recently saved'},{value:'az',label:'Title A to Z'},{value:'artist',label:'Artist'},{value:'duration',label:'Duration'}]} />
+      <SortControl value={sort} onChange={chooseSort} label={`Sort ${title}`} options={songSortChoices} />
+      {collection === 'favorites' && labels.length > 0 && <div className="collection-filters" role="group" aria-label="Filter liked songs by genre or type">{['All', ...labels].map(item => <button type="button" key={item} aria-pressed={activeLabel === item} onClick={() => setLabel(item)}>{item}</button>)}</div>}
       <PlayButtons songs={songs} context={title} download={collection === 'favorites' ? <DownloadCollection songs={localSongs} title="Liked Songs" /> : undefined} />
       {collection === 'downloads' && <DownloadJobs query={query} />}
       {songs.length ? <>{collection === 'downloads' && !!app.jobs.length && <SectionHeading title="Ready offline" />}<CollectionSongs hideSort songs={songs} context={title} hearts={collection === 'favorites'} onRemove={ids => {
         if (collection === 'downloads') ids.forEach(id => app.removeDownload(id));
         else app.account.setLibrary(library => ({ ...library, favorites: library.favorites.filter(song => !ids.has(song.id)) }));
       }} /></>
-        : <Notice title={query.trim() ? 'No matching songs' : collection === 'favorites' ? 'Keep the songs you love' : 'Your offline listening starts here'} icon={collection === 'favorites' ? 'heart' : 'download'}
-          action={query.trim() ? <button className="text-button" onClick={() => setQuery('')}>Clear search</button> : <button className="secondary-button" onClick={() => app.goTab('search')}>Explore music</button>}>
-          {query.trim() ? 'Try another song title or artist.' : collection === 'favorites' ? 'Tap the heart on any song to add it to your favorites.' : 'Use a song menu to download. Incomplete transfers are never shown as ready offline.'}
+        : <Notice title={query.trim() || activeLabel !== 'All' ? 'No matching songs' : collection === 'favorites' ? 'Keep the songs you love' : 'Your offline listening starts here'} icon={collection === 'favorites' ? 'heart' : 'download'}
+          action={query.trim() || activeLabel !== 'All' ? <button className="text-button" onClick={() => { setQuery(''); setLabel('All'); }}>Clear filters</button> : <button className="secondary-button" onClick={() => app.goTab('search')}>Explore music</button>}>
+          {query.trim() || activeLabel !== 'All' ? 'Try another song title, artist, or genre.' : collection === 'favorites' ? 'Tap the heart on any song to add it to your favorites.' : 'Use a song menu to download. Incomplete transfers are never shown as ready offline.'}
         </Notice>}
       {collection === 'downloads' && <p className="browse-footnote"><Icon name="lock" size={13} />Downloads stay inside Cine music.</p>}
     </> : <>
       <p className="browse-collection-summary">{collection === 'playlists' ? count(library.playlists.length, 'playlist') : collection === 'albums' ? count(library.albums.length, 'album') : count(library.artists.length, 'artist')}</p>
       <SearchField value={query} onChange={setQuery} placeholder={`Find ${collection === 'artists' ? 'an artist' : collection === 'albums' ? 'an album' : 'a playlist'}`} label={`Search saved ${collection}`} />
-      <SortControl value={sort} onChange={value => setSort(value as typeof sort)} label={`Sort ${title}`} options={[{value:'recent',label:'Recently saved'},{value:'az',label:'Name A to Z'},...(collection === 'albums' ? [{value:'artist',label:'Artist'}] : [])]} />
+      <SortControl value={sort} onChange={chooseSort} label={`Sort ${title}`} options={[{value:'recent',label:'Recently saved'},{value:'az',label:'Name A to Z'},...(collection === 'albums' ? [{value:'artist',label:'Artist'}] : [])]} />
       {collection === 'playlists' ? playlists.map(playlist => <button className="list-link browse-directory-row" key={playlist.id} onClick={() => app.openRoute({ kind: 'playlist', id: playlist.id })}>
         <Cover kind="playlist" song={{ title: playlist.name, cover: playlist.cover || playlist.songs[0]?.cover }} /><span className="row-copy"><strong>{playlist.name}</strong><small>{count(playlist.songs.length)} · Private</small></span><Icon name="chevron_right" size={19} />
       </button>) : entries.map(item => <button className="list-link browse-directory-row" key={item.id} onClick={() => app.openRoute({ kind: 'catalog', type: collection === 'artists' ? 'artist' : 'album', id: item.id })}>

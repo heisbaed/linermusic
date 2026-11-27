@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from './AppContext';
 import { ConfirmDialog, Cover, Sheet, SongRows, SortControl } from './ui';
 import type { Song } from './types';
+import { genreChoices } from './collectionFilters';
 
 export function CollectionSongs({ songs, context, hearts = false, onRemove, hideSort = false }: {
   songs: Song[]; context: string; hearts?: boolean; onRemove?: (ids: Set<string>) => void; hideSort?: boolean;
@@ -10,7 +11,8 @@ export function CollectionSongs({ songs, context, hearts = false, onRemove, hide
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState('saved');
-  const [action, setAction] = useState<'playlist' | 'remove' | 'download' | null>(null);
+  const [action, setAction] = useState<'playlist' | 'remove' | 'download' | 'genre' | null>(null);
+  const [genres, setGenres] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [limit, setLimit] = useState(40);
   const visible = [...songs];
@@ -19,6 +21,10 @@ export function CollectionSongs({ songs, context, hearts = false, onRemove, hide
   if (sort === 'duration') visible.sort((a, b) => a.durationMs - b.durationMs);
   const picked = songs.filter(song => selected.has(song.id));
   function finish() { setAction(null); setSelecting(false); setSelected(new Set()); }
+  function saveGenres() {
+    app.account.setLibrary(library => ({ ...library, favorites: library.favorites.map(song => selected.has(song.id) ? { ...song, genres } : song) }));
+    app.toast('Song genres updated.'); finish();
+  }
   return <>
     <div className="collection-tools">{!hideSort && <SortControl label={`Sort ${context} songs`} value={sort} onChange={setSort} options={[{value:'saved',label:'Saved order'},{value:'title',label:'Title'},{value:'artist',label:'Artist'},{value:'duration',label:'Duration'}]} />}<button className="text-button" onClick={() => { setSelecting(value => !value); setSelected(new Set()); }}>{selecting ? 'Done' : 'Select songs'}</button></div>
     {selecting ? <>
@@ -28,6 +34,8 @@ export function CollectionSongs({ songs, context, hearts = false, onRemove, hide
       }}>Favorite</button><button className="text-button" disabled={!picked.length} onClick={() => setAction('download')}>Download</button>{onRemove && <button className="text-button" disabled={!picked.length} onClick={() => setAction('remove')}>Remove</button>}</div>
       <div className="selection-songs">{visible.slice(0, limit).map(song => <label className="selection-song" key={song.id}><input type="checkbox" aria-label={`Select ${song.title}`} checked={selected.has(song.id)} onChange={event => setSelected(current => { const next = new Set(current); if (event.target.checked) next.add(song.id); else next.delete(song.id); return next; })} /><Cover song={song} /><span className="row-copy"><strong>{song.title}</strong><small>{song.artist}</small></span></label>)}</div>
     </> : <SongRows songs={visible.slice(0, limit)} queueSongs={visible} context={context} showHearts={hearts} />}
+    {selecting && hearts && <button className="secondary-button" disabled={!picked.length} onClick={() => { setGenres(picked.length === 1 ? picked[0].genres || [] : []); setAction('genre'); }}>Edit genres</button>}
+    {action === 'genre' && <Sheet title="Song genres" onClose={() => setAction(null)}><p>Choose genres for {picked.length} selected {picked.length === 1 ? 'song' : 'songs'}. Saving replaces their previous genre labels.</p><div className="genre-picker">{genreChoices.map(genre => <label key={genre}><input type="checkbox" checked={genres.includes(genre)} onChange={event => setGenres(current => event.target.checked ? [...current, genre] : current.filter(item => item !== genre))} />{genre}</label>)}</div><button className="primary-button" onClick={saveGenres}>{genres.length ? 'Save genres' : 'Clear genre labels'}</button></Sheet>}
     {visible.length > limit && <button className="secondary-button" onClick={() => setLimit(value => value + 40)}>Show more songs</button>}
     {action === 'playlist' && <Sheet title="Add selected songs" onClose={() => setAction(null)}><div className="bulk-playlist-options">{app.account.library.playlists.map(playlist => <button className="list-link" key={playlist.id} onClick={() => {
       app.account.setLibrary(library => ({ ...library, playlists: library.playlists.map(item => item.id === playlist.id ? { ...item, songs: [...item.songs, ...picked.filter(song => !item.songs.some(old => old.id === song.id))] } : item) }));

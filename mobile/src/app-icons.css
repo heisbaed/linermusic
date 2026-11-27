@@ -1,0 +1,5 @@
+.app-icon-settings{margin-top:32px}.app-icon-settings h2{font-size:20px;margin-bottom:8px}.app-icon-settings>p{color:var(--muted);line-height:1.5}
+.app-icon-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.app-icon-options button{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;padding:16px 8px;background:var(--surface);color:var(--text);border:2px solid transparent;border-radius:16px;font:inherit;overflow-wrap:anywhere}
+.app-icon-options button[aria-checked=true]{border-color:var(--accent)}.app-icon-options img{width:72px;height:72px;border-radius:16px}.app-icon-options small{color:var(--accent)}
+.tv-app .app-icon-options{grid-template-columns:repeat(4,minmax(0,1fr));max-width:840px}.tv-app .app-icon-options button{color:var(--ink);background:var(--card,rgba(128,128,128,.12))}.tv-app .app-icon-options button:focus-visible{outline:3px solid var(--accent);outline-offset:4px}

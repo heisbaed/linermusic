@@ -11,6 +11,9 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.datasource.DefaultHttpDataSource;
+import androidx.media3.datasource.BaseDataSource;
+import androidx.media3.datasource.DataSpec;
+import androidx.media3.datasource.DataSource;
 import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.source.ProgressiveMediaSource;
@@ -19,6 +22,7 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource;
 final class CinePlayer {
     private MediaPlayer local = new MediaPlayer();
     private ExoPlayer stream;
+    private MediaDataSource offlineSource;
     private MediaPlayer.OnPreparedListener prepared;
     private MediaPlayer.OnCompletionListener completed;
     private MediaPlayer.OnErrorListener failed;
@@ -38,26 +42,48 @@ final class CinePlayer {
     void setOnInfoListener(MediaPlayer.OnInfoListener listener) { info=listener; if (local != null) local.setOnInfoListener(listener); }
     void setOnSeekCompleteListener(MediaPlayer.OnSeekCompleteListener listener) { seeked=listener; if (local != null) local.setOnSeekCompleteListener(listener); }
     void addOnRoutingChangedListener(AudioRouting.OnRoutingChangedListener listener, Handler handler) { if (local != null) local.addOnRoutingChangedListener(listener,handler); }
-    void setDataSource(MediaDataSource source) throws IOException {
-        if (local == null) {
-            if (stream != null) throw new IOException("Player is already streaming");
-            local = new MediaPlayer();
-        }
-        local.setDataSource(source);
+    void setDataSource(Context context, MediaDataSource source) throws IOException {
+        offlineSource = source;
+        DataSource.Factory memory = () -> new BaseDataSource(false) {
+            private long position, remaining;
+            private Uri uri;
+            private boolean opened;
+            @Override public long open(DataSpec spec) throws IOException {
+                transferInitializing(spec);
+                long size = source.getSize();
+                if (spec.position < 0 || spec.position > size) throw new IOException("Invalid offline seek");
+                position = spec.position;
+                remaining = spec.length == C.LENGTH_UNSET ? size - position : Math.min(spec.length, size - position);
+                uri = spec.uri; opened = true; transferStarted(spec); return remaining;
+            }
+            @Override public int read(byte[] buffer, int offset, int length) throws IOException {
+                if (length == 0) return 0;
+                if (remaining == 0) return C.RESULT_END_OF_INPUT;
+                int count = source.readAt(position, buffer, offset, (int)Math.min(length, remaining));
+                if (count < 0) return C.RESULT_END_OF_INPUT;
+                position += count; remaining -= count; bytesTransferred(count); return count;
+            }
+            @Override public Uri getUri() { return uri; }
+            @Override public void close() { uri = null; if (opened) { opened = false; transferEnded(); } }
+        };
+        configure(context, Uri.parse("memory://cine/offline"), memory, false);
     }
     void setDataSource(Context context, Uri uri, Map<String,String> headers) throws IOException {
         if (!MainActivity.allowedNetworkUrl(uri.toString()) || uri.getHost()==null || !uri.getHost().endsWith(".googlevideo.com")) throw new IOException("Unsupported audio address");
-        local.release(); local=null;
         DefaultHttpDataSource.Factory http=new DefaultHttpDataSource.Factory()
             .setUserAgent("Mozilla/5.0").setDefaultRequestProperties(headers)
             .setConnectTimeoutMs(5000).setReadTimeoutMs(8000).setAllowCrossProtocolRedirects(false);
+        configure(context, uri, http, true);
+    }
+    private void configure(Context context, Uri uri, DataSource.Factory factory, boolean network) {
+        if (local != null) { local.release(); local=null; }
         stream=new ExoPlayer.Builder(context)
             .setLoadControl(new DefaultLoadControl.Builder()
                 .setBufferDurationsMs(5000,15000,750,1500)
                 .setPrioritizeTimeOverSizeThresholds(true).build()).build();
         stream.setAudioAttributes(new androidx.media3.common.AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),false);
-        stream.setWakeMode(C.WAKE_MODE_NETWORK);
+        stream.setWakeMode(network ? C.WAKE_MODE_NETWORK : C.WAKE_MODE_LOCAL);
         stream.setPlayWhenReady(playWhenReady);
         stream.setVolume(volume);
         stream.addListener(new Player.Listener() {
@@ -84,7 +110,7 @@ final class CinePlayer {
                 if(reason==Player.DISCONTINUITY_REASON_SEEK && seeked!=null)seeked.onSeekComplete(null);
             }
         });
-        stream.setMediaSource(new ProgressiveMediaSource.Factory(http).createMediaSource(MediaItem.fromUri(uri)));
+        stream.setMediaSource(new ProgressiveMediaSource.Factory(factory).createMediaSource(MediaItem.fromUri(uri)));
     }
     void prepareAsync() { if(stream!=null)stream.prepare(); else local.prepareAsync(); }
     void setPlayWhenReady(boolean value) { playWhenReady=value; if(stream!=null)stream.setPlayWhenReady(value); }
@@ -97,5 +123,5 @@ final class CinePlayer {
     AudioDeviceInfo getRoutedDevice() { return local==null?null:local.getRoutedDevice(); }
     void seekTo(long position,int mode) { if(stream!=null)stream.seekTo(position); else local.seekTo(position,mode); }
     void setVolume(float left,float right) { volume=Math.max(0f,Math.min(1f,Math.min(left,right))); if(stream!=null)stream.setVolume(volume); else if(local!=null)local.setVolume(volume,volume); }
-    void release() { if(stream!=null){stream.release();stream=null;} if(local!=null){local.release();local=null;} }
+    void release() { if(stream!=null){stream.release();stream=null;} if(local!=null){local.release();local=null;} if(offlineSource!=null){try{offlineSource.close();}catch(IOException ignored){}offlineSource=null;} }
 }

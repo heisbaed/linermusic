@@ -10,6 +10,7 @@ export interface Song {
   downloadBytes?: number;
   storageBytes?: number;
   downloadedAt?: number;
+  genres?: string[];
 }
 export interface PlayerState {
   track: Song | null;
@@ -39,6 +40,8 @@ export interface DownloadJob {
 }
 export interface Playlist { id: string; name: string; songs: Song[]; description?: string; isPublic?: boolean; cover?: string }
 export interface NativeApi {
+  appIcon?(): string;
+  setAppIcon?(name: string): boolean;
   countryCode?(): string;
   cancelGoogleSignIn?(): void;
   background(): void;

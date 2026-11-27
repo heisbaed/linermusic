@@ -16,7 +16,11 @@ import java.util.concurrent.*;
 /** Foreground review plus Android's permission-return installation flow. */
 public class UpdateActivity extends Activity {
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
-    private TextView status;private boolean waiting,checking,installing;
+    private TextView status, details; private ProgressBar progress; private Button primary;
+    private JSONObject available;
+    private boolean waiting,checking,installing,readyShown;
+    private final Handler ui = new Handler(Looper.getMainLooper());
+    private final Runnable refresh = new Runnable() { public void run() { showDownload(); ui.postDelayed(this, 500); } };
     private File apk(){return new File(getCacheDir(),"ota/update.apk");}
     static long installedVersion(Context c){try{android.content.pm.PackageInfo info=c.getPackageManager().getPackageInfo(c.getPackageName(),0);return Build.VERSION.SDK_INT>=28?info.getLongVersionCode():info.versionCode;}catch(Exception e){return BuildConfig.VERSION_CODE;}}
     static boolean trustedUrl(String value){try{URI u=new URI(value);return "https".equals(u.getScheme())&&u.getUserInfo()==null&&(u.getPort()==-1||u.getPort()==443)
@@ -41,12 +45,20 @@ public class UpdateActivity extends Activity {
     }
     public void onCreate(Bundle state){
         super.onCreate(state);waiting=state!=null&&state.getBoolean("waiting");
-        LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);layout.setPadding(32,64,32,32);
-        TextView title=new TextView(this);title.setText("Cine music updates");title.setTextSize(24);layout.addView(title);
-        status=new TextView(this);status.setPadding(0,24,0,24);layout.addView(status);
-        Button retry=new Button(this);retry.setText("Check again");retry.setOnClickListener(v->{if(apk().exists())offerInstall();else check();});layout.addView(retry);
-        Button close=new Button(this);close.setText("Back to music");close.setOnClickListener(v->finish());layout.addView(close);setContentView(layout);
-        if(apk().exists())offerInstall();else if("progress".equals(getIntent().getAction()))status.setText("Download progress is in the notification. Return here when it finishes to install.");else check();
+        int pad=(int)(24*getResources().getDisplayMetrics().density);
+        int background=getSharedPreferences("cine_appearance",MODE_PRIVATE).getInt("background",0xff08231e);
+        boolean light=android.graphics.Color.luminance(background)>.5;
+        int ink=light?0xff17262b:0xfff6f7fc;
+        ScrollView scroll=new ScrollView(this);scroll.setBackgroundColor(background);
+        LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);layout.setPadding(pad,pad,pad,pad);scroll.addView(layout);
+        scroll.setOnApplyWindowInsetsListener((view,insets)->{if(Build.VERSION.SDK_INT>=30){android.graphics.Insets bars=insets.getInsets(android.view.WindowInsets.Type.systemBars());view.setPadding(bars.left,bars.top,bars.right,bars.bottom);}else view.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
+        TextView title=new TextView(this);title.setText("Cine music updates");title.setTextSize(28);title.setTextColor(ink);layout.addView(title);
+        status=new TextView(this);status.setTextColor(ink);status.setTextSize(16);status.setPadding(0,pad,0,pad);layout.addView(status);
+        progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);progress.setMax(100);progress.setVisibility(android.view.View.GONE);layout.addView(progress,new LinearLayout.LayoutParams(-1,pad));
+        details=new TextView(this);details.setTextColor(ink);details.setPadding(0,pad,0,pad);layout.addView(details);
+        primary=new Button(this);primary.setText("Check again");primary.setOnClickListener(v->{if(apk().exists())install();else if(available!=null)download();else check();});layout.addView(primary);
+        Button close=new Button(this);close.setText("Back to music");close.setOnClickListener(v->finish());layout.addView(close);setContentView(scroll);
+        if(apk().exists())offerInstall();else if(!showDownload())check();
     }
     static JSONObject fetchManifest()throws Exception{
         HttpURLConnection connection=null;
@@ -61,21 +73,38 @@ public class UpdateActivity extends Activity {
         }finally{if(connection!=null)connection.disconnect();}
     }
     private void check(){
-        if(checking)return;checking=true;status.setText("Checking for updates...");
+        if(checking)return;checking=true;getSharedPreferences("cine_updates",MODE_PRIVATE).edit().remove("download_state").apply();primary.setEnabled(false);status.setText("Checking for updates...");
         worker.execute(()->{try{
             JSONObject data=fetchManifest();
-            if(data.getLong("versionCode")<=installedVersion(this)){runOnUiThread(()->{status.setText("You are up to date. Version "+BuildConfig.VERSION_NAME);if("available".equals(getIntent().getAction()))finish();});return;}
+            if(data.getLong("versionCode")<=installedVersion(this)){runOnUiThread(()->{available=null;status.setText("You are up to date. Version "+BuildConfig.VERSION_NAME);primary.setEnabled(true);primary.setText("Check again");});return;}
             String url=data.getString("downloadUrl"),hash=data.getString("sha256"),version=data.getString("version");long size=data.getLong("fileSize");
             if(!trustedUrl(url)||!hash.matches("[a-fA-F0-9]{64}")||size<=0||size>200_000_000)throw new IOException("Update metadata is incomplete");
-            runOnUiThread(()->{if(isFinishing()||isDestroyed())return;status.setText("Version "+version+" is available.");
-                new AlertDialog.Builder(this).setTitle("Update Cine music").setMessage(data.optString("releaseNotes")+"\n\nDownload: "+String.format(Locale.ROOT,"%.1f MB",size/1048576.0))
-                    .setNegativeButton("Later",(d,w)->{}).setPositiveButton("Download",(d,w)->{
-                        startForegroundService(new Intent(this,OTAUpdateService.class).setAction("download").putExtra("url",url).putExtra("sha256",hash).putExtra("size",size));
-                        status.setText("Downloading. You can return to music; tap the notification when ready.");}).show();});
-        }catch(Exception e){runOnUiThread(()->status.setText("Could not check for updates. "+(e.getMessage()==null?"Try again.":e.getMessage())));}finally{checking=false;}});
+            runOnUiThread(()->{if(isFinishing()||isDestroyed())return;available=data;status.setText("Version "+version+" is available.");details.setText(data.optString("releaseNotes")+"\n\nDownload: "+String.format(Locale.ROOT,"%.1f MB",size/1048576.0));primary.setText("Download update");primary.setEnabled(true);});
+        }catch(Exception e){runOnUiThread(()->{status.setText("Could not check for updates. "+(e.getMessage()==null?"Try again.":e.getMessage()));primary.setEnabled(true);});}finally{checking=false;}});
     }
-    private void offerInstall(){try{verifyPackage(this,apk());status.setText("The downloaded update is ready to install.");
-        new AlertDialog.Builder(this).setTitle("Install update").setMessage("Confirm installation in Android. Your music library will be kept.").setNegativeButton("Later",(d,w)->{}).setPositiveButton("Install",(d,w)->install()).show();
+    private void download(){
+        if(available==null)return;
+        getSharedPreferences("cine_updates",MODE_PRIVATE).edit().putString("download_state","downloading").putLong("download_bytes",0).putLong("download_total",available.optLong("fileSize")).putLong("download_updated",System.currentTimeMillis()).apply();
+        startForegroundService(new Intent(this,OTAUpdateService.class).setAction("download").putExtra("url",available.optString("downloadUrl")).putExtra("sha256",available.optString("sha256")).putExtra("size",available.optLong("fileSize")));
+        showDownload();
+    }
+    private boolean showDownload(){
+        if(installing||waiting)return true;
+        if(apk().exists()){if(!readyShown)offerInstall();return true;}
+        android.content.SharedPreferences prefs=getSharedPreferences("cine_updates",MODE_PRIVATE);
+        String state=prefs.getString("download_state","");
+        if(state.equals("downloading")||state.equals("verifying")){
+            if(System.currentTimeMillis()-prefs.getLong("download_updated",0)>90000){prefs.edit().putString("download_state","failed").putString("download_message","Download interrupted. Please retry.").apply();return true;}
+            long bytes=prefs.getLong("download_bytes",0),total=prefs.getLong("download_total",0);
+            int percent=total>0?(int)Math.min(100,bytes*100/total):0;
+            progress.setVisibility(android.view.View.VISIBLE);progress.setIndeterminate(state.equals("verifying")||total<=0);progress.setProgress(percent);
+            status.setText(state.equals("verifying")?"Verifying update...":"Downloading update - "+percent+"%");
+            details.setText(String.format(Locale.ROOT,"%.1f MB / %.1f MB",bytes/1048576.0,total/1048576.0));primary.setText("Downloading...");primary.setEnabled(false);return true;
+        }
+        if(state.equals("failed")&&!checking){progress.setVisibility(android.view.View.GONE);status.setText(prefs.getString("download_message","Download failed. Please retry."));primary.setText(available==null?"Check again":"Retry download");primary.setEnabled(true);return true;}
+        return false;
+    }
+    private void offerInstall(){try{verifyPackage(this,apk());readyShown=true;progress.setVisibility(android.view.View.VISIBLE);progress.setIndeterminate(false);progress.setProgress(100);status.setText("The downloaded update is ready to install.");details.setText("Confirm installation in Android. Your music library will be kept.");primary.setText("Install update");primary.setEnabled(true);
     }catch(Exception e){apk().delete();getSharedPreferences("cine_updates",MODE_PRIVATE).edit().remove("install_message").remove("install_session").apply();check();}}
     private void install(){
         if(!getPackageManager().canRequestPackageInstalls()){waiting=true;startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+getPackageName())));return;}
@@ -110,7 +139,8 @@ public class UpdateActivity extends Activity {
             } finally { installing = false; }
         });
     }
-    protected void onResume(){super.onResume();if(waiting){waiting=false;if(getPackageManager().canRequestPackageInstalls())install();else status.setText("Installation permission was not granted. Reopen Updates to retry.");}else {String message=getSharedPreferences("cine_updates",MODE_PRIVATE).getString("install_message","");if(!message.isEmpty())status.setText(message);}}
+    protected void onResume(){super.onResume();ui.removeCallbacks(refresh);ui.post(refresh);if(waiting){waiting=false;if(getPackageManager().canRequestPackageInstalls())install();else status.setText("Installation permission was not granted. Tap Install update to retry.");}else {String message=getSharedPreferences("cine_updates",MODE_PRIVATE).getString("install_message","");if(!message.isEmpty())status.setText(message);}}
+    protected void onPause(){ui.removeCallbacks(refresh);super.onPause();}
     protected void onSaveInstanceState(Bundle b){super.onSaveInstanceState(b);b.putBoolean("waiting",waiting);}
-    protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
+    protected void onDestroy(){ui.removeCallbacks(refresh);worker.shutdownNow();super.onDestroy();}
 }

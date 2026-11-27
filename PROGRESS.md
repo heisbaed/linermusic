@@ -1,3 +1,13 @@
+# Cine music repair progress - 27 November 2026
+
+## Release 0.1.14 / code 17
+
+Offline Media3 decoding, container screening before download completion, truthful playlist download readiness, remembered Liked Songs sorting and genre/type filters, synced genre labels, four runtime-selectable launcher icons, and in-screen updater progress/install controls. See RELEASE-0.1.14.md.
+
+Only compilation/package work is authorized; no runtime tests or device verification. Existing damaged downloads are not repaired automatically. All four icon directions were approved for user selection. The unrelated TV-title report was explicitly withdrawn and excluded.
+
+---
+
 # Cine music repair progress - 20 November 2026
 
 ## Release 0.1.13 / code 16
