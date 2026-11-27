@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './AppContext';
-import { DjCineLauncher } from './DjCine';
+import { useTvArtwork } from './tvArtwork';
 import { TvCard, TvShelf } from './TvLayout';
 import { Icon } from './Icons';
 import { Cover } from './ui';
@@ -28,6 +28,7 @@ export function TvHomeScreen() {
   const recommendations = radio.seed===seed?.id ? radio.songs : [];
   const featureSong = view==='for-you' ? recommendations[0]||seed : undefined;
   const featureAlbum = view!=='recent' && !featureSong ? feed.items[0] : undefined;
+  const portrait = useTvArtwork(seed,true,true,true);
   const checkpoint = app.smart.checkpoint;
   const name = app.account.user?.displayName?.trim().split(/\s+/)[0];
   useEffect(()=>()=>pending.current?.abort(),[]);
@@ -58,31 +59,36 @@ export function TvHomeScreen() {
   const featureTitle=featureSong?displaySongTitle(featureSong.title,featureSong.artist):featureAlbum?.title;
   const featureArtist=featureSong?.artist||featureAlbum?.artists.map(artist=>artist.name).join(', ');
   const featureArt=featureSong?.cover||featureAlbum?.cover?.url;
+  const station = view==='for-you' && !!seed && !!recommendations.length;
   function openFeature(){
     if(featureAlbum)app.openRoute({kind:'catalog',type:'album',id:featureAlbum.id});
+    else if(station && seed?.artistId)app.openRoute({kind:'catalog',type:'artist',id:seed.artistId});
     else if(featureSong?.albumId)app.openRoute({kind:'catalog',type:'album',id:featureSong.albumId});
     else if(featureSong)app.openRoute({kind:'dj',seed:featureSong});
   }
   return <section className="tv-page tv-home-page" aria-label="Home">
-    <header className="tv-home-top"><div><p>{homeGreeting(new Date().getHours())}{name?', '+name:''}</p><h1>Home</h1></div>
+    <header className="tv-home-top"><div><h1>{homeGreeting(new Date().getHours())}{name?', '+name:''}</h1></div>
       <div className="tv-home-filters" role="group" aria-label="Home content">{(['for-you','new','recent'] as const).map(value=><button className="tv-button" key={value} aria-pressed={view===value} onClick={()=>setView(value)}>{value==='for-you'?'For you':value==='new'?'New releases':'Recent'}</button>)}
         <button className="tv-button tv-home-refresh" aria-label="Refresh Home" disabled={!app.online||radioLoading||feed.loading||starting} onClick={()=>setEdition(value=>value+1)}><Icon name="refresh" size={20}/></button>
       </div>
     </header>
+    {view==='for-you'&&<div className="tv-home-jump" aria-label="Jump back in">
+      <button data-tv-key="home-likes" onClick={()=>app.openRoute({kind:'collection',collection:'favorites'})}><span className="tv-home-like-art"><Icon name="heart" size={22}/></span><span>Liked Songs</span></button>
+      {playlists.slice(0,3).map(playlist=><button key={playlist.id} data-tv-key={'home-'+playlist.id} onClick={()=>app.openRoute({kind:'playlist',id:playlist.id})}><Cover song={{title:playlist.name,cover:playlist.cover||playlist.songs[0]?.cover}}/><span>{playlist.name}</span></button>)}
+      {recent.slice(0,Math.max(0,4-Math.min(playlists.length,3))).map(song=><button key={song.id} data-tv-key={'home-song-'+song.id} onClick={()=>void app.playback.play(song,recent,'Recently played')}><Cover song={song}/><span>{displaySongTitle(song.title,song.artist)}</span></button>)}
+      <button data-tv-key="home-dj" onClick={()=>app.openRoute({kind:'dj'})}><span className="tv-home-like-art"><Icon name="sparkles" size={22}/></span><span>Dj Cine</span></button>
+    </div>}
     {!app.online&&<p className="tv-home-status" role="status">Connect to stream music on TV.</p>}
-    {view!=='recent'&&featureTitle&&<section className="tv-home-feature" aria-label={featureSong?'Made for you':'Featured new release'}>
-      <div className="tv-home-feature-art" aria-hidden="true"><Cover song={featureSong||{title:featureTitle,cover:featureArt,albumId:featureAlbum?.id}} large/></div>
-      <div className="tv-home-feature-copy"><p className="tv-home-feature-label">{featureSong?'Made for you':'New release'}</p><h2>{featureTitle}</h2><p>{featureArtist}</p>
-        <div className="tv-actions"><button className="tv-button tv-primary" data-tv-key="featured" disabled={!app.online||starting} onClick={()=>void playFeature()}><Icon name="play" size={20}/>{starting?'Starting…':'Play'}</button><button className="tv-button" onClick={openFeature}>{featureAlbum||featureSong?.albumId?'View release':'Explore with Dj Cine'}<Icon name="chevron_right" size={18}/></button></div>
+    {view!=='recent'&&featureTitle&&<section className="tv-home-feature tv-home-editorial" aria-label={station?'Artist radio':featureSong?'For you':'Featured new release'}>
+      <div className="tv-home-editorial-backdrop" aria-hidden="true" style={station&&portrait?{backgroundImage:`url("${portrait}")`}:undefined}/>
+      <div className="tv-home-feature-copy"><p className="tv-home-feature-label">{station?'Artist radio':featureSong?'Back in rotation':'New release'}</p><h2>{station?seed!.artist:featureTitle}</h2><p>{station?`${recommendations.length} songs · Starting with ${featureTitle}`:featureArtist}</p>
+        <div className="tv-actions"><button className="tv-button tv-primary" data-tv-key="featured" disabled={!app.online||starting} onClick={()=>void playFeature()}><Icon name="play" size={20}/>{starting?'Starting…':station?'Play radio':'Play'}</button><button className="tv-button" onClick={openFeature}>{station&&seed?.artistId?'View artist':featureAlbum||featureSong?.albumId?'View release':'Explore with Dj Cine'}<Icon name="chevron_right" size={18}/></button></div>
       </div>
+      <div className="tv-home-editorial-cover"><Cover song={featureSong||{title:featureTitle,cover:featureArt,albumId:featureAlbum?.id}} large/></div>
     </section>}
     {view==='for-you'&&<>
       {shelf('Made for you',recommendations)}
       {radioError&&<div className="tv-home-status"><p role="status">{radioError}</p><button className="tv-button" onClick={()=>setEdition(value=>value+1)}>Retry</button></div>}
-      <div className="tv-home-personal"><div className="tv-home-shortcuts" aria-label="Your music">
-        <button data-tv-key="home-likes" onClick={()=>app.openRoute({kind:'collection',collection:'favorites'})}><Icon name="heart" size={22}/><span>Liked Songs<small>{favorites.length} songs</small></span></button>
-        {playlists.slice(0,3).map(playlist=><button key={playlist.id} data-tv-key={'home-'+playlist.id} onClick={()=>app.openRoute({kind:'playlist',id:playlist.id})}><Cover song={{title:playlist.name,cover:playlist.cover||playlist.songs[0]?.cover}}/><span>{playlist.name}<small>{playlist.songs.length} songs</small></span></button>)}
-      </div><DjCineLauncher/></div>
       {checkpoint&&checkpoint.song.id!==app.playback.player.track?.id&&<section className="tv-resume"><h2>Continue listening</h2><button className="tv-track" data-tv-key="resume" onClick={()=>void app.playback.play(checkpoint.song,checkpoint.queue,checkpoint.context,checkpoint.positionMs)}><Cover song={checkpoint.song}/><span><strong>{displaySongTitle(checkpoint.song.title,checkpoint.song.artist)}</strong><small>{checkpoint.song.artist} · {formatTime(checkpoint.positionMs)}</small></span><Icon name="play" size={22}/></button></section>}
       {!recommendations.length&&shelf('Back in rotation',recent)}
     </>}

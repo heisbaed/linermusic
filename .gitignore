@@ -11,3 +11,4 @@ mobile/node_modules/
 mobile/dist/
 node_modules/
 *.log
+android/dj-firebase.local.json

@@ -10,7 +10,7 @@ import { useAccount } from './useAccount';
 import { useGenreWarmup } from './useLibraryGenres';
 import { usePlayback } from './usePlayback';
 import { useSmartFeatures } from './useSmartFeatures';
-import { control } from './native';
+import { control, subscribe } from './native';
 import { isOnline, onConnectivityChange } from './network';
 import { loadSaved, save, toggleFavorite } from './library';
 import { focusElement } from './spatialNav';
@@ -19,6 +19,7 @@ import { syncThemeIcon } from './themeIcons';
 import { trackEvent, trackPageView } from './analytics';
 import './tv.css';
 import './tv-browse-polish.css';
+import './tv-refinement.css';
 
 const noop = () => {};
 const defaults: Preferences = { autoplay: true, wifiOnly: true, reducedMotion: 'system', haptics: false,
@@ -48,6 +49,7 @@ export default function TvApp() {
   const verified = account.user?.emailVerified === true;
   const returnFocus = useRef<HTMLElement | null>(null);
   const queueFromBrowsing = useRef(false);
+  const pendingSystemPlayer = useRef(false);
   const previousVerified = useRef(verified);
   const state = useRef({ overlay, routes, tab, playback, verified });
   state.current = { overlay, routes, tab, playback, verified };
@@ -73,6 +75,13 @@ export default function TvApp() {
     return false;
   }
   useEffect(() => onConnectivityChange(() => setOnline(isOnline())), []);
+  useEffect(()=>{
+    pendingSystemPlayer.current=!!window.CineAndroid?.consumePlayerOpen?.();
+    return subscribe(event=>{if(event.type==='widgetError'||event.type==='systemSettingsError')setMessage(String(event.data.message||'This system action is unavailable.'));if(event.type==='openPlayer'){
+      window.CineAndroid?.consumePlayerOpen?.();pendingSystemPlayer.current=true;
+      if(state.current.verified&&state.current.playback.player.track){pendingSystemPlayer.current=false;setOverlay('player');}
+    }});
+  },[]);
   useEffect(() => {
     save('cine-tv-theme-v2', theme);
     if (!syncThemeIcon(theme)) toast('The theme changed, but the launcher icon could not update. Try again in Settings.');
@@ -84,6 +93,7 @@ export default function TvApp() {
     if (!verified) { control('stop'); window.CineAndroid?.stopDjVoice?.(); }
     setTab('home'); setRoutes([]); setOverlay(null);
   }, [verified, account.user?.localId]);
+  useEffect(()=>{if(verified&&playback.player.track&&pendingSystemPlayer.current){pendingSystemPlayer.current=false;setOverlay('player');}},[verified,playback.player.track?.id]);
   useEffect(() => {
     if (verified === previousVerified.current) return;
     previousVerified.current = verified;

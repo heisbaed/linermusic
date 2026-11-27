@@ -42,6 +42,11 @@ final class CineConnect {
     private final Context context;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ScheduledExecutorService worker = Executors.newSingleThreadScheduledExecutor();
+    private final ConnectCommandStream commandStream;
+    private final java.util.concurrent.atomic.AtomicBoolean commandWake = new java.util.concurrent.atomic.AtomicBoolean();
+    private long lastCommandPoll;
+    private JSONArray lastEventQueue;
+    private boolean presentingRemote;
     private final SharedPreferences preferences;
     private final String deviceId;
     private final String deviceName;
@@ -97,6 +102,7 @@ final class CineConnect {
         } catch (Exception unavailable) { configuredDatabase = ""; }
         database = configuredDatabase;
         apiKey = configuredKey;
+        commandStream = new ConnectCommandStream(context,database,deviceId,this::wakeCommands);
         worker.scheduleWithFixedDelay(this::tick, 0, 1000, TimeUnit.MILLISECONDS);
     }
 
@@ -115,7 +121,7 @@ final class CineConnect {
         if (!remote()) {
             viewJson = localJson;
             if (PlaybackService.instance != null) PlaybackService.instance.present(value);
-            Events.send(context, "player", value);
+            emitPlayer(value);
         }
     }
 
@@ -201,8 +207,9 @@ final class CineConnect {
         try {
             refreshAccount();
             network = online();
-            if (uid.isEmpty() || database.isEmpty()) { emitView(); return; }
+            if (uid.isEmpty() || database.isEmpty()) { commandStream.watch("");emitView(); return; }
             if (!network) {
+                commandStream.watch("");
                 if (tv && audible(local())) localCommand("pause", 0);
                 emitView();
                 return;
@@ -220,14 +227,17 @@ final class CineConnect {
             if (alive(state)) {
                 if (deviceId.equals(state.optString("owner"))) {
                     confirmedUntil = state.optLong("expiresAt");
+                    commandStream.watch(uid);
                     adopt();
-                    receiveCommands();
+                    if(!commandStream.connected()||elapsed-lastCommandPoll>=5000)receiveCommands();
                     if (deviceId.equals(state.optString("owner")) && elapsed - lastWrite >= 1500) publishState();
                 } else {
+                    commandStream.watch("");
                     if (audible(local())) localCommand("pause", 0);
                     receiveQueue();
                 }
             } else if (confirmedUntil > 0 && now() >= confirmedUntil && audible(local())) {
+                commandStream.watch("");
                 localCommand("pause", 0);
             }
             message = "";
@@ -392,7 +402,9 @@ final class CineConnect {
     }
 
     private void receiveCommands() throws Exception {
+        lastCommandPoll=SystemClock.elapsedRealtime();
         JSONObject inbox = object(request("commands/" + deviceId, "GET", null, null).data);
+        JSONObject removals = new JSONObject();
         List<String> keys = new ArrayList<>();
         inbox.keys().forEachRemaining(keys::add);
         Collections.sort(keys);
@@ -412,8 +424,35 @@ final class CineConnect {
                 }
                 preferences.edit().putStringSet("commands:" + uid, handled).commit();
             }
-            request("commands/" + deviceId + "/" + key, "DELETE", null, null);
+            removals.put(key,JSONObject.NULL);
         }
+        if(removals.length()>0)request("commands/"+deviceId,"PATCH",removals,null);
+    }
+    private void wakeCommands(){
+        if(!commandWake.compareAndSet(false,true))return;
+        worker.execute(()->{
+            commandWake.set(false);
+            try{
+                refreshAccount();if(uid.isEmpty()||!online())return;
+                refreshState();
+                if(alive(state)&&deviceId.equals(state.optString("owner"))){
+                    adopt();receiveCommands();
+                    if(deviceId.equals(state.optString("owner")))publishState();
+                    emitView();
+                }
+            }catch(Exception unavailable){/* Polling retries without changing ownership. */}
+        });
+    }
+    private synchronized void emitPlayer(JSONObject value){
+        JSONArray items=value.optJSONArray("queue");
+        JSONObject event=value;
+        if(items==lastEventQueue){
+            event=new JSONObject();Iterator<String> fields=value.keys();
+            try{while(fields.hasNext()){String key=fields.next();if(!key.equals("queue"))event.put(key,value.opt(key));}}
+            catch(Exception unavailable){event=value;}
+        }
+        else lastEventQueue=items;
+        Events.send(context,"player",event);
     }
 
     private void execute(String action, JSONObject data) throws Exception {
@@ -496,7 +535,9 @@ final class CineConnect {
         else if (foreground && remote()) {
             try { context.startForegroundService(new Intent(context, PlaybackService.class).setAction("remote")); } catch (Exception ignored) {}
         }
-        Events.send(context, "player", view);
+        boolean remoteView=remote();
+        if(remoteView||presentingRemote||lastEventQueue==null)emitPlayer(view);
+        presentingRemote=remoteView;
         JSONArray list = new JSONArray();
         Iterator<String> ids = devices.keys();
         while (ids.hasNext()) {

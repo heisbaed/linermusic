@@ -113,7 +113,7 @@ export function useLivePosition(player: { positionMs: number; durationMs: number
   useEffect(() => {
     anchor.current = { position: player.positionMs, at: performance.now() };
     setNow(performance.now());
-  }, [player.positionMs, player.track?.id]);
+  }, [player.positionMs, player.track?.id, player.status]);
   useEffect(() => {
     if (!active || player.status !== 'playing') return;
     const timer = window.setInterval(() => setNow(performance.now()), intervalMs);

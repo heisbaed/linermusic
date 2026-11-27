@@ -1,9 +1,9 @@
 {
-  "version": "0.1.16",
-  "versionCode": 19,
+  "version": "0.1.17",
+  "versionCode": 20,
   "platform": "mobile",
-  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.16/Cine-Music-Mobile-0.1.16.apk",
-  "fileSize": 12657602,
-  "sha256": "9dab4c48df0580c3a74177f517afdf98ca0c8cbb4eca2fbc2dd2818b6b7e3c3e",
-  "releaseNotes": "Dj Cine with Firebase AI Logic and optional installed-device narration; top TV navigation and refreshed Home; compact layouts, full-art idle player, unboxed lyrics/queue with blurred backgrounds, artwork fallback, theme-matched icons, and early next-song preparation independent of crossfade."
+  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.17/Cine-Music-Mobile-0.1.17.apk",
+  "fileSize": 13980752,
+  "sha256": "1459db32b0c7541662427c0a57f51a5a84cfab484e5f763492bc792ce080eadf",
+  "releaseNotes": "Refreshed TV Home, readable theme-matched focus and a single-composition animated splash; simplified Dj Cine with native app verification and restricted configuration; lighter lyrics and player updates, faster Connect command delivery, improved original-recording search ranking, and TV system media integration. Native APK upgrade required; availability of AI and TV launcher media surfaces depends on device/service support."
 }

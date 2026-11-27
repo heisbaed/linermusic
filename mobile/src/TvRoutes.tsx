@@ -120,5 +120,9 @@ export function TvRouteScreen({ route }: { route: TvRoute }) {
     <section><h2>Account</h2><p role="status">{app.account.syncStatus}</p><div className="tv-actions">
       <button className="tv-button" onClick={app.account.retrySync}>Sync library</button><button className="tv-button" onClick={app.account.signOut}>Sign out</button>
     </div></section>
+    <section><h2>System playback controls</h2><div className="tv-actions">
+      <button className="tv-button" onClick={()=>window.CineAndroid?.openNotificationSettings()}>Notification settings</button>
+      <button className="tv-button" onClick={()=>{if(!window.CineAndroid?.requestMusicWidget?.())app.toast('Your TV launcher cannot add this widget automatically.');}}>Add playback widget</button>
+    </div></section>
   </section>;
 }

@@ -73,7 +73,10 @@ final class ArtworkCache {
         file.setLastModified(System.currentTimeMillis());
         BufferedInputStream input = new BufferedInputStream(new FileInputStream(file));
         String mime = java.net.URLConnection.guessContentTypeFromStream(input);
-        return new WebResourceResponse(mime == null ? "image/webp" : mime, null, 200, "OK",
-            Collections.singletonMap("Cache-Control", "public, max-age=2592000, immutable"), input);
+        Map<String,String> headers = new HashMap<>();
+        headers.put("Cache-Control", "public, max-age=2592000, immutable");
+        // These are public catalog images. Preserve canvas sampling after a disk-cache hit.
+        headers.put("Access-Control-Allow-Origin", "*");
+        return new WebResourceResponse(mime == null ? "image/webp" : mime, null, 200, "OK",headers,input);
     }
 }

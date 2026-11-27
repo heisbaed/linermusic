@@ -18,11 +18,17 @@ final class CineSplashView extends FrameLayout {
     private final ImageView emblem;
     private final TextView wordmark;
     private final TextView credit;
+    private final TvSplashMovie movie;
     private boolean revealed;
     private boolean dismissing;
 
     CineSplashView(Context context) {
         super(context);
+        if("tv".equals(BuildConfig.CINE_PLATFORM)){
+            emblem=null;wordmark=null;credit=null;
+            movie=new TvSplashMovie(context);addView(movie,new FrameLayout.LayoutParams(-1,-1));setClickable(true);return;
+        }
+        movie=null;
         setBackgroundColor(Color.rgb(18, 8, 17));
         setClickable(true);
         LinearLayout brand = new LinearLayout(context);
@@ -56,6 +62,7 @@ final class CineSplashView extends FrameLayout {
     void reveal() {
         if (revealed) return;
         revealed = true;
+        if(movie!=null){movie.reveal();return;}
         if (ValueAnimator.areAnimatorsEnabled()) {
             if (emblem.getDrawable() instanceof Animatable) ((Animatable) emblem.getDrawable()).start();
             wordmark.setAlpha(0);
@@ -79,7 +86,7 @@ final class CineSplashView extends FrameLayout {
     }
 
     @Override protected void onDetachedFromWindow() {
-        if (emblem.getDrawable() instanceof Animatable) ((Animatable) emblem.getDrawable()).stop();
+        if (emblem!=null && emblem.getDrawable() instanceof Animatable) ((Animatable) emblem.getDrawable()).stop();
         super.onDetachedFromWindow();
     }
 

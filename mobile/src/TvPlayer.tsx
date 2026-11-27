@@ -41,12 +41,16 @@ export function TvPlayer({ mode, onMode, onBack }: {
   const lyrics = useLyrics(track, mode !== 'queue');
   const lines = useMemo(() => parseTvLyrics(lyrics.text), [lyrics.text]);
   const wordTimed = useMemo(() => lines.some(line => line.words.length > 0), [lines]);
-  const position = useLivePosition(player, true, mode === 'lyrics' && wordTimed ? 100 : 500);
+  const position = useLivePosition(player, true, mode === 'lyrics' && wordTimed ? 200 : 500);
   const live = useRef({ position, seek });
   live.current = { position, seek };
   const active = lines.reduce((index, line, i) => line.time * 1000 <= position ? i : index, -1);
   const playing = status === 'playing' || status === 'loading';
   const split = mode !== 'player';
+  const activeWord = active >= 0 ? lines[active].words.reduce((last,word,i)=>word.time*1000<=position?i:last,-1) : -1;
+  const lyricRows = useMemo(() => lines.map((line,index) => <LyricLine key={index} line={line}
+    current={index===Math.max(0,active)} activeRef={index===Math.max(0,active)?activeLine:undefined}
+    wordIndex={index===Math.max(0,active)?activeWord:-1} />),[lines,active,activeWord]);
 
   useEffect(() => {
     if (mode !== 'player') { controlsShown.current = true; setUtilitiesVisible(true); return; }
@@ -148,7 +152,7 @@ export function TvPlayer({ mode, onMode, onBack }: {
   return <section className="tv-overlay tv-listener" data-view={mode} data-controls-visible={mode !== 'player' || utilitiesVisible} ref={root} role="dialog" aria-modal="true"
     aria-label={mode === 'lyrics' ? 'Lyrics' : mode === 'queue' ? 'Up Next' : 'Now Playing'}>
     {mode === 'player' && <div className="tv-cinematic-cover" aria-hidden="true"><Cover song={{ ...track, cover: track.cover ? toSquareArtworkUrl(track.cover, 1440) : undefined }} large /></div>}
-    <div className="tv-art-wash" aria-hidden="true" style={wash || preferredArtwork ? { backgroundImage: `url("${wash || preferredArtwork}")` } : undefined} />
+    <div className="tv-art-wash" data-sampled={!!wash} aria-hidden="true" style={wash || preferredArtwork ? { backgroundImage: `url("${wash || preferredArtwork}")` } : undefined} />
     <div className="tv-art-shade" aria-hidden="true" />
     <header className="tv-listener-header" aria-hidden={mode === 'player' && !utilitiesVisible}>
       <button className="tv-icon-button tv-glass-back" onClick={onBack} aria-hidden={mode === 'player' && !utilitiesVisible} aria-label={split ? 'Back to artwork' : 'Back to browsing'}><Icon name="back" size={24} /></button>
@@ -202,9 +206,7 @@ export function TvPlayer({ mode, onMode, onBack }: {
       {mode === 'lyrics' && <section className="tv-lyrics-card" aria-label="Synced lyrics">
         <header><h2>Lyrics</h2></header>
         <div className="tv-lyrics-viewport" ref={lyricViewport}><div className="tv-lyrics-column" ref={lyricColumn}>
-          {lines.length ? lines.map((line, index) => <LyricLine key={index} line={line} current={index === Math.max(0, active)}
-            activeRef={index === Math.max(0, active) ? activeLine : undefined}
-            wordIndex={index === Math.max(0, active) ? line.words.reduce((last, word, i) => word.time * 1000 <= position ? i : last, -1) : -1} />) : lyrics.text ? <p className="tv-unsynced">{lyrics.text}</p>
+          {lines.length ? lyricRows : lyrics.text ? <p className="tv-unsynced">{lyrics.text}</p>
             : <div className="tv-lyrics-message"><Icon name="lyrics" size={42} /><p role="status">{lyrics.status === 'loading' ? 'Finding lyrics…' : lyrics.error || 'Lyrics are unavailable for this song.'}</p>
             </div>}
         </div></div>

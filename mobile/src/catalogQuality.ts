@@ -42,16 +42,45 @@ export function tokenMatch(token: string, word: string): number {
   return row[word.length]<=1 ? 3 : 0;
 }
 
-export function cleanSongResults(items: SearchResult[], _query = '', _songIds: ReadonlySet<string> = new Set()): SearchResult[] {
-  // Preserve the catalog's own ranking: mixed/top results, then typed song/video
-  // pages in provider order. Metadata completeness is never an availability test.
+export function cleanSongResults(items: SearchResult[], query = '', songIds: ReadonlySet<string> = new Set()): SearchResult[] {
+  // Keep every available result. Prefer matching catalog recordings over labelled
+  // alternate uploads, while retaining source order for equally strong matches.
   const seen = new Set<string>();
-  return items.filter(item => {
+  const unique = items.filter(item => {
     const key = `${item.type}:${item.id}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+  const wanted=searchText(query),words=wanted.split(' ').filter(Boolean);
+  if(!words.length)return unique;
+  const requestedVersion=/\b(cover|karaoke|instrumental|remix|live|acoustic|slowed|sped|reverb|tribute)\b/i.test(wanted);
+  const tracks=unique.filter((item):item is Extract<SearchResult,{type:'track'}>=>item.type==='track');
+  const artistTerms=new Set(tracks.flatMap(track=>track.artists.flatMap(artist=>{
+    const name=searchText(artist.name.replace(/\s*-\s*Topic$/i,''));
+    return name.length>2&&wanted.includes(name)?[name]:[];
+  })));
+  const requestedTitle=[...artistTerms].reduce((text,name)=>text.replace(name,' '),wanted).replace(/\bby\b/g,' ').replace(/\s+/g,' ').trim()||wanted;
+  const score=(track:Extract<SearchResult,{type:'track'}>)=>{
+    const title=searchText(displaySongTitle(track.title,track.artists[0]?.name||''));
+    const base=searchText(track.title.replace(/\([^)]*\)|\[[^\]]*\]/g,' ').replace(/\b(official|audio|video|lyrics?)\b/gi,' '));
+    const artist=track.artists.map(item=>searchText(item.name.replace(/\s*-\s*Topic$/i,'')));
+    const matchedArtist=!!artistTerms.size&&artist.some(name=>artistTerms.has(name));
+    const titleMatch=title===wanted||title===requestedTitle||base===requestedTitle;
+    const relevant=titleMatch||matchedArtist||words.every(word=>searchText(title+' '+artist.join(' ')).split(' ').includes(word));
+    let rank=titleMatch?50:relevant?20:0;
+    if(artistTerms.size)rank+=matchedArtist?35:-30;
+    if(relevant){
+      if(track.musicVideoType==='MUSIC_VIDEO_TYPE_ATV'||track.musicVideoType==='MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC')rank+=16;
+      else if(track.musicVideoType==='MUSIC_VIDEO_TYPE_OMV')rank+=12;
+      if(songIds.has(track.id))rank+=8;
+    }
+    if(!requestedVersion&&/\b(cover|karaoke|instrumental|tribute|originally performed|made famous|slowed|sped[ -]?up|reverb)\b/i.test(track.title))rank-=45;
+    return rank;
+  };
+  const ranked=tracks.map((track,index)=>({track,index,score:score(track)})).sort((a,b)=>b.score-a.score||a.index-b.index);
+  let at=0;
+  return unique.map(item=>item.type==='track'?ranked[at++].track:item);
 }
 export function relatedSongs(tracks: Track[], previous: Pick<Song,'id'|'title'>[]): Track[] {
   const ids = new Set(previous.map(s=>s.id));

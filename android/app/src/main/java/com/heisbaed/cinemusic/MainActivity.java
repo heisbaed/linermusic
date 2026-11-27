@@ -238,7 +238,8 @@ public class MainActivity extends Activity {
 
 
 
-        int startupColor = getColor(R.color.cine_startup_background);
+        int startupColor = "tv".equals(BuildConfig.CINE_PLATFORM)
+            ? getSharedPreferences("cine_appearance",MODE_PRIVATE).getInt("background",Color.rgb(255,243,247)) : getColor(R.color.cine_startup_background);
 
 
 
@@ -1416,6 +1417,9 @@ public class MainActivity extends Activity {
 
 
                         int splashTheme = R.style.CineSplashPink;
+                        if("tv".equals(BuildConfig.CINE_PLATFORM))splashTheme = background==Color.parseColor("#071F19") ? R.style.CineTvSplashGreen
+                            : background==Color.parseColor("#F2F0EC") ? R.style.CineTvSplashLight
+                            : background==Color.parseColor("#101112") ? R.style.CineTvSplashDark : R.style.CineTvSplashPink;
 
 
 
@@ -1523,7 +1527,11 @@ public class MainActivity extends Activity {
 
 
 
-                try { startActivity(intent); } catch (Exception ignored) {}
+                try { startActivity(intent); }
+                catch (Exception unavailable) {
+                    try { startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName()))); }
+                    catch (Exception missing) { emit("systemSettingsError",Events.json("message","This TV does not expose notification settings for apps.")); }
+                }
 
 
 
@@ -1943,6 +1951,7 @@ public class MainActivity extends Activity {
 
 
                     String host = connection.getURL().getHost();
+                    if(host.equals("firebasevertexai.googleapis.com")||host.equals("firebaseappcheck.googleapis.com")||host.equals("firebaseinstallations.googleapis.com"))DjAttestation.attachAndroidHeaders(MainActivity.this,connection);
 
 
 
@@ -2140,6 +2149,8 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface public String appIcon() { return LauncherIcons.get(MainActivity.this); }
         @JavascriptInterface public String djVoiceInfo() { return DjSpeech.get(MainActivity.this).info().toString(); }
+        @JavascriptInterface public void requestDjAttestation(String id) { if(id!=null && id.length()<100)runOnUiThread(()->DjAttestation.request(MainActivity.this,id)); }
+        @JavascriptInterface public String djFirebaseOptions() { return Events.json("apiKey",BuildConfig.CINE_DJ_API_KEY,"appId",BuildConfig.CINE_DJ_APP_ID,"androidAppId",BuildConfig.CINE_DJ_APP_ID,"projectId",BuildConfig.CINE_DJ_PROJECT_ID).toString(); }
         @JavascriptInterface public void speakDj(String id, String text, String language) { if(id!=null&&id.length()<100&&("en".equals(language)||"sw".equals(language)))DjSpeech.get(MainActivity.this).speak(id,text,language); }
         @JavascriptInterface public void stopDjVoice() { DjSpeech.stopIfActive(); }
         @JavascriptInterface public boolean hasDjVoiceInput() { return tvVoiceIntent().resolveActivity(getPackageManager()) != null; }

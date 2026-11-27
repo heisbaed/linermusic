@@ -136,8 +136,7 @@ public class PlaybackService extends Service {
     @Override public void onCreate() {
         super.onCreate(); instance = this;
         UiModeManager mode = (UiModeManager) getSystemService(UI_MODE_SERVICE);
-        tv = getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
-            || (mode != null && mode.getCurrentModeType() == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION);
+        tv = "tv".equals(BuildConfig.CINE_PLATFORM);
         android.content.SharedPreferences audioPreferences = getSharedPreferences("cine_audio", MODE_PRIVATE);
         equalizerEnabled = audioPreferences.getBoolean("eq_enabled", false);
         try { JSONArray storedBands = new JSONArray(audioPreferences.getString("eq_bands", "[0,0,0,0,0]")); for (int i = 0; i < 5 && i < storedBands.length(); i++) equalizerBands[i] = Math.max(-12, Math.min(12, storedBands.getInt(i))); } catch (Exception ignored) {}
@@ -821,6 +820,7 @@ public class PlaybackService extends Service {
             });
         }
         android.graphics.Bitmap artwork = surfaceArtwork;
+        session.setActive(track != null && !status.equals("idle"));
         int playbackState = status.equals("playing") ? PlaybackState.STATE_PLAYING : status.equals("loading") ? PlaybackState.STATE_BUFFERING : status.equals("error") ? PlaybackState.STATE_ERROR : PlaybackState.STATE_PAUSED;
         session.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_SEEK_TO | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_STOP)
             .setState(playbackState, position, status.equals("playing") ? 1 : 0).build());
@@ -828,20 +828,24 @@ public class PlaybackService extends Service {
         if (track != null && !nextMetadataKey.equals(metadataKey)) {
             metadataKey = nextMetadataKey;
             MediaMetadata.Builder metadata = new MediaMetadata.Builder()
+            .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, track.optString("id"))
             .putString(MediaMetadata.METADATA_KEY_TITLE, track.optString("title"))
             .putString(MediaMetadata.METADATA_KEY_ARTIST, track.optString("artist"))
             .putString(MediaMetadata.METADATA_KEY_ALBUM, "Cine music")
             .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, track.optString("title"))
             .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, track.optString("artist"))
             .putString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION, "Cine music")
+            .putString(MediaMetadata.METADATA_KEY_ART_URI, cover)
+            .putString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI, cover)
+            .putString(MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI, cover)
             .putLong(MediaMetadata.METADATA_KEY_DURATION, duration);
-            if (artwork != null) metadata.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, artwork).putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, artwork);
+            if (artwork != null) metadata.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, artwork).putBitmap(MediaMetadata.METADATA_KEY_ART, artwork).putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, artwork);
             session.setMetadata(metadata.build());
         }
         String noticeKey = nextMetadataKey + ":" + status + ":" + state.optString("remoteDeviceName");
         if (!noticeKey.equals(surfaceNoticeKey)) { surfaceNoticeKey = noticeKey; updateNotification(); }
         String widgetState = (track == null ? "" : track.optString("id")) + status;
-        if (!tv && (!widgetState.equals(lastWidgetState) || SystemClock.elapsedRealtime() - lastWidgetUpdate >= 1000)) {
+        if (!widgetState.equals(lastWidgetState) || SystemClock.elapsedRealtime() - lastWidgetUpdate >= (tv ? 4000 : 1000)) {
             lastWidgetState = widgetState; lastWidgetUpdate = SystemClock.elapsedRealtime(); MusicWidgetProvider.updateAll(this);
         }
     }
@@ -939,6 +943,8 @@ public class PlaybackService extends Service {
             .setContentTitle(track == null ? "Cine music" : "Cine music · " + track.optString("title"))
             .setContentText(track == null ? "Ready to play" : track.optString("artist"))
             .setSubText("Cine music")
+            .setCategory(Notification.CATEGORY_TRANSPORT)
+            .setShowWhen(false)
             .setContentIntent(open)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setOnlyAlertOnce(true)
@@ -947,12 +953,14 @@ public class PlaybackService extends Service {
             .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_previous, "Previous", action("previous")).build())
             .addAction(new Notification.Action.Builder(playing ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play, playing ? "Pause" : "Play", action(playing ? "pause" : "resume")).build())
             .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_next, "Next", action("next")).build());
+        if(tv)builder.extend(new Notification.TvExtender().setChannelId("playback").setContentIntent(open));
         
         // Add large icon (album art) if available
         if (artwork != null) builder.setLargeIcon(artwork);
         
         // Add color styling based on album art (would extract dominant color)
-        builder.setColor(Color.parseColor("#B7C5FF"));
+        String icon=LauncherIcons.get(this);
+        builder.setColor(Color.parseColor(icon.equals("forest")?"#CBF595":icon.equals("mint")?"#555F48":icon.equals("ivory")?"#DADCD6":"#A82D65"));
         
         return builder.build();
     }

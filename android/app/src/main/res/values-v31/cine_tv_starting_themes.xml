@@ -1,0 +1,9 @@
+<resources>
+    <style name="CineTvSplashPink" parent="Theme.CineMusic.Starting">
+        <item name="android:windowBackground">#FFF3F7</item><item name="android:windowSplashScreenBackground">#FFF3F7</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item><item name="android:windowSplashScreenBrandingImage">@android:color/transparent</item><item name="android:windowSplashScreenAnimationDuration">0</item>
+    </style>
+    <style name="CineTvSplashGreen" parent="CineTvSplashPink"><item name="android:windowBackground">#071F19</item><item name="android:windowSplashScreenBackground">#071F19</item></style>
+    <style name="CineTvSplashLight" parent="CineTvSplashPink"><item name="android:windowBackground">#F2F0EC</item><item name="android:windowSplashScreenBackground">#F2F0EC</item></style>
+    <style name="CineTvSplashDark" parent="CineTvSplashPink"><item name="android:windowBackground">#101112</item><item name="android:windowSplashScreenBackground">#101112</item></style>
+</resources>

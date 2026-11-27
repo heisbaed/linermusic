@@ -1,0 +1,6 @@
+<resources>
+    <style name="CineTvSplashPink" parent="Theme.CineMusic.Starting"><item name="android:windowBackground">#FFF3F7</item></style>
+    <style name="CineTvSplashGreen" parent="Theme.CineMusic.Starting"><item name="android:windowBackground">#071F19</item></style>
+    <style name="CineTvSplashLight" parent="Theme.CineMusic.Starting"><item name="android:windowBackground">#F2F0EC</item></style>
+    <style name="CineTvSplashDark" parent="Theme.CineMusic.Starting"><item name="android:windowBackground">#101112</item></style>
+</resources>

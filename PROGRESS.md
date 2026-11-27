@@ -1,3 +1,15 @@
+# Cine music TV refinement and DJ configuration - 28 November 2026
+
+## Release 0.1.17 / code 20 - installed, publication pending
+
+Implemented TV Home/focus/splash/DJ refinements, native AI App Check, reduced player/lyrics update work, realtime Connect command wake-up, original-recording search ranking and TV MediaSession/notification/widget integration. See RELEASE-0.1.17.md for exact scope and dependencies.
+
+GitHub secret alerts identify Firebase client API keys, including the DJ config committed in 0.1.16 and an older authentication key. Removed the DJ source JSON; created a package/signing/service-restricted replacement in ignored native build configuration; removed Firebase AI from the old shared key's allowlist while preserving its other Firebase services. Existing client-key alerts remain open; no claim of revocation or historical misuse audit. DJ-BUILD.md documents actual protections.
+
+Both web interfaces, native APKs and the landing page compile. Separate Mobile and TV 0.1.17 APKs installed successfully on R58M34PT7SN and 192.168.10.105:44323. Release upload and site/update-feed deployment are pending. No automated tests or new-build UI/playback/AI verification, as instructed. Device attestation/Play Console requirements and launcher media surfaces remain runtime dependencies.
+
+---
+
 # Cine music TV polish, playback preparation and Dj Cine - 28 November 2026
 
 ## Release 0.1.16 / code 19

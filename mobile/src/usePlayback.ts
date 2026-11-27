@@ -68,10 +68,19 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
           autoplayController.current?.abort();
           smartController.current?.abort();
         }
-        setPlayer(state);
+        setPlayer(previous => {
+          const changed = previous.track?.id !== state.track?.id || previous.status !== state.status
+            || previous.track?.title !== state.track?.title || previous.track?.artist !== state.track?.artist || previous.track?.cover !== state.track?.cover
+            || previous.durationMs !== state.durationMs || previous.error !== state.error || previous.remoteDeviceId !== state.remoteDeviceId
+            || previous.output !== state.output || previous.shuffle !== state.shuffle || previous.repeat !== state.repeat
+            || previous.sleepDeadline !== state.sleepDeadline || previous.sleepEndOfSong !== state.sleepEndOfSong
+            || JSON.stringify(previous.equalizer) !== JSON.stringify(state.equalizer);
+          // Progress interpolates locally; a native tick must not rebuild the whole app.
+          return !changed && state.status === 'playing' && Math.floor(previous.positionMs/2000) === Math.floor(state.positionMs/2000) ? previous : state;
+        });
         live.current.player = state;
         if (state.track && Array.isArray(state.queue)) {
-          if (JSON.stringify(state.queue) !== JSON.stringify(live.current.queue)) { setLocalQueue(state.queue); live.current.queue = state.queue; }
+          if (state.queue !== live.current.queue) { setLocalQueue(state.queue); live.current.queue = state.queue; }
         }
         if (state.track && typeof state.shuffle === 'boolean') {
           const next: ShuffleMode = state.shuffle ? (live.current.shuffle === 'smart' ? 'smart' : 'on') : 'off';
