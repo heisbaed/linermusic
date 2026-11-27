@@ -7,6 +7,7 @@ import { Icon } from './Icons';
 import { loadSaved } from './library';
 import type { Song } from './types';
 import { personalizeSongs, type RadioMode } from './smartFeatures';
+import { genreCompatible } from './musicMetadata';
 import { trackEvent } from './analytics';
 
 export function SongRadio({ song, onClose }: { song: Song; onClose: () => void }) {
@@ -23,7 +24,7 @@ export function SongRadio({ song, onClose }: { song: Song; onClose: () => void }
       .finally(() => { if (!abort.signal.aborted) setLoading(false); });
     return () => abort.abort();
   }, [song.id, retry]);
-  const recommended = personalizeSongs(songs, app.account.library.favorites, app.account.library.recent, app.smart.hidden, mode, loadSaved<string[]>('skipped:' + app.account.user?.localId, []));
+  const recommended = personalizeSongs(songs.filter(item => genreCompatible(song, item)), [song], [], app.smart.hidden, mode, loadSaved<string[]>('skipped:' + app.account.user?.localId, []));
   const queue = [song, ...recommended];
   return <Sheet full title="Song radio" onClose={onClose} className="song-radio"><div className="radio-content">
     <div className="radio-hero"><Cover large song={song} /><span className="eyebrow">SONG RADIO</span><h1>{song.title}</h1><p>{song.artist} and related tracks</p></div>

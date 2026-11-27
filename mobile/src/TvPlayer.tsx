@@ -10,6 +10,7 @@ import { parseTvLyrics, type TvLyricLine } from './tvLyrics';
 import { displaySongTitle } from './catalogQuality';
 import type { TvOverlay } from './TvApp';
 import './tv-player.css';
+import { toSquareArtworkUrl } from '@/shared/media/innertube/innertubeThumbnail';
 
 const LyricLine = memo(function LyricLine({ line, current, wordIndex, activeRef }: {
   line: TvLyricLine; current: boolean; wordIndex: number; activeRef?: Ref<HTMLParagraphElement>;
@@ -91,6 +92,7 @@ export function TvPlayer({ mode, onMode, onBack }: {
 
   return <section className="tv-overlay tv-listener" data-view={mode} ref={root} role="dialog" aria-modal="true"
     aria-label={mode === 'lyrics' ? 'Lyrics' : mode === 'queue' ? 'Up Next' : 'Now Playing'}>
+    {mode === 'player' && <div className="tv-cinematic-cover" aria-hidden="true"><Cover song={{ ...track, cover: track.cover ? toSquareArtworkUrl(track.cover, 1440) : undefined }} large /></div>}
     <div className="tv-art-wash" aria-hidden="true" style={wash ? { backgroundImage: `url("${wash}")` } : undefined} />
     <div className="tv-art-shade" aria-hidden="true" />
     <header className="tv-listener-header">

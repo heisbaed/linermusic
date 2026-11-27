@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { control, isAndroid, playNative, snapshot, subscribe, setQueue as sendQueue } from './native';
 import { isOnline } from './network';
 import { loadSaved, save } from './library';
+import { genreCompatible } from './musicMetadata';
 import { resolveStream } from './catalog';
 import { innertubeCatalog } from '@/shared/media/innertube/innertubeCatalog';
 import type { PlaybackController, Preferences, ShuffleMode } from './AppContext';
@@ -132,7 +133,9 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     const items = uniqueSongs(songs.some(item => item.id === song.id) ? songs : [...songs, song]);
     setLocalQueue(items); setContext(from);
     live.current.queue = items; live.current.context = from;
-    setPlayer({ track, status: 'loading', positionMs: 0, durationMs: track.durationMs });
+    const pendingPlayer: PlayerState = { track, status: 'loading', positionMs: 0, durationMs: track.durationMs };
+    live.current.player = pendingPlayer;
+    setPlayer(pendingPlayer);
     try {
       const url = isAndroid || local ? undefined : await resolveStream(track.id, controller.signal);
       if (controller.signal.aborted) return;
@@ -153,12 +156,12 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     const generation=queueGeneration.current;
     const controller=new AbortController();autoplayController.current=controller;
     try{
-      const seeds=[seed,...heard.current.filter(song=>song.id!==seed.id).slice(0,2)];
+      const seeds=[seed];
       for(const candidate of seeds){
         const result=await innertubeCatalog.getRadio(candidate.id,{signal:controller.signal,k:50});
         if(controller.signal.aborted||generation!==queueGeneration.current||live.current.player.remoteDeviceId||(!live.current.prefs.autoplay&&live.current.shuffle!=='smart'))return;
-        if (live.current.player.track?.id !== seed.id && !live.current.queue.some(song => song.id === seed.id)) return;
-        const added=personalize(relatedSongs(result.items,[seed,...heard.current,...live.current.queue]).map(songFromTrack)).slice(0,25);
+        if (live.current.player.track?.id !== seed.id) return;
+        const added=personalize(relatedSongs(result.items,[seed,...heard.current,...live.current.queue]).map(songFromTrack), seed).slice(0,25);
         if(!added.length)continue;
         if(live.current.shuffle==='smart')added.forEach(song=>smartAdded.current.add(song.id));
         if(live.current.player.status==='ended')await play(added[0],added,'Autoplay');
@@ -177,8 +180,8 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     try{
       const result=await innertubeCatalog.getRadio(seed.id,{signal:controller.signal,k:50});
       if(controller.signal.aborted||generation!==queueGeneration.current||live.current.player.remoteDeviceId||live.current.shuffle!=='smart')return;
-      if (live.current.player.track?.id !== seed.id && !live.current.queue.some(song => song.id === seed.id)) return;
-      const added=personalize(relatedSongs(result.items,[seed,...heard.current,...live.current.queue]).map(songFromTrack)).slice(0,20);
+      if (live.current.player.track?.id !== seed.id) return;
+      const added=personalize(relatedSongs(result.items,[seed,...heard.current,...live.current.queue]).map(songFromTrack), seed).slice(0,20);
       if(!added.length){live.current.toast('No smart recommendations were available for this song.');return;}
       added.forEach(song=>smartAdded.current.add(song.id));
       setQueue([...live.current.queue,...added]);
@@ -194,10 +197,10 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     if(current.player.status==='ended'&&current.player.track&&!current.player.sleepEndOfSong&&!current.player.sleepDeadline)await prepareRelated(current.player.track);
   }
 
-  function personalize(songs: Song[]) {
+  function personalize(songs: Song[], seed: Song) {
     const current = live.current;
     const hidden = normalizeHidden(loadSaved<{ hidden?: HiddenMusic }>('smart-music:' + current.owner, {}).hidden);
-    return personalizeSongs(songs, current.favorites, current.recent, hidden, 'balanced', loadSaved<string[]>('skipped:' + current.owner, []));
+    return personalizeSongs(songs.filter(song => genreCompatible(seed, song)), [seed], [], hidden, 'balanced', loadSaved<string[]>('skipped:' + current.owner, []));
   }
 
   async function browserAdvance(direction: number, ended = false) {

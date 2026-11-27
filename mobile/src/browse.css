@@ -245,3 +245,4 @@
 .genre-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0}
 .genre-picker label{display:flex;align-items:center;gap:12px;min-height:48px;color:var(--text)}
 .genre-picker input{width:20px;height:20px;accent-color:var(--accent)}
+.library-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.library-heading h1{margin:0}.genre-status{font-size:12px;color:var(--muted);margin:4px 0 8px}.collection-filters{scroll-snap-type:x proximity}.collection-filters button{scroll-snap-align:start}

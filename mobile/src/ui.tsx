@@ -69,12 +69,12 @@ export function SearchField({ value, onChange, onSubmit, placeholder = 'Songs, a
   return <form className="search-field" role="search" onSubmit={submit}><Icon name="search" /><input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} aria-label={label} type="search" enterKeyHint="search" autoComplete="off" autoCapitalize="none" spellCheck={false} />{value && <Action icon="close" label={`Clear ${label.toLowerCase()}`} onClick={() => onChange('')} />}</form>;
 }
 
-export function SortControl({ value, onChange, options, label = 'Sort music' }: {
-  value: string; onChange: (value: string) => void; options: { value: string; label: string }[]; label?: string;
+export function SortControl({ value, onChange, options, label = 'Sort music', compact = false }: {
+  value: string; onChange: (value: string) => void; options: { value: string; label: string }[]; label?: string; compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const current = options.find(option => option.value === value) || options[0];
-  return <><div className="sort-control"><span>Sort by</span><button type="button" className="sort-trigger" aria-label={`${label}, ${current.label}`} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}><strong>{current.label}</strong><Icon name="chevron_down" size={18} /></button></div>
+  return <><div className={`sort-control${compact ? ' sort-compact' : ''}`}><span>Sort by</span><button type="button" className="sort-trigger" aria-label={`${label}, ${current.label}`} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}><strong>{compact ? 'Sort' : current.label}</strong><Icon name="chevron_down" size={18} /></button></div>
     {open && <Sheet title="Sort by" onClose={() => setOpen(false)} className="sort-sheet"><div className="sort-options" role="radiogroup" aria-label={label}>{options.map(option => <button type="button" role="radio" aria-checked={value === option.value} className={value === option.value ? 'sort-option selected' : 'sort-option'} data-sort={option.value} key={option.value} onClick={() => { onChange(option.value); setOpen(false); }}><span>{option.label}</span><span className="sort-indicator" aria-hidden="true">{value === option.value && <Icon name="check" size={18} />}</span></button>)}</div></Sheet>}
   </>;
 }

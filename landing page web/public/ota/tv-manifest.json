@@ -1,9 +1,9 @@
 {
-  "version": "0.1.14",
-  "versionCode": 17,
+  "version": "0.1.15",
+  "versionCode": 18,
   "platform": "tv",
-  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.14/Cine-Music-TV-0.1.14.apk",
-  "fileSize": 12467677,
-  "sha256": "420ab694a0bf0e075e6456088e78cadfef8ce9d00092824a6e6bf157d2aa8c3e",
-  "releaseNotes": "Encrypted offline playback uses the streaming audio engine. Adds Liked Songs sorting and genre/type filters, four selectable launcher icons, and update progress with an Install button directly on the update screen. Includes stricter download completion checks."
+  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.15/Cine-Music-TV-0.1.15.apk",
+  "fileSize": 12738910,
+  "sha256": "440d6f718c57d36a5f1592ba1142766b7902de46de32ec73d0a9e307cf3f451f",
+  "releaseNotes": "Daily Mix rotation, broader song search, seed-anchored radio, automatic cached genre metadata, compact mobile lists, mobile Library Settings, denser TV browsing with full-screen cover artwork, and a redesigned widget."
 }

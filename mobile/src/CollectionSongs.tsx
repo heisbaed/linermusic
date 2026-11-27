@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useApp } from './AppContext';
 import { ConfirmDialog, Cover, Sheet, SongRows, SortControl } from './ui';
 import type { Song } from './types';
-import { genreChoices } from './collectionFilters';
+import { genreChoices, sortCollectionSongs } from './collectionFilters';
 
 export function CollectionSongs({ songs, context, hearts = false, onRemove, hideSort = false }: {
   songs: Song[]; context: string; hearts?: boolean; onRemove?: (ids: Set<string>) => void; hideSort?: boolean;
@@ -15,7 +15,7 @@ export function CollectionSongs({ songs, context, hearts = false, onRemove, hide
   const [genres, setGenres] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [limit, setLimit] = useState(40);
-  const visible = [...songs];
+  const visible = sort === 'recent' || sort === 'oldest' ? sortCollectionSongs(songs, sort, 'addedAt') : [...songs];
   if (sort === 'title') visible.sort((a, b) => a.title.localeCompare(b.title));
   if (sort === 'artist') visible.sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
   if (sort === 'duration') visible.sort((a, b) => a.durationMs - b.durationMs);
@@ -26,7 +26,7 @@ export function CollectionSongs({ songs, context, hearts = false, onRemove, hide
     app.toast('Song genres updated.'); finish();
   }
   return <>
-    <div className="collection-tools">{!hideSort && <SortControl label={`Sort ${context} songs`} value={sort} onChange={setSort} options={[{value:'saved',label:'Saved order'},{value:'title',label:'Title'},{value:'artist',label:'Artist'},{value:'duration',label:'Duration'}]} />}<button className="text-button" onClick={() => { setSelecting(value => !value); setSelected(new Set()); }}>{selecting ? 'Done' : 'Select songs'}</button></div>
+    <div className="collection-tools">{!hideSort && <SortControl label={`Sort ${context} songs`} value={sort} onChange={setSort} options={[{value:'saved',label:'Custom order'},{value:'recent',label:'Date added · Newest first'},{value:'oldest',label:'Date added · Oldest first'},{value:'title',label:'Title'},{value:'artist',label:'Artist'},{value:'duration',label:'Duration'}]} />}<button className="text-button" onClick={() => { setSelecting(value => !value); setSelected(new Set()); }}>{selecting ? 'Done' : 'Select songs'}</button></div>
     {selecting ? <>
       <div className="collection-selection" role="group" aria-label="Selected song actions"><span role="status">{picked.length} selected</span><button className="text-button" onClick={() => setSelected(picked.length === songs.length ? new Set() : new Set(songs.map(song => song.id)))}>{picked.length === songs.length ? 'Deselect all' : 'Select all'}</button><button className="text-button" disabled={!picked.length} onClick={() => setAction('playlist')}>Add to playlist</button><button className="text-button" disabled={!picked.length} onClick={() => {
         app.account.setLibrary(library => ({ ...library, favorites: [...picked.filter(song => !library.favorites.some(item => item.id === song.id)), ...library.favorites] }));

@@ -26,6 +26,9 @@ final class MediaArtwork {
     static Bitmap cached(String url) { return cache.get(url); }
 
     static void load(String address, Consumer<Bitmap> callback) {
+        load(null, address, callback);
+    }
+    static void load(android.content.Context context, String address, Consumer<Bitmap> callback) {
         Bitmap cached = cache.get(address);
         if (cached != null) { callback.accept(cached); return; }
         synchronized (pending) {
@@ -39,11 +42,19 @@ final class MediaArtwork {
             HttpURLConnection connection = null;
             try {
                 if (!MainActivity.allowedNetworkUrl(address)) throw new java.io.IOException("Unsupported artwork address");
-                connection = (HttpURLConnection)new URL(address).openConnection();
-                connection.setConnectTimeout(6000); connection.setReadTimeout(6000); connection.setInstanceFollowRedirects(false);
-                if (connection.getResponseCode() != 200 || connection.getContentLengthLong() > 2_000_000) throw new java.io.IOException("Artwork unavailable");
+                InputStream source = null;
+                if (context != null) {
+                    android.webkit.WebResourceResponse response = ArtworkCache.load(context.getApplicationContext(), android.net.Uri.parse(address));
+                    if (response != null) source = response.getData();
+                }
+                if (source == null) {
+                    connection = (HttpURLConnection)new URL(address).openConnection();
+                    connection.setConnectTimeout(6000); connection.setReadTimeout(6000); connection.setInstanceFollowRedirects(false);
+                    if (connection.getResponseCode() != 200 || connection.getContentLengthLong() > 2_000_000) throw new java.io.IOException("Artwork unavailable");
+                    source = connection.getInputStream();
+                }
                 ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                try (InputStream input = connection.getInputStream()) {
+                try (InputStream input = source) {
                     byte[] buffer = new byte[8192]; int count;
                     while ((count = input.read(buffer)) != -1) {
                         if (bytes.size() + count > 2_000_000) throw new java.io.IOException("Artwork too large");

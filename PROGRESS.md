@@ -1,3 +1,23 @@
+# Cine music UI and recommendation follow-up - 27 November 2026
+
+## Release 0.1.15 / code 18
+
+Expanded this release after the owner supplied Liked Songs screenshots and requested a Spotify reference review: matched recording/artist genre metadata warms in the background, both apps expose library-derived horizontal categories, and generation uses the current song rather than unrelated favorites/history. Mobile song rows and controls are flatter/denser. TV lists/detail pages, Home shortcuts, full-screen cover art and concentrated glass surfaces were rebuilt. Native widget layout uses a clear three-control transport. Library Settings shortcut is mobile-only as explicitly corrected.
+
+The phone screenshot and Spotify reference review were explicitly authorized. No automated tests or new-build functionality checks. Only compilation and installation status will be reported as confirmed. RELEASE-0.1.15.md records metadata coverage and verification limits.
+
+---
+
+# Cine music follow-up repair - 27 November 2026
+
+## Release 0.1.15 / code 18
+
+Daily Mix daily/refresh rotation; broader search retrieval; seed-anchored recommendations; cached catalog genre enrichment; compact mobile Liked Songs and direct mobile Library Settings; dense TV browsing and full-screen artwork; redesigned native widget. See RELEASE-0.1.15.md for implementation and verification limits.
+
+Owner explicitly limited Library Settings placement to mobile. The unrelated TV-title report remains excluded. Only the old screenshots and Spotify reference view were inspected; no automated tests or functional verification of the new build.
+
+---
+
 # Cine music repair progress - 27 November 2026
 
 ## Release 0.1.14 / code 17

@@ -1,6 +1,6 @@
 import { ConnectControls } from './ConnectControls';
 import { AppIconSettings } from './AppIconSettings';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { TV_THEMES, useApp } from './AppContext';
 import { songFrom } from './Browse';
 import { TvCard, TvShelf, TvSongs, type TvRoute } from './TvLayout';
@@ -9,10 +9,13 @@ import { Icon } from './Icons';
 import { innertubeCatalog } from '@/shared/media/innertube/innertubeCatalog';
 import type { AlbumDetails, ArtistDetails, CatalogPlaylistDetails } from '@/shared/contracts';
 import type { Song } from './types';
+import { songLabels, songSortChoices, sortCollectionSongs } from './collectionFilters';
+import { useLibraryGenres } from './useLibraryGenres';
+import { loadSaved, save } from './library';
 
-function Detail({ title, subtitle, art, songs, artist }: { title: string; subtitle?: string; art?: string; songs: Song[]; artist?: ArtistDetails }) {
+function Detail({ title, subtitle, art, songs, artist, tools }: { title: string; subtitle?: string; art?: string; songs: Song[]; artist?: ArtistDetails; tools?: ReactNode }) {
   const app = useApp();
-  return <section className="tv-page" aria-label={title}>
+  return <section className="tv-page tv-detail-page" aria-label={title}>
     <header className="tv-detail">
       <Cover song={{ title, cover: art }} kind={artist ? 'artist' : 'album'} large />
       <div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}
@@ -25,8 +28,7 @@ function Detail({ title, subtitle, art, songs, artist }: { title: string; subtit
         </div>
       </div>
     </header>
-    {!!songs.length && <TvSongs songs={songs} title={artist ? 'Top Songs' : title} />}
-    {!songs.length && <p>No songs are available here.</p>}
+    <div className="tv-detail-list">{tools}{songs.length ? <TvSongs songs={songs} title={artist ? 'Top Songs' : title} /> : <p>No songs match this view.</p>}</div>
     {artist && [{ items: artist.albums, label: 'Albums' }, { items: artist.singles, label: 'Singles & EPs' }].map(({ items, label }) => {
       if (!items.length) return null;
       return <TvShelf key={label} title={label}>{items.slice(0, 30).map(release =>
@@ -80,6 +82,23 @@ export function TvLibraryScreen() {
   </section>;
 }
 
+function TvCollectionDetail({ favorites }: { favorites: boolean }) {
+  const app = useApp();
+  const songs = favorites ? app.account.library.favorites : app.account.library.recent;
+  const key = 'tv-collection-sort:' + (app.account.user?.localId || 'guest') + ':' + favorites;
+  const [sort, setSort] = useState(() => loadSaved(key, 'recent'));
+  const [open, setOpen] = useState(false), [label, setLabel] = useState('All');
+  const genres = useLibraryGenres(songs, favorites, app.online);
+  const labels = [...new Set(songs.flatMap(songLabels))].sort();
+  const visible = sortCollectionSongs(songs.filter(song => label === 'All' || songLabels(song).includes(label)), sort);
+  return <Detail title={favorites ? 'Liked Songs' : 'Recently Played'} subtitle={`${songs.length} songs`} songs={visible} art={songs[0]?.cover} tools={<div className="tv-collection-tools">
+    <button className="tv-button" aria-expanded={open} onClick={() => setOpen(!open)}>Sort: {songSortChoices.find(choice => choice.value === sort)?.label || 'Recently added'}</button>
+    {open && <div className="tv-sort-options" role="group" aria-label="Sort songs">{songSortChoices.map(choice => <button className="tv-button" key={choice.value} aria-pressed={sort === choice.value} onClick={() => { setSort(choice.value); save(key,choice.value); setOpen(false); }}>{choice.label}</button>)}</div>}
+    {favorites && !!labels.length && <div className="tv-genre-filters" role="group" aria-label="Genre filters">{['All', ...labels].map(item => <button className="tv-button" key={item} aria-pressed={label === item} onClick={() => setLabel(item)}>{item}</button>)}</div>}
+    {genres.loading && <p className="genre-status">Updating genres…</p>}{genres.error && <button className="tv-button" onClick={genres.retry}>Retry genre information</button>}
+  </div>} />;
+}
+
 export function TvRouteScreen({ route }: { route: TvRoute }) {
   const app = useApp();
   if (route.kind === 'catalog') return <Catalog {...route} />;
@@ -87,8 +106,7 @@ export function TvRouteScreen({ route }: { route: TvRoute }) {
     const playlist = app.account.library.playlists.find(item => item.id === route.id);
     return <Detail title={playlist?.name || 'Playlist unavailable'} songs={playlist?.songs || []} art={playlist?.cover || playlist?.songs[0]?.cover} />;
   }
-  if (route.kind === 'collection') return <Detail title={route.collection === 'favorites' ? 'Liked Songs' : 'Recently Played'}
-    songs={route.collection === 'favorites' ? app.account.library.favorites : app.account.library.recent} />;
+  if (route.kind === 'collection') return <TvCollectionDetail key={route.collection} favorites={route.collection === 'favorites'} />;
   return <section className="tv-page tv-settings">
     <header className="tv-page-title"><h1>Settings</h1><p>{app.account.user?.email}</p></header>
     <section><h2>Appearance</h2><div className="tv-actions">{TV_THEMES.map(theme => <button className="tv-button tv-theme-choice" key={theme.id}

@@ -674,7 +674,7 @@ public class PlaybackService extends Service {
                     status = "paused"; publish(); updateNotification(); audio.abandonAudioFocusRequest(focus); break;
                 case "resume":
                     cancelSleepFade(); playWhenReady = true;
-                    if (!prepared && player == null && track != null) { recoveryAttempts = 0; load(new JSONObject(track.toString())); return; }
+                    if (track != null && ("error".equals(status) || "ended".equals(status) || (!prepared && player == null))) { recoveryAttempts = 0; load(new JSONObject(track.toString())); return; }
                     if (prepared && player != null) {
                         if (audio.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) { status = "paused"; break; }
                         player.start(); status = "playing"; publish(); startForeground(1, notification());
@@ -742,7 +742,7 @@ public class PlaybackService extends Service {
         if (!cover.equals(surfaceCover)) {
             surfaceCover = cover;
             surfaceArtwork = MediaArtwork.cached(cover);
-            if (!cover.isEmpty()) MediaArtwork.load(cover, image -> {
+            if (!cover.isEmpty()) MediaArtwork.load(this, cover, image -> {
                 if (instance == this && cover.equals(surfaceCover)) { surfaceArtwork = image; present(surfaceState); }
             });
         }
@@ -775,7 +775,7 @@ public class PlaybackService extends Service {
         String address = next.optString("cover");
         if (address.equals(artworkAddress)) return;
         artworkAddress = address; artwork = MediaArtwork.cached(address); metadataKey = "";
-        MediaArtwork.load(address, image -> {
+        MediaArtwork.load(this, address, image -> {
             if (instance != this || !address.equals(artworkAddress)) return;
             artwork = image; metadataKey = ""; lastWidgetUpdate = 0; publish(); updateNotification();
         });

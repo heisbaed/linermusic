@@ -11,6 +11,8 @@ export interface Song {
   storageBytes?: number;
   downloadedAt?: number;
   genres?: string[];
+  likedAt?: number;
+  addedAt?: number;
 }
 export interface PlayerState {
   track: Song | null;

@@ -1,10 +1,11 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon, type IconName } from './Icons';
 import { Brand, Cover } from './ui';
 import { useApp, type Route, type Tab } from './AppContext';
 import { focusElement, focusFirstActionable } from './spatialNav';
 import { displaySongTitle } from './catalogQuality';
 import type { Song } from './types';
+import { formatTime } from './library';
 
 export type TvRoute = Exclude<Route, { kind: 'playlist-form' | 'playlist-import' }>;
 export type TvEntry = { key: string; route: TvRoute };
@@ -44,8 +45,21 @@ export function TvShell({ page, main, settings, overlay, onQueue, children }: {
   }, [page]);
 
   const { track, status, positionMs, durationMs } = app.playback.player;
+  const [wash, setWash] = useState('');
+  useEffect(() => {
+    let cancelled = false; setWash('');
+    if (!track?.cover) return;
+    const image = new Image(); image.crossOrigin = 'anonymous';
+    image.onload = () => {
+      if (cancelled) return;
+      try { const canvas = document.createElement('canvas'); canvas.width = 8; canvas.height = 8; canvas.getContext('2d')?.drawImage(image, 0, 0, 8, 8); setWash(canvas.toDataURL('image/png')); } catch { /* Theme lighting remains when a cover cannot be sampled. */ }
+    };
+    image.src = track.cover;
+    return () => { cancelled = true; };
+  }, [track?.cover]);
   const playing = status === 'playing' || status === 'loading';
   return <div className="tv-shell" aria-hidden={overlay || undefined} ref={element => { element?.toggleAttribute('inert', overlay); }}>
+    <div className="tv-ambient" aria-hidden="true">{wash && <img src={wash} alt="" />}</div>
     <header className="tv-header">
       <Brand />
       <nav className="tv-nav" aria-label="Main navigation">
@@ -93,12 +107,12 @@ export function TvSongs({ songs, title }: { songs: Song[]; title: string }) {
   const [limit, setLimit] = useState(36);
   return <section className="tv-tracks" aria-label={title}><div data-tv-shelf-id={title}>
     {songs.slice(0, limit).map((song, index) => <button type="button" key={song.id + index} data-tv-key={`${song.id}-${index}`}
-      className="tv-track" aria-label={`Play ${displaySongTitle(song.title, song.artist)} by ${song.artist}`} onClick={() => {
+      className={`tv-track ${app.playback.player.track?.id === song.id ? 'is-current' : ''}`} aria-current={app.playback.player.track?.id === song.id ? 'true' : undefined} aria-label={`Play ${displaySongTitle(song.title, song.artist)} by ${song.artist}`} onClick={() => {
         app.playback.setShuffle('off');
         app.playback.setRepeat('off');
-        void app.playback.play(song, songs.slice(index), title);
+        void app.playback.play(song, songs, title);
       }}>
-      <Cover song={song} /><span><strong>{displaySongTitle(song.title, song.artist)}</strong><small>{song.artist}</small></span><Icon name={app.playback.player.track?.id === song.id ? 'equalizer' : 'play'} size={19} />
+      <span className="tv-track-number" aria-hidden="true">{index + 1}</span><Cover song={song} /><span className="tv-track-copy"><strong>{displaySongTitle(song.title, song.artist)}</strong><small>{song.artist}</small></span><span className="tv-track-duration">{song.durationMs > 0 ? formatTime(song.durationMs) : ''}</span><Icon name={app.playback.player.track?.id === song.id ? 'equalizer' : 'play'} size={19} />
     </button>)}
   </div>
   {songs.length > limit && <button type="button" className="tv-button" onClick={() => setLimit(value => value + 36)}>Show more songs</button>}</section>;

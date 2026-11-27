@@ -7,6 +7,7 @@ import { TvSearchScreen } from './TvSearchScreen';
 import { TvRouteScreen, TvLibraryScreen } from './TvRoutes';
 import { TvPlayer } from './TvPlayer';
 import { useAccount } from './useAccount';
+import { useGenreWarmup } from './useLibraryGenres';
 import { usePlayback } from './usePlayback';
 import { useSmartFeatures } from './useSmartFeatures';
 import { control } from './native';
@@ -16,6 +17,7 @@ import { focusElement } from './spatialNav';
 import { Brand } from './ui';
 import { trackEvent, trackPageView } from './analytics';
 import './tv.css';
+import './tv-browse-polish.css';
 
 const noop = () => {};
 const defaults: Preferences = { autoplay: true, wifiOnly: true, reducedMotion: 'system', haptics: false,
@@ -33,6 +35,7 @@ export default function TvApp() {
   const [overlay, setOverlay] = useState<TvOverlay | null>(null);
   const [message, setMessage] = useState('');
   const [online, setOnline] = useState(isOnline);
+  useGenreWarmup(account.library.favorites, account.user?.emailVerified === true && account.ready, online);
   const toast = setMessage;
   const playback = usePlayback({ downloads: [], prefs, toast, streamOnly: true,
     owner: account.user?.localId || '', favorites: account.library.favorites, recent: account.library.recent,

@@ -12,8 +12,8 @@ import type { Song } from './types';
 
 export function TvHomeScreen() {
   const app = useApp();
-  const { recent, favorites, artists } = app.account.library;
-  const [seed] = useState(() => recent[0] || favorites[0]);
+  const { recent, favorites, artists, playlists } = app.account.library;
+  const seed = recent[0] || favorites[0];
   const [recommendations, setRecommendations] = useState<Song[]>([]);
   const feed = useDiscovery(true);
   const featured = feed.items[0];
@@ -22,6 +22,7 @@ export function TvHomeScreen() {
   useEffect(() => {
     if (!seed || !app.online) return;
     const task = new AbortController();
+    setRecommendations([]);
     void innertubeCatalog.getRadio(seed.id, { signal: task.signal, k: 20 }).then(result => {
       if (!task.signal.aborted) setRecommendations(relatedSongs(result.items, [seed]).slice(0, 10).map(songFrom));
     }).catch(() => {});
@@ -29,6 +30,11 @@ export function TvHomeScreen() {
   }, [seed?.id, app.online]);
 
   return <section className="tv-page" aria-label="Home">
+    <div className="tv-home-shortcuts" aria-label="Your music">
+      {!!favorites.length && <button data-tv-key="home-likes" onClick={() => app.openRoute({ kind: 'collection', collection: 'favorites' })}><Icon name="heart" size={24} /><span>Liked Songs</span></button>}
+      {playlists.slice(0, 3).map(playlist => <button key={playlist.id} data-tv-key={'home-'+playlist.id} onClick={() => app.openRoute({ kind: 'playlist', id: playlist.id })}><Cover song={{ title: playlist.name, cover: playlist.cover || playlist.songs[0]?.cover }} /><span>{playlist.name}</span></button>)}
+      {recent.slice(0, Math.max(0, 6-Math.min(playlists.length,3)-Number(!!favorites.length))).map(song => <button key={song.id} data-tv-key={'home-recent-'+song.id} onClick={() => void app.playback.play(song, [song], 'Recently played')}><Cover song={song} /><span>{displaySongTitle(song.title, song.artist)}</span></button>)}
+    </div>
     {featured ? <section className="tv-feature" aria-label="Featured new release">
       <div><p className="tv-kicker">New release</p><h1>{featured.title}</h1><p>{featured.artists.map(artist => artist.name).join(', ')}</p>
         <button className="tv-button tv-primary" data-tv-key="featured" data-tv-autofocus

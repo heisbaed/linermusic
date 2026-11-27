@@ -19,6 +19,8 @@ function backupSong(value: unknown): Song | null {
     artistId: typeof value.artistId === 'string' ? value.artistId.slice(0, 256) : undefined,
     albumId: typeof value.albumId === 'string' ? value.albumId.slice(0, 256) : undefined,
     ...(Array.isArray(value.genres) ? { genres: value.genres.filter((item): item is string => typeof item === 'string' && item.length <= 60).slice(0, 20) } : {}),
+    likedAt: typeof value.likedAt === 'number' && Number.isFinite(value.likedAt) && value.likedAt > 0 ? value.likedAt : undefined,
+    addedAt: typeof value.addedAt === 'number' && Number.isFinite(value.addedAt) && value.addedAt > 0 ? value.addedAt : undefined,
   };
 }
 function backupPlaylist(value: unknown): Playlist | null {

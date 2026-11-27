@@ -22,6 +22,7 @@ import { appShareLink, getShareText, shareSongLink } from './songLinks';
 import { loadSaved, save, toggleFavorite } from './library';
 
 import { useAccount } from './useAccount';
+import { useGenreWarmup } from './useLibraryGenres';
 
 import { usePlayback } from './usePlayback';
 import { useSmartFeatures } from './useSmartFeatures';
@@ -136,6 +137,7 @@ export default function CineApp() {
   const smart = useSmartFeatures(account.user, prefs.privateListening, playback);
 
   const verified = account.user?.emailVerified === true;
+  useGenreWarmup(account.library.favorites, verified && account.ready, online);
 
   useListeningRecorder(account.user?.localId || '', playback.player, verified && !prefs.privateListening);
 

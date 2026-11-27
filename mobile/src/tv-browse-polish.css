@@ -1,0 +1,63 @@
+/* Browse density is independent of the full player and lyric geometry. */
+.tv-app{background:var(--base);font-size:clamp(16px,1.35vw,24px)}
+.tv-shell{isolation:isolate;padding-left:clamp(160px,16vw,290px)}
+.tv-ambient{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:radial-gradient(ellipse at 25% 0%,var(--soft),transparent 65%),var(--base)}
+.tv-ambient img{width:100%;height:100%;object-fit:cover;filter:blur(28px);opacity:.12;transform:scale(1.08)}
+.tv-app[data-theme] .tv-header{width:clamp(160px,16vw,290px);padding:4vh 1.4vw;gap:4vh;background:color-mix(in srgb,var(--base) 76%,transparent);border-right:1px solid var(--edge);backdrop-filter:blur(16px);box-shadow:inset -1px 0 0 #ffffff09}
+.tv-app[data-theme] .tv-nav{background:transparent;border:0;box-shadow:none;padding:0}
+.tv-app .tv-nav-item{min-height:48px;font-size:1em;padding:.65em .7em;border-radius:12px}
+.tv-app .tv-nav-item:focus{color:var(--ink);background:var(--soft);outline:2px solid var(--accent);outline-offset:2px;box-shadow:none}
+.tv-main{scroll-padding-block:20px}
+.tv-page{padding:24px 2.7vw 32px}
+.tv-app .tv-page-title{margin-bottom:20px}
+.tv-app .tv-page-title h1{font-size:clamp(28px,3vw,48px);letter-spacing:-.035em;line-height:1.15}
+.tv-app .tv-page h2{font-size:clamp(20px,1.8vw,30px);letter-spacing:-.02em;margin-bottom:12px}
+.tv-app .tv-tracks{padding-top:0}
+.tv-app .tv-track{display:flex;align-items:center;width:100%;gap:12px;min-height:48px;height:clamp(48px,7.3vh,76px);margin:0;padding:6px 12px;border:0;border-bottom:1px solid color-mix(in srgb,var(--ink) 6%,transparent);border-radius:8px;background:transparent;box-shadow:none;transition:background-color 140ms ease}
+.tv-app .tv-track:nth-child(odd){background:transparent;border:0;border-bottom:1px solid color-mix(in srgb,var(--ink) 6%,transparent);box-shadow:none}
+.tv-app .tv-track .tv-track-number{flex:0 0 24px;width:24px;color:var(--muted);font-size:.8em;text-align:center}
+.tv-app .tv-track .cover{flex:none;width:clamp(32px,5.4vh,52px);height:clamp(32px,5.4vh,52px);border-radius:6px}
+.tv-app .tv-track .tv-track-copy{flex:1;min-width:0}
+.tv-app .tv-track strong{font-size:clamp(16px,1.45vw,26px);font-weight:550;line-height:1.3}
+.tv-app .tv-track small{font-size:clamp(13px,1.1vw,20px);line-height:1.3;color:var(--muted)}
+.tv-app .tv-track .tv-track-duration{flex:0 0 48px;width:48px;text-align:right;font-variant-numeric:tabular-nums;font-size:.8em;color:var(--muted)}
+.tv-app .tv-track>svg{flex:none;width:18px;height:18px;margin-left:8px}
+.tv-app .tv-track.is-current strong{color:var(--accent)}
+.tv-app .tv-track:focus{background:var(--soft);outline:2px solid var(--accent);outline-offset:-2px;box-shadow:inset 0 1px 0 #ffffff16}
+.tv-app .tv-detail-page{display:grid;grid-template-columns:clamp(160px,21vw,280px) minmax(0,1fr);gap:24px;align-items:start}
+.tv-app .tv-detail-page>.tv-detail{display:flex;flex-direction:column;align-items:stretch;position:sticky;top:24px;gap:16px;margin:0;padding:0;border:0;background:transparent;min-width:0}
+.tv-app .tv-detail-page>.tv-detail>.cover{width:100%;max-width:220px;aspect-ratio:1;border-radius:16px;box-shadow:0 12px 28px #0002}
+.tv-app .tv-detail-page .tv-detail h1{font-size:clamp(24px,2.5vw,40px);line-height:1.15;letter-spacing:-.035em;overflow-wrap:anywhere}
+.tv-app .tv-detail-page .tv-detail p{font-size:.88em;line-height:1.5}
+.tv-app .tv-detail-page>.tv-tracks{grid-column:2;min-width:0}
+.tv-app .tv-detail-page>.tv-detail-list{grid-column:2;min-width:0}
+.tv-collection-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px}
+.tv-sort-options{display:flex;flex-wrap:wrap;gap:8px;width:100%;padding:12px;background:var(--surface);border:1px solid var(--edge);border-radius:12px}
+.tv-genre-filters{display:flex;gap:8px;width:100%;overflow-x:auto;padding:4px 2px 12px;scrollbar-width:none}.tv-genre-filters button{flex:none;border-radius:999px}
+.tv-genre-filters button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}
+.tv-app .tv-detail-page>.tv-shelf{grid-column:1/-1}
+.tv-app[data-theme] .tv-dock{left:calc(clamp(160px,16vw,290px) + 24px);right:24px;bottom:16px;background:color-mix(in srgb,var(--base) 74%,transparent);backdrop-filter:blur(16px);border:1px solid var(--edge);border-radius:16px;box-shadow:inset 0 1px 0 #ffffff24,0 8px 24px #0002}
+.tv-app .tv-dock .tv-icon-button[aria-label*="song"]{background:transparent;color:var(--accent)}
+@media(prefers-reduced-motion:reduce){.tv-app .tv-track{transition:none}}
+@supports not (backdrop-filter:blur(1px)){.tv-app[data-theme] .tv-header,.tv-app[data-theme] .tv-dock{background:var(--base)}}
+.tv-home-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:24px}
+.tv-home-shortcuts:empty{display:none}
+.tv-home-shortcuts button{display:flex;align-items:center;gap:12px;min-height:56px;min-width:0;text-align:left;padding:8px;background:var(--surface);border:1px solid var(--edge);border-radius:12px;color:var(--ink);font:inherit}
+.tv-home-shortcuts .cover{width:40px;height:40px;flex:none;border-radius:7px}.tv-home-shortcuts span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tv-home-shortcuts button:focus{outline:2px solid var(--accent);outline-offset:2px;background:var(--soft)}
+.tv-app .tv-feature{min-height:0;max-height:none;padding:24px;grid-template-columns:minmax(0,1fr) clamp(120px,20vh,220px);border-radius:20px;background:linear-gradient(125deg,color-mix(in srgb,var(--accent) 20%,var(--base)),var(--base));box-shadow:inset 0 1px 0 #ffffff18}
+.tv-app .tv-feature h1{font-size:clamp(28px,3.2vw,48px);line-height:1.12;letter-spacing:-.035em;-webkit-line-clamp:2}
+.tv-app .tv-feature p{color:var(--muted);font-size:1em}.tv-app .tv-feature>.cover{transform:none;max-height:22vh;aspect-ratio:1}
+.tv-cinematic-cover{position:absolute;inset:0;z-index:-2;overflow:hidden;background:#101214}
+.tv-cinematic-cover>.cover{display:block;width:100%;height:100%;border-radius:0;background:none}
+.tv-cinematic-cover img{width:100%;height:100%;object-fit:cover;object-position:center}
+.tv-listener[data-view=player]{--ink:#fff;--muted:#e3e2e6;--accent:#ffb7d8;--on-accent:#2d1422;background:#101214}
+.tv-listener[data-view=player] .tv-art-wash{display:none}
+.tv-app[data-theme] .tv-listener[data-view=player] .tv-art-shade{background:linear-gradient(0deg,#080a11e8,transparent 80%),linear-gradient(90deg,#090b1599,transparent 75%)}
+.tv-listener[data-view=player] .tv-listening-layout{display:flex;align-items:flex-end;padding:0 4.5vw 4vh}
+.tv-listener[data-view=player] .tv-record-layout{display:flex;align-items:flex-end;justify-content:flex-start;width:100%;height:100%}
+.tv-listener[data-view=player] .tv-artwork-frame{display:none}
+.tv-listener[data-view=player] .tv-playback-card{width:min(560px,52vw);padding:20px 24px;border-radius:20px;background:#11141e8c;border:1px solid #ffffff30;backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 #ffffff20,0 12px 32px #0002}
+.tv-listener[data-view=player] .tv-track-heading h1{font-size:clamp(24px,2.5vw,40px)}
+.tv-listener[data-view=player] .tv-player-tabs,.tv-listener[data-view=player] .tv-glass-back{background:#14172080;border-color:#ffffff30;color:#fff;backdrop-filter:blur(12px)}
+.tv-listener[data-view=player] .tv-player-tabs button{color:#e3e2e6}.tv-listener[data-view=player] .tv-player-tabs button[aria-pressed=true]{color:#fff;background:#ffffff24}
