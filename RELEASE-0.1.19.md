@@ -20,3 +20,7 @@ Both app interfaces/native packages and the website are compiled during delivery
 Firebase verification configuration is completed without enabling paid billing. AI still depends on verification, connection, model availability and quota; successful live AI/speech is not claimed. Upstream music/lyrics/release coverage and TV launcher/OS surfaces remain external constraints. This is not a claim of perfection or equivalence to private Spotify/Apple/YouTube algorithms.
 
 Read SERVICE-REVIEW-0.1.19.md for the research links, implementation details, security alert status and manual acceptance checklist. Existing Firebase client-key alerts are not falsely marked revoked; no administrator credential is added.
+
+## Published delivery
+
+Both separate APK builds, both interface bundles, dashboard TypeScript and the website build succeeded. Source b1a3767a was pushed, GitHub published this release, and Firebase Hosting reported successful deployment of the website/dashboard and both version-code-22 update feeds. No installation or runtime verification was performed.

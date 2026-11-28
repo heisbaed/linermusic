@@ -1,7 +1,7 @@
 # 28 November 2026 — final query-preservation update 0.1.19
 
 - Source review caught a literal-query edge case: natural-language title/artist interpretation must not strip “by” from the upstream query (for example, a title containing that word). The original text is now retained; explicit structured fields still build their requested catalog query.
-- Version 0.1.19/code22 carries this correction on top of the complete 0.1.18 service/algorithm work. Both interfaces and native APKs compiled successfully; the website and version-code-22 feeds are prepared. Public publication is the remaining step. No device installation or runtime/automated checks are authorized.
+- Version 0.1.19/code22 carries this correction on top of the complete 0.1.18 service/algorithm work. Both interfaces and native APKs compiled successfully. Source b1a3767a was pushed to codex/release-0.1.19. GitHub published v0.1.19 with separate Mobile/TV APKs, checksums and the report. Firebase Hosting reported successful deployment of the website, dashboard and both version-code-22 update feeds at cinemusic.web.app. No devices were installed or runtime checks performed. No device installation or runtime/automated checks are authorized.
 
 ---
 

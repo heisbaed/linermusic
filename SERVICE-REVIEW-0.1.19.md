@@ -121,7 +121,15 @@ The prior Firebase client-key alerts remain open rather than falsely labelled re
 
 ## Compilation, delivery and manual checks
 
-Final delivery status is recorded in RELEASE-0.1.19.md and PROGRESS.md. Required packaging: compile both web interfaces, both native APKs and the website; publish separate APK assets, source and platform update feeds. Do not install on the owner's devices.
+Completed delivery:
+
+- Mobile and TV TypeScript/Vite production bundles compiled successfully.
+- Separate Android Mobile and TV `assembleDebug` packages compiled successfully, version 0.1.19/code 22. The existing debug signing identity is retained.
+- Dashboard TypeScript compilation and the website production build succeeded.
+- Source commit `b1a3767a` was pushed to `codex/release-0.1.19`; this follows the complete service update in `9ff49f00`.
+- [GitHub v0.1.19](https://github.com/heisbaed/linermusic/releases/tag/v0.1.19) published separate Mobile/TV APK assets, SHA256SUMS.txt and this report.
+- Firebase Hosting reported a successful deployment of [the website](https://cinemusic.web.app), [dashboard](https://cinemusic.web.app/dashboard), and separate `/ota/manifest.json` and `/ota/tv-manifest.json` update feeds.
+- No devices were installed. Publication/build success does not prove a user has downloaded, installed or successfully played through the release.
 
 No automated tests, app launches, screenshots, song playback, offline playback, live AI/speech requests, notification/installer flow checks or performance benchmarks were performed. Source review, small read-only reported-title metadata lookups, configuration operations and compilation are the actual evidence.
 
