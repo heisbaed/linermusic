@@ -8,17 +8,17 @@ export function parseTvLyrics(text: string): TvLyricLine[] {
   const bracket = new RegExp('\\[' + timestamp.source + '\\]', 'g');
   const angle = new RegExp('<' + timestamp.source + '>', 'g');
   return text.split(/\r?\n/).flatMap(line => {
-    const lineStamps = [...line.matchAll(bracket)];
+    const lineStamps = [...line.matchAll(bracket)].filter(stamp => Number(stamp[2]) < 60);
     if (!lineStamps.length) return [];
     const body = line.replace(bracket, '').trim();
     const plain = body.replace(angle, '');
     if (!plain.trim()) return [];
-    const stamps = [...body.matchAll(angle)];
+    const stamps = [...body.matchAll(angle)].filter(stamp => Number(stamp[2]) < 60);
     const words = stamps.map((match, i) => ({
       time: seconds(match) + offset,
       text: body.slice(match.index! + match[0].length, stamps[i + 1]?.index),
     })).filter(word => word.text.trim());
     const complete = words.map(word => word.text).join('').trim() === plain.trim();
     return lineStamps.map(stamp => ({ time: seconds(stamp) + offset, text: plain, words: complete && lineStamps.length === 1 ? words : [] }));
-  }).sort((a, b) => a.time - b.time);
+  }).filter(line => line.time >= 0).sort((a, b) => a.time - b.time);
 }

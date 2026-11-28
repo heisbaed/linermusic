@@ -1,3 +1,4 @@
+import { consumeMusicSearch, requestMusicSearch } from './searchNavigation';
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { searchCatalog } from '@/shared/media/innertube/innertubeSearch';
 import { innertubeCatalog } from '@/shared/media/innertube/innertubeCatalog';
@@ -30,10 +31,10 @@ export function songFrom(track: Track): Song {
   return {
     id: track.id,
     title: displaySongTitle(track.title, track.artists.map(artist => artist.name).join(', ')),
-    artist: track.artists.map(artist => artist.name).join(', '),
+    artist: (track.artists.length&&track.artists.every(artist=>artist.kind==='uploader')?'Uploaded by ':'')+track.artists.map(artist => artist.name).join(', '),
     cover: track.cover?.url,
     durationMs: track.durationMs,
-    ...(track.artists[0]?.id ? { artistId: track.artists[0].id } : {}),
+    ...(track.artists[0]?.id&&track.artists[0].kind!=='uploader' ? { artistId: track.artists[0].id } : {}),
     ...(track.album?.id ? { albumId: track.album.id } : {}),
   };
 }
@@ -157,8 +158,11 @@ export function SearchScreen() {
       const text = (event as CustomEvent<{ query: string }>).detail?.query;
       if (text) runRef.current(text, 'all');
     };
+    const onPending = () => { const text = consumeMusicSearch(); if (text) runRef.current(text, 'all'); };
+    window.addEventListener('cine:pending-search', onPending);
     window.addEventListener('cine:browse-search', onSearch);
-    return () => { window.removeEventListener('cine:browse-search', onSearch); request.current?.abort(); if (debounce.current) clearTimeout(debounce.current); if (searchTrack.current) clearTimeout(searchTrack.current); };
+    onPending();
+    return () => { window.removeEventListener('cine:pending-search', onPending); window.removeEventListener('cine:browse-search', onSearch); request.current?.abort(); if (debounce.current) clearTimeout(debounce.current); if (searchTrack.current) clearTimeout(searchTrack.current); };
   }, []);
 
   function remember(entry: SearchHistory) {
@@ -422,7 +426,7 @@ export function CollectionScreen({ collection }: { collection: Collection }) {
   if (sort === 'az') playlists.sort((a, b) => a.name.localeCompare(b.name));
   const discover = () => {
     app.goTab('search');
-    window.dispatchEvent(new CustomEvent('cine:browse-search', { detail: { query: collection === 'artists' ? 'artists' : 'albums' } }));
+    requestMusicSearch(collection === 'artists' ? 'artists' : 'albums');
   };
   return <section className={`screen browse-collection browse-collection-${collection}`}>
     <PageHeader title={title} action={collection === 'playlists' ? <Action icon="plus" label="Create playlist" onClick={create} /> : undefined} />

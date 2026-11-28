@@ -42,6 +42,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
   live.current = { player, queue, shuffle, repeat, context, downloads, prefs, onRecent, toast, playerLyrics, owner, favorites, recent };
   const resolving = useRef<AbortController | null>(null);
   const playedId = useRef('');
+  const nativeSample = useRef({position:initial.positionMs,at:performance.now(),playing:initial.status === 'playing'});
   const heard = useRef<Song[]>([]);
   const radioBusy = useRef(false);
   const radioAttempt = useRef({id:'',at:0});
@@ -55,6 +56,15 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
   const tracked = useRef({ status: '', id: '' });
   const telemetry = useRef<PlaybackTelemetryState>({ startedId: '', resumePending: false });
 
+  useEffect(() => {
+    // A recommendation belongs to the account and listening context that asked
+    // for it, even if its network response arrives after sign-out.
+    queueGeneration.current++;
+    autoplayController.current?.abort(); smartController.current?.abort();
+    smartBusy.current = false; radioBusy.current = false;
+    smartAdded.current.clear(); heard.current = []; smartSeed.current = '';
+    radioAttempt.current = {id:'',at:0};
+  }, [owner]);
   useEffect(() => { save('queue', queue); }, [queue]);
   useEffect(() => { save('shuffle', shuffle); }, [shuffle]);
   useEffect(() => { save('repeat', repeat); }, [repeat]);
@@ -63,6 +73,9 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     const unsubscribe = subscribe(event => {
       if (event.type === 'player') {
         const state = event.data as unknown as PlayerState;
+        const now = performance.now(), sample = nativeSample.current;
+        const discontinuity = Math.abs(state.positionMs-(sample.position+(sample.playing?now-sample.at:0))) > 700;
+        nativeSample.current = {position:state.positionMs,at:now,playing:state.status === 'playing'};
         const previous = tracked.current;
         if (state.remoteDeviceId) {
           autoplayController.current?.abort();
@@ -76,7 +89,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
             || previous.sleepDeadline !== state.sleepDeadline || previous.sleepEndOfSong !== state.sleepEndOfSong
             || JSON.stringify(previous.equalizer) !== JSON.stringify(state.equalizer);
           // Progress interpolates locally; a native tick must not rebuild the whole app.
-          return !changed && state.status === 'playing' && Math.floor(previous.positionMs/2000) === Math.floor(state.positionMs/2000) ? previous : state;
+          return !changed && !discontinuity && state.status === 'playing' && Math.floor(previous.positionMs/2000) === Math.floor(state.positionMs/2000) ? previous : state;
         });
         live.current.player = state;
         if (state.track && Array.isArray(state.queue)) {
@@ -89,7 +102,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
         if (state.track && state.repeat) { setLocalRepeat(state.repeat); live.current.repeat = state.repeat; }
         if (!state.remoteDeviceId && state.status === 'playing' && state.track && playedId.current !== state.track.id) {
           playedId.current = state.track.id;
-          heard.current = [state.track,...heard.current.filter(s=>s.id!==state.track!.id)];
+          heard.current = [state.track,...heard.current.filter(s=>s.id!==state.track!.id)].slice(0,200);
           live.current.onRecent(state.track);
         }
         if (!state.remoteDeviceId && state.status === 'playing' && state.track) {
@@ -102,7 +115,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
           const current = { status: state.status, id: state.track?.id || '' };
           const event = nextPlaybackTelemetry(previous, current, telemetry.current);
           telemetry.current = event.state;
-          if (event.event) trackEvent(event.event, { path: 'player', label: analyticsContextLabel(live.current.context), mediaPositionMs: state.positionMs });
+          if (event.event&&!live.current.prefs.privateListening) trackEvent(event.event, { path: 'player', label: analyticsContextLabel(live.current.context), mediaPositionMs: state.positionMs });
           tracked.current = current;
         }
         clearTimeout(autoplayTask.current);
@@ -121,7 +134,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     return () => { unsubscribe(); clearTimeout(autoplayTask.current); resolving.current?.abort(); autoplayController.current?.abort(); smartController.current?.abort(); };
   }, []);
 
-  async function play(song: Song, songs = [song], from = song.title, positionMs = 0) {
+  async function play(song: Song, songs = [song], from = song.title, positionMs = 0, continuation=false) {
     telemetry.current = { startedId: '', resumePending: false };
     resolving.current?.abort();
     autoplayController.current?.abort();
@@ -129,7 +142,8 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     if (songs !== live.current.queue || from !== live.current.context) {
       queueGeneration.current++;
       if (songs === live.current.queue) songs = songs.filter(item => !smartAdded.current.has(item.id) || item.id === song.id);
-      smartAdded.current.clear(); smartSeed.current = ''; heard.current = [];
+      if(!continuation){smartAdded.current.clear();heard.current=[];}
+      smartSeed.current = '';
       smartBusy.current = false; radioBusy.current = false;
       radioAttempt.current = { id: '', at: 0 };
     }
@@ -173,7 +187,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
         const added=personalize(relatedSongs(result.items,[seed,...heard.current,...live.current.queue]).map(songFromTrack), seed).slice(0,25);
         if(!added.length)continue;
         if(live.current.shuffle==='smart')added.forEach(song=>smartAdded.current.add(song.id));
-        if(live.current.player.status==='ended')await play(added[0],added,'Autoplay');
+        if(live.current.player.status==='ended')await play(added[0],added,'Autoplay',0,true);
         else setQueue([...live.current.queue,...added]);
         break;
       }
@@ -209,7 +223,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
   function personalize(songs: Song[], seed: Song) {
     const current = live.current;
     const hidden = normalizeHidden(loadSaved<{ hidden?: HiddenMusic }>('smart-music:' + current.owner, {}).hidden);
-    return personalizeSongs(songs.filter(song => genreCompatible(seed, song)), [seed], [], hidden, 'balanced', loadSaved<string[]>('skipped:' + current.owner, []));
+    return personalizeSongs(songs.filter(song => genreCompatible(seed, song)), [seed], [], hidden, 'balanced', loadSaved<string[]>('skipped:' + current.owner, []),seed);
   }
 
   async function browserAdvance(direction: number, ended = false) {
@@ -222,7 +236,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
     let to = at + direction;
     if (direction > 0 && random !== 'off' && items.length > 1) { const choices = items.filter(item => item.id !== state.track?.id && !heard.current.some(song=>song.id===item.id)); to = choices.length ? items.indexOf(choices[Math.floor(Math.random() * choices.length)]) : items.length; }
     if (to >= items.length && mode === 'all') to = 0;
-    if (to >= 0 && to < items.length) await play(items[to], items);
+    if (to >= 0 && to < items.length) await play(items[to], items, live.current.context, 0, true);
     else if (!ended) live.current.toast('End of queue. Choose another song or turn on Repeat All.');
   }
 
@@ -275,7 +289,7 @@ export function usePlayback({ downloads, prefs, onRecent, toast, owner = '', fav
       const id = current.player.track.id;
       save('skipped:' + current.owner, [id, ...loadSaved<string[]>('skipped:' + current.owner, []).filter(item => item !== id)].slice(0, 100));
     }
-    if (current.player.track) trackEvent('skip', { path: 'player', mediaPositionMs: current.player.positionMs, label: current.player.positionMs < 30000 ? 'early' : 'late' });
+    if (current.player.track&&!current.prefs.privateListening) trackEvent('skip', { path: 'player', mediaPositionMs: current.player.positionMs, label: current.player.positionMs < 30000 ? 'early' : 'late' });
     if (isAndroid) control('next'); else void browserAdvance(1);
   }
   return { player, queue, context, shuffle, repeat, play, playAll, toggle, next, previous: () => { if (isAndroid) control('previous'); else void browserAdvance(-1); }, seek: ms => control('seek', Math.max(0, Math.min(live.current.player.durationMs, ms))), setShuffle, cycleShuffle, setRepeat, setQueue, playerLyrics, setPlayerLyrics };

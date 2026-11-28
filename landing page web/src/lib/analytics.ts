@@ -87,7 +87,7 @@ export function isAnalyticsEvent(value: unknown): value is AnalyticsEvent {
   if (!value || typeof value !== 'object') return false;
   const event = value as Partial<AnalyticsEvent>;
   return typeof event.id === 'string'
-    && typeof event.name === 'string'
+    && typeof event.name === 'string' && Object.prototype.hasOwnProperty.call(EVENT_LABELS, event.name)
     && (event.surface === 'mobile' || event.surface === 'tv' || event.surface === 'landing')
     && typeof event.path === 'string'
     && typeof event.timestamp === 'number'
@@ -138,15 +138,27 @@ export function buildMetrics(
   surface: AnalyticsSurfaceFilter,
   now = Date.now(),
 ): AnalyticsMetrics {
-  const scoped = events.filter(event =>
+  const unique = [...new Map(events.map(event => [event.surface + ':' + event.id, event])).values()];
+  const scoped = unique.filter(event =>
     event.timestamp >= since
     && event.timestamp <= now + 60_000
     && (surface === 'all' || event.surface === surface));
 
   const metric = (name: AnalyticsEventName) => scoped.reduce((count, event) => count + (event.name === name ? 1 : 0), 0);
-  const sessions = new Set(scoped.map(event => event.sessionId)).size;
-  const activeMs = scoped.reduce((total, event) => total
-    + (event.name === 'session_heartbeat' || event.name === 'session_end' ? Math.min(65_000, Math.max(0, event.durationMs || 0)) : 0), 0);
+  const sessions = new Set(scoped.map(event => event.surface + ':' + event.sessionId)).size;
+  // Heartbeat/end intervals can overlap after retries or a visibility change.
+  // Measure their union per session instead of summing the same seconds twice.
+  const ends = new Map<string,number>();
+  let activeMs = 0;
+  for (const event of [...scoped].sort((a,b) => a.timestamp-b.timestamp)) {
+    if (event.name !== 'session_heartbeat' && event.name !== 'session_end') continue;
+    const key = event.surface + ':' + event.sessionId;
+    const end = Math.min(now,event.timestamp);
+    const duration = Number.isFinite(event.durationMs) ? Math.min(65000,Math.max(0,event.durationMs!)) : 0;
+    const start = Math.max(since,end-duration,ends.get(key) || 0);
+    activeMs += Math.max(0,end-start);
+    ends.set(key,Math.max(ends.get(key) || 0,end));
+  }
 
   const pathCounts = new Map<string, number>();
   for (const event of scoped) {
@@ -155,11 +167,16 @@ export function buildMetrics(
   }
 
   const versionCounts = new Map<string, Set<string>>();
+  const latestVersions = new Map<string,AnalyticsEvent>();
   for (const event of scoped) {
     if (event.name !== 'app_open' && event.name !== 'app_install') continue;
+    const key = event.surface + ':' + (event.installId || event.sessionId);
+    if ((latestVersions.get(key)?.timestamp || 0) <= event.timestamp) latestVersions.set(key,event);
+  }
+  for (const event of latestVersions.values()) {
     const version = event.version || event.label || 'unknown';
     const installs = versionCounts.get(version) || new Set<string>();
-    installs.add(event.installId || event.sessionId);
+    installs.add(event.surface + ':' + (event.installId || event.sessionId));
     versionCounts.set(version, installs);
   }
 

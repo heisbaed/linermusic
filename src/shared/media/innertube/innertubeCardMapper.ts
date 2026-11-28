@@ -2,7 +2,7 @@ import type { SearchResult } from "@/shared/contracts";
 import { asArray, asRecord, type JsonRecord } from "@/shared/utils/json";
 import { getPageType, getRuns, getText, runsToAlbum, runsToArtists, yearFromRuns } from "./innertubeJson";
 import { coverFromThumbnail } from "./innertubeThumbnail";
-import { durationFromRuns, hasExplicitBadge, parseDurationMs } from "./innertubeTrackMapper";
+import { durationFromRuns, hasExplicitBadge, parseDurationMs, musicVideoType } from "./innertubeTrackMapper";
 
 function endpointFrom(card: JsonRecord, titleRun: JsonRecord | undefined, kind: string, idKey: string): JsonRecord | undefined {
   const candidates = [card.onTap, titleRun?.navigationEndpoint, card.navigationEndpoint];
@@ -74,6 +74,7 @@ export function mapCardShelf(raw: unknown): SearchResult | null {
       artists: artists.length > 0 ? artists : [{ id: "", name: "Unknown" }],
       album: runsToAlbum(subtitleRuns),
       durationMs: durationFromRuns(subtitleRuns),
+      musicVideoType: musicVideoType(card),
       ...coverPart,
       explicit: hasExplicitBadge(card),
     };

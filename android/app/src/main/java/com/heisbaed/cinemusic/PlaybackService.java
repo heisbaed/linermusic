@@ -17,7 +17,21 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class PlaybackService extends Service {
+public class PlaybackService extends android.service.media.MediaBrowserService {
+    static synchronized Intent intent(Context context){
+        android.content.SharedPreferences settings=context.getSharedPreferences("cine_internal",MODE_PRIVATE);
+        String token=settings.getString("media_start","");
+        if(token.isEmpty()){token=java.util.UUID.randomUUID().toString();settings.edit().putString("media_start",token).commit();}
+        return new Intent(context,PlaybackService.class).putExtra("cine_media_start",token);
+    }
+    private boolean internalStart(Intent intent){
+        String expected=getSharedPreferences("cine_internal",MODE_PRIVATE).getString("media_start","");
+        return !expected.isEmpty()&&expected.equals(intent.getStringExtra("cine_media_start"));
+    }
+    static JSONObject systemState(){
+        PlaybackService service=instance;
+        return service==null||service.surfaceState==null?Events.json("status","idle"):service.surfaceState;
+    }
     static volatile PlaybackService instance;
     static final int PREVIOUS_RESTART_MS = 3000;
     private volatile String snapshotJson = idleSnapshot().toString();
@@ -167,9 +181,16 @@ public class PlaybackService extends Service {
             @Override public void onSkipToNext() { command("next", 0); }
             @Override public void onSkipToPrevious() { command("previous", 0); }
             @Override public void onSeekTo(long position) { command("seek", position); }
+            @Override public void onPlayFromMediaId(String id, Bundle extras) { playMediaId(id); }
+            @Override public void onSkipToQueueItem(long id) {
+                JSONArray items=surfaceState==null?queue:surfaceState.optJSONArray("queue");
+                JSONObject song=items==null?null:items.optJSONObject((int)id);
+                if(id>=0&&id<Integer.MAX_VALUE&&song!=null)playMediaId(song.optString("id"));
+            }
         });
-        session.setActive(true);
+        session.setActive(false);
         session.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
+        setSessionToken(session.getSessionToken());
         session.setSessionActivity(PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class).putExtra("openPlayer", true), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         NotificationManager notifications = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         notifications.createNotificationChannel(new NotificationChannel("playback", "Music playback", NotificationManager.IMPORTANCE_LOW));
@@ -203,6 +224,7 @@ public class PlaybackService extends Service {
             // Don't stop service - keep playing in background
             return START_STICKY; 
         }
+        if(!internalStart(intent)){if(track==null)stopSelf(startId);return START_NOT_STICKY;}
         if ("remote".equals(intent.getAction())) {
             try { present(new JSONObject(CineConnect.get(this).snapshot())); startForeground(1, notification()); } catch (Exception ignored) {}
             return START_NOT_STICKY;
@@ -348,6 +370,7 @@ public class PlaybackService extends Service {
         JSONObject candidate;
         try { candidate = nextTrack(1, true); } catch (Exception error) { candidate = null; }
         if (candidate == null) return;
+        if(candidate.optBoolean("offline")&&candidate.optLong("downloadBytes")>Math.max(8L*1024*1024,Runtime.getRuntime().maxMemory()/8))return;
         preloadTried = true;
         preload(candidate);
     }
@@ -617,7 +640,7 @@ public class PlaybackService extends Service {
             sleepTrackId = null;
         }
         // Check time-based sleep timer
-        if (sleepDeadline > 0 && sleepDeadline != Long.MAX_VALUE && System.currentTimeMillis() >= sleepDeadline) {
+        if (sleepDeadline > 0 && sleepDeadline != Long.MAX_VALUE && SystemClock.elapsedRealtime() >= sleepAtElapsed) {
             clearSleepTimer();
             commandLocal("pause", 0);
         }
@@ -822,7 +845,7 @@ public class PlaybackService extends Service {
         android.graphics.Bitmap artwork = surfaceArtwork;
         session.setActive(track != null && !status.equals("idle"));
         int playbackState = status.equals("playing") ? PlaybackState.STATE_PLAYING : status.equals("loading") ? PlaybackState.STATE_BUFFERING : status.equals("error") ? PlaybackState.STATE_ERROR : PlaybackState.STATE_PAUSED;
-        session.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_SEEK_TO | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_STOP)
+        session.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_SEEK_TO | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_STOP | PlaybackState.ACTION_PLAY_FROM_MEDIA_ID | PlaybackState.ACTION_SKIP_TO_QUEUE_ITEM)
             .setState(playbackState, position, status.equals("playing") ? 1 : 0).build());
         String nextMetadataKey = track == null ? "" : track.toString() + ":" + duration + ":" + (artwork == null ? 0 : artwork.hashCode());
         if (track != null && !nextMetadataKey.equals(metadataKey)) {
@@ -843,7 +866,17 @@ public class PlaybackService extends Service {
             session.setMetadata(metadata.build());
         }
         String noticeKey = nextMetadataKey + ":" + status + ":" + state.optString("remoteDeviceName");
-        if (!noticeKey.equals(surfaceNoticeKey)) { surfaceNoticeKey = noticeKey; updateNotification(); }
+        if(track==null){session.setMetadata(null);metadataKey="";}
+        JSONArray items=track==null?null:state.optJSONArray("queue");
+        if(items!=systemQueue){
+            systemQueue=items;
+            java.util.List<MediaSession.QueueItem> rows=new java.util.ArrayList<>();
+            if(items!=null)for(int index=0;index<Math.min(200,items.length());index++){
+                JSONObject song=items.optJSONObject(index);if(song!=null)rows.add(new MediaSession.QueueItem(description(song),index));
+            }
+            session.setQueue(rows);session.setQueueTitle("Cine music queue");notifyChildrenChanged("current");
+        }
+        if (!noticeKey.equals(surfaceNoticeKey)) { surfaceNoticeKey = noticeKey;if(track==null)((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).cancel(1);else updateNotification(); }
         String widgetState = (track == null ? "" : track.optString("id")) + status;
         if (!widgetState.equals(lastWidgetState) || SystemClock.elapsedRealtime() - lastWidgetUpdate >= (tv ? 4000 : 1000)) {
             lastWidgetState = widgetState; lastWidgetUpdate = SystemClock.elapsedRealtime(); MusicWidgetProvider.updateAll(this);
@@ -930,7 +963,7 @@ public class PlaybackService extends Service {
         publish(); updateNotification(); audio.abandonAudioFocusRequest(focus); stopForeground(STOP_FOREGROUND_DETACH);
     }
     private PendingIntent action(String action) {
-        return PendingIntent.getService(this, action.hashCode(), new Intent(this, PlaybackService.class).setAction(action), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        return PendingIntent.getService(this, action.hashCode(), PlaybackService.intent(this).setAction(action), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
     private Notification notification() {
         JSONObject track = surfaceState == null ? this.track : surfaceState.optJSONObject("track");
@@ -965,7 +998,46 @@ public class PlaybackService extends Service {
         return builder.build();
     }
     private void updateNotification() { ((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).notify(1, notification()); }
-    @Override public IBinder onBind(Intent intent) { return null; }
+    private JSONArray systemQueue;
+    private android.media.MediaDescription description(JSONObject song){
+        android.media.MediaDescription.Builder item=new android.media.MediaDescription.Builder().setMediaId(song.optString("id"))
+            .setTitle(song.optString("title")).setSubtitle(song.optString("artist"));
+        String cover=song.optString("cover");if(cover.startsWith("https://"))item.setIconUri(android.net.Uri.parse(cover));
+        return item.build();
+    }
+    private void playMediaId(String id){
+        if(id==null||id.length()>256)return;
+        JSONArray items=surfaceState==null||surfaceState.optJSONObject("track")==null?null:surfaceState.optJSONArray("queue");
+        if(items==null)return;
+        for(int index=0;index<items.length();index++){
+            JSONObject song=items.optJSONObject(index);
+            if(song!=null&&id.equals(song.optString("id")))try{
+                JSONObject payload=new JSONObject(song.toString());payload.put("queue",items).put("shuffle",shuffle).put("repeat",repeat);
+                CineConnect.get(this).play(payload.toString());return;
+            }catch(Exception unavailable){return;}
+        }
+    }
+    @Override public BrowserRoot onGetRoot(String packageName,int uid,Bundle hints){
+        try{
+            String[] names=getPackageManager().getPackagesForUid(uid);
+            if(names==null||!java.util.Arrays.asList(names).contains(packageName))return null;
+            android.content.pm.ApplicationInfo client=getPackageManager().getApplicationInfo(packageName,0);
+            boolean trusted=uid==android.os.Process.myUid()||uid==android.os.Process.SYSTEM_UID
+                ||(client.flags&(android.content.pm.ApplicationInfo.FLAG_SYSTEM|android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP))!=0;
+            if(!trusted&&Build.VERSION.SDK_INT>=28){android.media.session.MediaSessionManager manager=getSystemService(android.media.session.MediaSessionManager.class);
+                trusted=manager!=null&&manager.isTrustedForMediaControl(new android.media.session.MediaSessionManager.RemoteUserInfo(packageName,-1,uid));}
+            return trusted?new BrowserRoot("current",null):null;
+        }catch(Exception denied){return null;}
+    }
+    @Override public void onLoadChildren(String parent,Result<java.util.List<android.media.browse.MediaBrowser.MediaItem>> result){
+        java.util.List<android.media.browse.MediaBrowser.MediaItem> rows=new java.util.ArrayList<>();
+        JSONArray items=surfaceState==null||surfaceState.optJSONObject("track")==null?null:surfaceState.optJSONArray("queue");
+        if("current".equals(parent)&&items!=null)for(int index=0;index<Math.min(200,items.length());index++){
+            JSONObject song=items.optJSONObject(index);if(song!=null)rows.add(new android.media.browse.MediaBrowser.MediaItem(description(song),android.media.browse.MediaBrowser.MediaItem.FLAG_PLAYABLE));
+        }
+        result.sendResult(rows);
+    }
+    @Override public IBinder onBind(Intent intent) { return super.onBind(intent); }
     @Override public void onDestroy() {
         cancelTvRecovery();
         generation++; cancelLoad(); cancelSleepFade(); cancelCrossfade(); cancelPreload(); handler.removeCallbacksAndMessages(null); loader.shutdownNow(); lookaheadLoader.shutdownNow();

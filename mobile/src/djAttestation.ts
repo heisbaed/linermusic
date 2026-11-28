@@ -5,7 +5,7 @@ export function requestDjAttestation(): Promise<{token:string;expireTimeMillis:n
     if(!native?.requestDjAttestation){reject(new Error('DJ_UPDATE: Install the latest Cine music app to use AI requests.'));return;}
     const id=crypto.randomUUID();let finished=false;
     const clean=()=>{finished=true;clearTimeout(timer);stop();};
-    const timer=setTimeout(()=>{if(!finished){clean();reject(new Error('DJ_VERIFY: App verification timed out. Try again with Google Play services available.'));}},30000);
+    const timer=setTimeout(()=>{if(!finished){clean();reject(new Error('DJ_VERIFY: App verification timed out. Check your connection and try again.'));}},30000);
     const stop=subscribe(event=>{
       if(finished||event.type!=='djAttestation'||event.data.id!==id)return;
       clean();

@@ -122,6 +122,7 @@ export function TvRouteScreen({ route }: { route: TvRoute }) {
     </div></section>
     <section><h2>System playback controls</h2><div className="tv-actions">
       <button className="tv-button" onClick={()=>window.CineAndroid?.openNotificationSettings()}>Notification settings</button>
+      <button className="tv-button" onClick={()=>{if(window.CineAndroid?.openScreensaverSettings)window.CineAndroid.openScreensaverSettings();else app.toast('Update the TV APK to select Cine music playback in system Screensaver settings.');}}>Screensaver playback</button>
       <button className="tv-button" onClick={()=>{if(!window.CineAndroid?.requestMusicWidget?.())app.toast('Your TV launcher cannot add this widget automatically.');}}>Add playback widget</button>
     </div></section>
   </section>;

@@ -683,6 +683,7 @@ public class MainActivity extends Activity {
 
 
         super.onNewIntent(intent); setIntent(intent); receiveAuthLink(intent); publishState();
+        if(intent!=null&&intent.getBooleanExtra("cine_notifications",false))emit("openNotifications",new JSONObject());
 
 
 
@@ -1511,6 +1512,19 @@ public class MainActivity extends Activity {
 
 
 
+        @JavascriptInterface public String musicNotificationState() { return NotificationHub.state(MainActivity.this).toString(); }
+        @JavascriptInterface public void configureMusicNotification(String name,boolean enabled) {
+            NotificationHub.configure(MainActivity.this,name,enabled);
+            if(enabled)runOnUiThread(()->requestNotifications());
+        }
+        @JavascriptInterface public void notificationArtists(String json) { NotificationHub.artists(MainActivity.this,json); }
+        @JavascriptInterface public void refreshMusicNotifications() {
+            new Thread(()->{NotificationHub.check(MainActivity.this);emit("musicNotifications",NotificationHub.state(MainActivity.this));},"cine-activity-check").start();
+        }
+        @JavascriptInterface public boolean consumeNotificationOpen() {
+            Intent intent=getIntent();if(intent==null||!intent.getBooleanExtra("cine_notifications",false))return false;
+            intent.removeExtra("cine_notifications");return true;
+        }
         @JavascriptInterface public void openNotificationSettings() {
 
 
@@ -2148,6 +2162,8 @@ public class MainActivity extends Activity {
 
 
         @JavascriptInterface public String appIcon() { return LauncherIcons.get(MainActivity.this); }
+        @JavascriptInterface public boolean isNetworkConnected() { try{android.net.ConnectivityManager manager=getSystemService(android.net.ConnectivityManager.class);android.net.NetworkCapabilities active=manager==null?null:manager.getNetworkCapabilities(manager.getActiveNetwork());return active!=null&&active.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET);}catch(Exception unavailable){return false;} }
+        @JavascriptInterface public void openScreensaverSettings() { runOnUiThread(()->{try{startActivity(new Intent(android.provider.Settings.ACTION_DREAM_SETTINGS));}catch(Exception unavailable){emit("systemSettingsError",Events.json("message","Open your TV system settings and choose Cine music playback under Screensaver."));}}); }
         @JavascriptInterface public String djVoiceInfo() { return DjSpeech.get(MainActivity.this).info().toString(); }
         @JavascriptInterface public void requestDjAttestation(String id) { if(id!=null && id.length()<100)runOnUiThread(()->DjAttestation.request(MainActivity.this,id)); }
         @JavascriptInterface public String djFirebaseOptions() { return Events.json("apiKey",BuildConfig.CINE_DJ_API_KEY,"appId",BuildConfig.CINE_DJ_APP_ID,"androidAppId",BuildConfig.CINE_DJ_APP_ID,"projectId",BuildConfig.CINE_DJ_PROJECT_ID).toString(); }

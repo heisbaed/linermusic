@@ -11,6 +11,7 @@ export interface Song {
   storageBytes?: number;
   downloadedAt?: number;
   genres?: string[];
+  genreSource?: 'recording' | 'artist';
   likedAt?: number;
   addedAt?: number;
 }
@@ -78,6 +79,13 @@ export interface NativeApi {
   setSystemBars(background: string, lightIcons: boolean): void;
   isWifiConnected(): boolean;
   openNotificationSettings(): void;
+  musicNotificationState?(): string;
+  configureMusicNotification?(name: string, enabled: boolean): void;
+  notificationArtists?(json: string): void;
+  refreshMusicNotifications?(): void;
+  consumeNotificationOpen?(): boolean;
+  openScreensaverSettings?(): void;
+  isNetworkConnected?(): boolean;
   authTokens(): string;
   consumeSongLink?(): string;
   consumePlayerOpen?(): boolean;

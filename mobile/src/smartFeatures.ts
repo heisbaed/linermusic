@@ -1,5 +1,6 @@
 import { searchText } from './catalogQuality';
 import type { Song } from './types';
+import { genreEvidence } from './musicMetadata';
 
 export interface HiddenMusic {
   songs: Pick<Song, 'id' | 'title' | 'artist'>[];
@@ -45,17 +46,21 @@ export function deduplicatePlaylist(songs: Song[]): Song[] {
 
 export type RadioMode = 'balanced' | 'familiar' | 'discover';
 
-export function personalizeSongs(songs: Song[], favorites: Song[], recent: Song[], hidden: HiddenMusic, mode: RadioMode = 'balanced', skipped: string[] = []): Song[] {
+export function personalizeSongs(songs: Song[], favorites: Song[], recent: Song[], hidden: HiddenMusic, mode: RadioMode = 'balanced', skipped: string[] = [], anchor?:Song): Song[] {
   const favoritesByArtist = new Set(favorites.map(song => artistIdentity(song.artist)));
   const recentIds = new Set(recent.slice(0, 20).map(song => song.id));
   const candidates = deduplicatePlaylist(songs.filter(song => !isHidden(song, hidden)));
-  const scored = candidates.map((song, index) => ({ song, score: -index / 100
+  const context=anchor?genreEvidence(anchor):null;
+  // Candidate order already represents the seed/request's source relevance.
+  // Taste feedback is a bounded adjustment rather than a replacement for it.
+  const scored = candidates.map((song, index) => ({ song, score: 12*(1-index/Math.max(1,candidates.length))
     + (favoritesByArtist.has(artistIdentity(song.artist)) ? mode === 'familiar' ? 8 : mode === 'discover' ? -4 : 2 : 0)
-    - (recentIds.has(song.id) ? 6 : 0) - (skipped.includes(song.id) ? 12 : 0) })).sort((a, b) => b.score - a.score);
+    - (recentIds.has(song.id) ? 6 : 0) - (skipped.includes(song.id) ? 12 : 0)
+    + (context?.genres.length&&genreEvidence(song).genres.some(genre=>context.genres.includes(genre))?context.source==='recording'?2:1:0) })).sort((a, b) => b.score - a.score);
   const result: Song[] = [];
   while (scored.length) {
     const lastArtist = result.length ? artistIdentity(result[result.length - 1].artist) : '';
-    const next = scored.findIndex(item => artistIdentity(item.song.artist) !== lastArtist);
+    const next = scored.findIndex(item => artistIdentity(item.song.artist) !== lastArtist && item.score >= scored[0].score-3);
     result.push(scored.splice(next < 0 ? 0 : next, 1)[0].song);
   }
   return result;

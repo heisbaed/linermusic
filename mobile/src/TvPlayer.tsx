@@ -196,7 +196,7 @@ export function TvPlayer({ mode, onMode, onBack }: {
             <button className="tv-icon-button" onClick={next} aria-label="Next"><Icon name="next" size={29} /></button>
             <button className="tv-icon-button" aria-label={`Repeat ${app.playback.repeat}`} aria-pressed={app.playback.repeat !== 'off'}
               onClick={() => app.playback.setRepeat(app.playback.repeat === 'off' ? 'all' : app.playback.repeat === 'all' ? 'one' : 'off')}>
-              <Icon name={app.playback.repeat === 'one' ? 'repeat_one' : 'repeat'} size={22} />
+              <Icon name={app.playback.repeat === 'one' ? 'repeat_one' : 'repeat'} size={22} />{app.playback.repeat==='one'&&<span className="control-mode-badge" aria-hidden="true">1</span>}
             </button>
           </div>
           </div>

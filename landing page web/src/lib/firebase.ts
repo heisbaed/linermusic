@@ -19,14 +19,27 @@ export class AuthError extends Error {}
 
 let configPromise: Promise<FirebaseAppConfig> | null = null;
 
+async function request(url: string, options: RequestInit = {}): Promise<Response> {
+  const controller=new AbortController(),parent=options.signal;
+  const cancel=()=>controller.abort();
+  parent?.addEventListener('abort',cancel,{once:true});
+  if(parent?.aborted)cancel();
+  const timer=setTimeout(cancel,15000);
+  try { return await fetch(url,{...options,signal:controller.signal}); }
+  catch(error) {
+    if(parent?.aborted)throw error;
+    throw new Error('Could not connect. Check your connection and try again.');
+  } finally { clearTimeout(timer);parent?.removeEventListener('abort',cancel); }
+}
+
 export function loadFirebaseAppConfig(): Promise<FirebaseAppConfig> {
   if (!configPromise) {
-    configPromise = fetch('/firebase-config.json', { cache: 'no-store' }).then(async response => {
+    configPromise = request('/firebase-config.json', { cache: 'no-store' }).then(async response => {
       if (!response.ok) throw new Error('Firebase configuration could not be loaded.');
       const data = await response.json() as Partial<FirebaseAppConfig>;
       if (!data.apiKey || !data.databaseURL) throw new Error('Firebase configuration is incomplete.');
       return data as FirebaseAppConfig;
-    });
+    }).catch(error => { configPromise = null; throw error; });
   }
   return configPromise;
 }
@@ -48,7 +61,7 @@ function authMessage(code: string | undefined): string {
 
 async function identityRequest(path: string, body: unknown): Promise<Record<string, unknown>> {
   const config = await loadFirebaseAppConfig();
-  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/${path}?key=${encodeURIComponent(config.apiKey)}`, {
+  const response = await request(`https://identitytoolkit.googleapis.com/v1/${path}?key=${encodeURIComponent(config.apiKey)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -75,7 +88,7 @@ export async function signInWithPassword(email: string, password: string): Promi
 
 export async function refreshDashboardAuth(auth: DashboardAuth): Promise<DashboardAuth> {
   const config = await loadFirebaseAppConfig();
-  const response = await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(config.apiKey)}`, {
+  const response = await request(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(config.apiKey)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: auth.refreshToken }),
@@ -104,12 +117,12 @@ export async function fetchAnalyticsEvents(
     startAt: String(Math.max(0, Math.floor(since))),
     limitToLast: '50000',
   });
-  const response = await fetch(`${config.databaseURL}/analytics/${surface}/events.json?${params.toString()}`, { signal });
+  const response = await request(`${config.databaseURL}/analytics/${surface}/events.json?${params.toString()}`, { signal });
   if (response.status === 401 || response.status === 403) throw new AuthError('The analytics feed rejected this account.');
   if (!response.ok) throw new Error('Analytics data could not be loaded.');
   const data = await response.json() as Record<string, unknown> | null;
   if (!data) return [];
-  return Object.values(data).filter(isAnalyticsEvent);
+  return Object.entries(data).flatMap(([id,value]) => isAnalyticsEvent(value) && value.surface === surface && value.id === id ? [value] : []);
 }
 
 export function adminEmails(): string[] {

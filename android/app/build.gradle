@@ -1,7 +1,7 @@
 plugins { id 'com.android.application' }
 
 dependencies {
-    implementation 'com.google.firebase:firebase-appcheck-playintegrity:19.4.1'
+    implementation 'com.google.firebase:firebase-appcheck-recaptcha:20.1.0'
     implementation 'androidx.media3:media3-exoplayer:1.6.1'
     implementation 'androidx.credentials:credentials:1.2.0-rc01'
     implementation 'androidx.credentials:credentials-play-services-auth:1.2.0-rc01'
@@ -34,16 +34,19 @@ android {
         def djOptions = djFile.exists() ? new groovy.json.JsonSlurper().parse(djFile) : [:]
         def djKey = providers.environmentVariable('CINE_DJ_API_KEY').getOrElse(djOptions.apiKey ?: '')
         buildConfigField 'String', 'CINE_DJ_API_KEY', groovy.json.JsonOutput.toJson(djKey)
+        def djSiteKey=providers.environmentVariable('CINE_DJ_RECAPTCHA_KEY').getOrElse(djOptions.recaptchaSiteKey ?: '')
+        buildConfigField 'String', 'CINE_DJ_RECAPTCHA_KEY', groovy.json.JsonOutput.toJson(djSiteKey)
         buildConfigField 'String', 'CINE_DJ_APP_ID', '"1:544084547503:android:b57393d5bf725e1a50c15a"'
         buildConfigField 'String', 'CINE_DJ_PROJECT_ID', '"cinemusic-1"'
         def cinePlatform = providers.gradleProperty('cinePlatform').getOrElse('mobile')
         buildConfigField 'String', 'CINE_PLATFORM', '"' + cinePlatform + '"'
         manifestPlaceholders = [cinePlatform: cinePlatform, cineLauncherCategory: cinePlatform == 'tv' ? 'android.intent.category.LEANBACK_LAUNCHER' : 'android.intent.category.LAUNCHER', cineAppLabel: cinePlatform == 'tv' ? 'Cine music TV' : 'Cine music', cineStartingTheme: cinePlatform == 'tv' ? '@style/CineTvSplashPink' : '@style/Theme.CineMusic.Starting']
         applicationId 'com.heisbaed.cinemusic'
+        manifestPlaceholders.cineTvEnabled = cinePlatform == 'tv' ? 'true' : 'false'
         minSdk 26
         targetSdk 36
-        versionCode providers.gradleProperty('cineVersionCode').map { it.toInteger() }.getOrElse(20)
-        versionName providers.gradleProperty('cineVersionName').getOrElse('0.1.17')
+        versionCode providers.gradleProperty('cineVersionCode').map { it.toInteger() }.getOrElse(21)
+        versionName providers.gradleProperty('cineVersionName').getOrElse('0.1.18')
         testInstrumentationRunner 'com.heisbaed.cinemusic.VaultChecks'
     }
     compileOptions {

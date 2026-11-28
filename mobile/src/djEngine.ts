@@ -31,7 +31,7 @@ export async function createDjSet(input: DjInput): Promise<DjSet> {
   const heard = new Set([...previous,...input.recent.map(song=>song.id)]);
   const candidates = deduplicatePlaylist([...direct,...radio]).filter(song=>!isHidden(song,input.hidden)&&!skipped.includes(song.id))
     .filter(song=>{const tags=cachedSongGenres(song);const wanted=genre.split(/[,;/]/).map(normalize).filter(Boolean);return !wanted.length||!tags.length||tags.some(tag=>wanted.includes(normalize(tag)));});
-  const ranked = personalizeSongs(candidates,input.favorites,input.recent,input.hidden,mode,skipped);
+  const ranked = personalizeSongs(candidates,input.favorites,input.recent,input.hidden,mode,skipped,anchor);
   const fresh = ranked.filter(song=>!heard.has(song.id));
   const pool = (mode==='discover'?fresh:mode==='familiar'?ranked:[...fresh,...ranked.filter(song=>heard.has(song.id))]).slice(0,50);
   if(!pool.length)throw new Error('No matching fresh songs were available. Try another request or choose Balanced.');

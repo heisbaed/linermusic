@@ -16,6 +16,7 @@ function backupSong(value: unknown): Song | null {
   return {
     id: value.id, title: value.title.slice(0, 500), artist: value.artist.slice(0, 500), durationMs: value.durationMs,
     cover: backupImage(value.cover),
+    genreSource: value.genreSource === 'recording' || value.genreSource === 'artist' ? value.genreSource : undefined,
     artistId: typeof value.artistId === 'string' ? value.artistId.slice(0, 256) : undefined,
     albumId: typeof value.albumId === 'string' ? value.albumId.slice(0, 256) : undefined,
     ...(Array.isArray(value.genres) ? { genres: value.genres.filter((item): item is string => typeof item === 'string' && item.length <= 60).slice(0, 20) } : {}),
@@ -85,13 +86,13 @@ export function playlistIsDownloaded(list: Playlist, downloads: { id: string }[]
     || jobs.some(job => job.id === song.id && job.status === 'completed'));
 }
 export function parseLrc(text: string): { time: number; text: string }[] {
-  let offset = 0;
+  const offset = Number(text.match(/\[offset:\s*([+-]?\d+)\s*\]/i)?.[1] || 0) / 1000;
   const lines = text.split(/\r?\n/).flatMap(line => {
     const offsetMatch = line.match(/^\s*\[offset:\s*([+-]?\d+)\s*\]/i);
-    if (offsetMatch) { offset = Number(offsetMatch[1]) / 1000; return []; }
+    if (offsetMatch) return [];
     const stamps = [...line.matchAll(/\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g)];
     const words = line.replace(/\[[^\]]*\]/g, '').replace(/<\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?>/g, '').trim();
-    return words ? stamps.map(stamp => {
+    return words ? stamps.filter(stamp => Number(stamp[2]) < 60).map(stamp => {
       const fraction = stamp[3] ? Number('0.' + stamp[3].padEnd(3, '0')) : 0;
       return { time: Number(stamp[1]) * 60 + Number(stamp[2]) + fraction + offset, text: words };
     }) : [];

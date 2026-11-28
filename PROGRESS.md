@@ -1,3 +1,15 @@
+# 28 November 2026 — 0.1.18 service/algorithm delivery
+
+- Owner requested deeper algorithm/service research, UI/button improvements, dashboard work and public updates. Do not install on devices. No automated or runtime verification is authorized; leave manual acceptance to the owner.
+- Implemented changes and primary research are recorded in SERVICE-REVIEW-0.1.18.md; release notes in RELEASE-0.1.18.md. Existing code/package/signing/private offline formats are preserved.
+- Search retrieval/intent/aliases/ranking, recommendation context and genre provenance, lyric request/parsing overhead, Connect seek coalescing, protected download recovery, cloud playlist conflict handling and telemetry integrity are addressed.
+- Native reCAPTCHA App Check is configured for the sideloaded app; paid billing was not enabled. Restricted DJ key remains ignored native build input. No live AI/speech success is claimed.
+- Added trusted TV media-browser integration and optional user-selected Cine music playback screensaver; Mobile has actual notification preferences/history. Shared selected/focus/input/button states improved.
+- Both interface bundles, Java/native APK packaging, dashboard TypeScript compilation and the website production build succeeded. Separate APKs, SHA-256 checksums and version-code-21 update feeds are prepared. Source/release/hosting publication is the remaining delivery step.
+- No app launches, device installs, playback/offline/AI checks, screenshots, benchmarks or automated tests were run. Small read-only reported-title metadata lookups and configuration operations are documented separately from runtime verification.
+
+---
+
 # Cine music TV refinement and DJ configuration - 28 November 2026
 
 ## Release 0.1.17 / code 20 - installed and published

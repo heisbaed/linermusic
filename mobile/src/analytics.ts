@@ -74,6 +74,8 @@ let currentSessionId = '';
 let configPromise: Promise<AnalyticsConfig | null> | null = null;
 let flushing = false;
 let stopSession: (() => void) | null = null;
+class AnalyticsDeliveryError extends Error { constructor(public status:number){super(`Analytics write failed (${status})`);} }
+const retryable=(error:unknown)=>!(error instanceof AnalyticsDeliveryError)||error.status===408||error.status===429||error.status>=500;
 
 function readStorage(key: string): string | null {
   try { return window.localStorage.getItem(key); } catch { return null; }
@@ -170,8 +172,8 @@ function writePending(events: AnalyticsEvent[]): void {
 
 function loadConfig(): Promise<AnalyticsConfig | null> {
   configPromise ??= fetch('/firebase-config.json', { cache: 'no-cache' })
-    .then(response => response.ok ? response.json() as Promise<AnalyticsConfig> : null)
-    .catch(() => null);
+    .then(response => { if(!response.ok)throw new Error('Analytics configuration unavailable'); return response.json() as Promise<AnalyticsConfig>; })
+    .catch(() => {configPromise=null;return null;});
   return configPromise;
 }
 
@@ -184,12 +186,15 @@ async function deliver(event: AnalyticsEvent): Promise<void> {
   const config = await loadConfig();
   const url = eventUrl(config || {}, event);
   if (!url) throw new Error('Analytics is not configured');
-  const response = await fetch(url, {
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  try{const response = await fetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...event, timestamp: { '.sv': 'timestamp' } }),
+    body: JSON.stringify(event),
+    signal:controller.signal,
   });
-  if (!response.ok) throw new Error(`Analytics write failed (${response.status})`);
+  if (!response.ok) throw new AnalyticsDeliveryError(response.status);
+  }finally{clearTimeout(timer);}
 }
 
 function queuePending(event: AnalyticsEvent): void {
@@ -203,13 +208,13 @@ async function send(event: AnalyticsEvent): Promise<void> {
     recordSuccess();
   } catch (error) {
     recordFailure(error);
-    queuePending(event);
+    if(retryable(error))queuePending(event);
   }
 }
 
 export async function flushPendingAnalytics(): Promise<void> {
   if (!ready || flushing) return;
-  const pending = readPending();
+  const pending = readPending().slice(0,8);
   if (!pending.length) return;
   flushing = true;
   const remaining: AnalyticsEvent[] = [];
@@ -219,10 +224,11 @@ export async function flushPendingAnalytics(): Promise<void> {
       recordSuccess();
     } catch (error) {
       recordFailure(error);
-      remaining.push(event);
+      if(retryable(error))remaining.push(event);
     }
   }
-  writePending(remaining);
+  const sentIds=new Set(pending.map(event=>event.id));
+  writePending([...readPending().filter(event=>!sentIds.has(event.id)),...remaining]);
   flushing = false;
 }
 
@@ -295,36 +301,31 @@ export function trackPageView(path: string): void {
 export function startSessionTracking(): () => void {
   if (typeof window === 'undefined') return () => undefined;
   if (stopSession) return stopSession;
-  trackEvent('session_start');
-  let lastPulseAt = Date.now();
+  let active = document.visibilityState === 'visible';
+  if(active) trackEvent('session_start');
+  let lastPulseAt = performance.now();
   const flush = (name: 'session_heartbeat' | 'session_end') => {
-    const now = Date.now();
-    const durationMs = Math.min(Math.max(0, now - lastPulseAt), MAX_DURATION);
-    if (document.visibilityState === 'visible' || name === 'session_end') {
-      trackEvent(name, { durationMs });
-    }
-    lastPulseAt = now;
+    if(!active)return;
+    const now = performance.now();
+    trackEvent(name, { durationMs: Math.min(Math.max(0, now-lastPulseAt),MAX_DURATION) });
+    lastPulseAt=now;
   };
-  const interval = window.setInterval(() => {
-    if (document.visibilityState === 'visible') flush('session_heartbeat');
-  }, 15_000);
+  const interval = window.setInterval(() => { if(document.visibilityState === 'visible')flush('session_heartbeat'); },15000);
   const onVisibility = () => {
-    if (document.visibilityState === 'visible') {
-      lastPulseAt = Date.now();
-      trackEvent('session_start');
-    } else {
-      flush('session_end');
-    }
+    if(document.visibilityState === 'visible') {
+      if(active)return;
+      active=true;lastPulseAt=performance.now();trackEvent('session_start');
+    } else { flush('session_end');active=false; }
   };
-  const onPageHide = () => flush('session_end');
-  document.addEventListener('visibilitychange', onVisibility);
-  window.addEventListener('pagehide', onPageHide);
+  const onPageHide = () => {flush('session_end');active=false;};
+  document.addEventListener('visibilitychange',onVisibility);
+  window.addEventListener('pagehide',onPageHide);
   const cleanup = () => {
-    flush('session_end');
+    flush('session_end');active=false;
     window.clearInterval(interval);
-    document.removeEventListener('visibilitychange', onVisibility);
-    window.removeEventListener('pagehide', onPageHide);
-    if (stopSession === cleanup) stopSession = null;
+    document.removeEventListener('visibilitychange',onVisibility);
+    window.removeEventListener('pagehide',onPageHide);
+    if(stopSession === cleanup)stopSession=null;
   };
   stopSession = cleanup;
   return cleanup;

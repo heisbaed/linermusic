@@ -328,3 +328,9 @@
   .dash-bar-track, .dash-bar-meta { grid-column: 1 / 3; }
   .dash-footer span:last-child { margin-left: 0; }
 }
+
+.dash-metric-note{max-width:960px;color:var(--dash-muted);font-size:12px;line-height:1.6;margin:0 0 20px}
+.dash button:focus-visible,.dash a:focus-visible,.dash input:focus-visible{outline:2px solid var(--dash-rose-deep);outline-offset:3px}
+.dash .dash-segment button{min-height:44px}
+.dash-kpis[data-unavailable=true]{opacity:.65}
+@media(prefers-reduced-motion:reduce){.dash *{animation:none!important;transition:none!important}}

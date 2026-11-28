@@ -1,5 +1,5 @@
 import { ConnectControls, ConnectLabel } from './ConnectControls';
-import { useEffect, useRef, useState, type TouchEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import { swipeDirection,type SwipePoint } from './playerGestures';
 import { isOnline } from './network';
 import { useApp, type Utility } from './AppContext';
@@ -11,42 +11,12 @@ import { innertubeCatalog } from '@/shared/media/innertube/innertubeCatalog';
 import type { Song } from './types';
 import { shareSongLink, getShareText, getLyricsPreview, getLyricsShareLink } from './songLinks';
 import { isTvEnvironment } from './spatialNav';
-import { lyricsScore, type LyricsRecord } from './lyricsMatch';
+import { fetchLyrics, lyricsIdentity } from './lyricsService';
 import { SongRadio } from './SongRadio';
 import { lyricOffset } from './smartFeatures';
 import './player.css';
 
-const lyricRequests = new Map<string, Promise<Response>>();
-const sessionLyrics = new Map<string, { text: string; savedAt: number }>();
-
-function requestLyrics(url: string): Promise<Response> {
-  let pending = lyricRequests.get(url);
-  if (!pending) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    pending = fetch(url, { signal: controller.signal }).finally(() => { clearTimeout(timeout); lyricRequests.delete(url); });
-    lyricRequests.set(url, pending);
-  }
-  return pending.then(response => response.clone());
-}
-
-
-async function fetchLyrics(track: Song): Promise<LyricsRecord | null> {
-  const exactParams = new URLSearchParams({ artist_name: track.artist, track_name: track.title });
-  if (track.durationMs > 0) exactParams.set('duration', String(Math.round(track.durationMs / 1000)));
-  const exact = await requestLyrics('https://lrclib.net/api/get?' + exactParams);
-  if (exact.ok) {
-    const data = await exact.json() as LyricsRecord;
-    if (data.syncedLyrics || data.plainLyrics) return data;
-  } else if (exact.status !== 404) {
-    throw new Error('Lyrics could not be loaded. Try again.');
-  }
-  const search = await requestLyrics('https://lrclib.net/api/search?' + new URLSearchParams({ artist_name: track.artist, track_name: track.title }));
-  if (!search.ok) throw new Error('Lyrics could not be loaded. Try again.');
-  const results = await search.json() as LyricsRecord[];
-  if (!Array.isArray(results)) return null;
-  return results.filter(record => (record.syncedLyrics || record.plainLyrics) && Number.isFinite(lyricsScore(record, track))).sort((a, b) => lyricsScore(b, track) - lyricsScore(a, track))[0] ?? null;
-}
+const sessionLyrics = new Map<string, { text: string; savedAt: number; identity?: string }>();
 
 export function useLyrics(track: Song | null, enabled: boolean) {
   const app = useApp();
@@ -56,13 +26,13 @@ export function useLyrics(track: Song | null, enabled: boolean) {
     if (!track || !enabled) return;
     const controller = new AbortController();
     // Try cache first with expiration (lyrics expire after 7 days)
-    const stored = sessionLyrics.get(track.id) ?? loadSaved<{ text: string; savedAt: number } | string | null>('lyrics:' + track.id, null);
+    const stored = sessionLyrics.get(track.id) ?? loadSaved<{ text: string; savedAt: number; identity?: string } | string | null>('lyrics:' + track.id, null);
     const cached = typeof stored === 'string' ? { text: stored, savedAt: 0 } : stored;
     app.playback.setPlayerLyrics?.(cached?.text ? { text: cached.text } : null);
     if (cached && cached.text) {
       const age = Date.now() - cached.savedAt;
       const weekInMs = 7 * 24 * 60 * 60 * 1000;
-      if (age < weekInMs) {
+      if (age < weekInMs && cached.identity === lyricsIdentity(track) && retry === 0) {
         setResult({ id: track.id, text: cached.text, status: 'ready', error: '' });
         app.playback.setPlayerLyrics?.({ text: cached.text });
         return;
@@ -77,16 +47,16 @@ export function useLyrics(track: Song | null, enabled: boolean) {
       return;
     }
     if (!cached?.text) setResult({ id: track.id, text: '', status: 'loading', error: '' });
-    void fetchLyrics(track).then(data => {
+    void fetchLyrics(track, controller.signal, retry > 0).then(data => {
       if (controller.signal.aborted) return;
       const text = data?.syncedLyrics || data?.plainLyrics || '';
       if (text) {
         sessionLyrics.delete(track.id);
-        sessionLyrics.set(track.id, { text, savedAt: Date.now() });
+        sessionLyrics.set(track.id, { text, savedAt: Date.now(), identity: lyricsIdentity(track) });
         while (sessionLyrics.size > 50) sessionLyrics.delete(sessionLyrics.keys().next().value!);
       }
       if (text && !isTvEnvironment()) {
-        save('lyrics:' + track.id, { text, savedAt: Date.now() });
+        save('lyrics:' + track.id, { text, savedAt: Date.now(), identity: lyricsIdentity(track) });
       }
       setResult({ id: track.id, text, status: text ? 'ready' : 'unavailable', error: '' });
       // Update shared lyrics for song menu sharing
@@ -102,7 +72,7 @@ export function useLyrics(track: Song | null, enabled: boolean) {
       }
     });
     return () => controller.abort();
-  }, [track?.id, enabled, retry]);
+  }, [track?.id,track?.title,track?.artist,track?.durationMs, enabled, retry]);
   const current = result.id === track?.id ? result : { text: '', status: enabled ? 'loading' : 'idle', error: '' };
   return { ...current, retry: () => setRetry(value => value + 1) };
 }
@@ -155,7 +125,7 @@ export function FullPlayer({ lyricsOpen, onLyrics, onCloseLyrics, onClose, onQue
   const app = useApp(), { playback } = app, { player } = playback;
   const current = player.track;
   const lyrics = useLyrics(current, true);
-  const lines = parseLrc(lyrics.text), timed = lines.length > 0;
+  const lines = useMemo(() => parseLrc(lyrics.text), [lyrics.text]), timed = lines.length > 0;
   const [offsetState, setOffsetState] = useState({ id: current?.id, value: lyricOffset(loadSaved('lyric-offset:' + current?.id, 0)) });
   const offset = offsetState.id === current?.id ? offsetState.value : lyricOffset(loadSaved('lyric-offset:' + current?.id, 0));
   function adjustTiming(value: number) {

@@ -1,9 +1,9 @@
 {
-  "version": "0.1.17",
-  "versionCode": 20,
+  "version": "0.1.18",
+  "versionCode": 21,
   "platform": "mobile",
-  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.17/Cine-Music-Mobile-0.1.17.apk",
-  "fileSize": 13980752,
-  "sha256": "1459db32b0c7541662427c0a57f51a5a84cfab484e5f763492bc792ce080eadf",
-  "releaseNotes": "Refreshed TV Home, readable theme-matched focus and a single-composition animated splash; simplified Dj Cine with native app verification and restricted configuration; lighter lyrics and player updates, faster Connect command delivery, improved original-recording search ranking, and TV system media integration. Native APK upgrade required; availability of AI and TV launcher media surfaces depends on device/service support."
+  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.18/Cine-Music-Mobile-0.1.18.apk",
+  "fileSize": 14682320,
+  "sha256": "3aec273d385c2baa3cfa315142b68c0095acbcbec56eb82bbf31354b88fe615a",
+  "releaseNotes": "Improved multi-source search and original-recording ranking, artist aliases and query intent; more focused Smart Shuffle/radio and lyrics caching; protected offline-download integrity and bounded recovery; playlist conflict merging and Connect seek delivery; native Dj Cine verification and installed voices; TV system media/screensaver support, readable controls and truthful analytics. Native APK upgrade required. Runtime checks are left to the owner."
 }

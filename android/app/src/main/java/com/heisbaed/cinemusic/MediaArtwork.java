@@ -32,7 +32,7 @@ final class MediaArtwork {
         Bitmap cached = cache.get(address);
         if (cached != null) { callback.accept(cached); return; }
         synchronized (pending) {
-            if (address.isEmpty() || System.currentTimeMillis() - failures.getOrDefault(address, 0L) < 30000) return;
+            if (address.isEmpty() || System.currentTimeMillis() - failures.getOrDefault(address, 0L) < 30000) {main.post(()->callback.accept(null));return;}
             List<Consumer<Bitmap>> listeners = pending.get(address);
             if (listeners != null) { listeners.add(callback); return; }
             listeners = new ArrayList<>(); listeners.add(callback); pending.put(address, listeners);

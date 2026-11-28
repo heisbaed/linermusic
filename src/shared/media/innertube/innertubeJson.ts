@@ -41,12 +41,12 @@ export function isArtistPage(pageType: string | undefined): boolean {
 export function runsToArtists(
   runs: JsonRecord[],
   accept: (pageType: string | undefined) => boolean = isArtistPage,
-): { id: string; name: string }[] {
+): import('@/shared/contracts').TrackArtist[] {
   return runs.flatMap((run) => {
     const endpoint = getBrowseEndpoint(run);
     const name = typeof run.text === "string" ? run.text.trim() : "";
     return accept(getPageType(endpoint)) && typeof endpoint?.browseId === "string" && name
-      ? [{ id: endpoint.browseId, name }]
+      ? [{ id: endpoint.browseId, name, kind: getPageType(endpoint) === 'MUSIC_PAGE_TYPE_USER_CHANNEL' ? 'uploader' as const : 'artist' as const }]
       : [];
   });
 }

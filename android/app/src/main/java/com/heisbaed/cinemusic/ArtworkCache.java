@@ -14,6 +14,8 @@ import java.util.*;
 /** Private, bounded artwork cache shared by all WebView screens across launches. */
 final class ArtworkCache {
     private static final Object WRITE_LOCK = new Object();
+    private static final Object[] FETCH_LOCKS=new Object[32];
+    static {for(int i=0;i<FETCH_LOCKS.length;i++)FETCH_LOCKS[i]=new Object();}
     private static boolean trusted(String host) {
         return host != null && (host.equals("i.ytimg.com") || host.endsWith(".googleusercontent.com")
             || host.endsWith(".ggpht.com") || host.endsWith(".scdn.co") || host.endsWith(".mzstatic.com"));
@@ -29,6 +31,8 @@ final class ArtworkCache {
             for (byte value : hash) key.append(String.format(Locale.ROOT, "%02x", value & 255));
             File target = new File(directory, key + ".img");
             if (target.isFile() && target.length() > 0) return response(target);
+            synchronized(FETCH_LOCKS[(hash[0]&255)%FETCH_LOCKS.length]){
+            if(target.isFile()&&target.length()>0)return response(target);
             URL url = new URL(uri.toString());
             for (int redirect = 0; redirect < 4; redirect++) {
                 if (!"https".equals(url.getProtocol()) || !trusted(url.getHost())) return null;
@@ -41,7 +45,8 @@ final class ArtworkCache {
                     url = new URL(url, connection.getHeaderField("Location"));
                     connection.disconnect(); connection = null; continue;
                 }
-                if (status != 200 || !connection.getContentType().toLowerCase(Locale.ROOT).startsWith("image/")) return null;
+                String type=connection.getContentType();
+                if (status != 200 || type==null || !type.toLowerCase(Locale.ROOT).startsWith("image/") || connection.getContentLengthLong()>2*1024*1024) return null;
                 ByteArrayOutputStream bytes = new ByteArrayOutputStream();
                 try (InputStream stream = connection.getInputStream()) {
                     byte[] buffer = new byte[16384]; int count;
@@ -59,11 +64,12 @@ final class ArtworkCache {
                     if (entries != null) {
                         Arrays.sort(entries, Comparator.comparingLong(File::lastModified));
                         long size = 0; for (File entry : entries) size += entry.length();
-                        long limit = ("tv".equals(BuildConfig.CINE_PLATFORM) ? 32L : 64L) * 1024 * 1024;
+                        long limit = 64L * 1024 * 1024;
                         for (File entry : entries) { if (size <= limit) break; if (!entry.equals(target)) { long length = entry.length(); if (entry.delete()) size -= length; } }
                     }
                 }
                 return response(target);
+            }
             }
         } catch (Exception unavailable) { /* Let WebView recover through its normal image loader. */ }
         finally { if (connection != null) connection.disconnect(); }

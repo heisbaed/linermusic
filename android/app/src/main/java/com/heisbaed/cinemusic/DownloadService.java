@@ -15,6 +15,8 @@ public class DownloadService extends Service {
     static volatile DownloadService instance;
     private static final Map<String, Job> JOBS = new LinkedHashMap<>();
     private static boolean loaded;
+    private static final ScheduledExecutorService outbox=Executors.newSingleThreadScheduledExecutor();
+    private static ScheduledFuture<?> saveTask,publishTask;
     // One active transfer at a time so a bulk download does not saturate the connection.
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean closed;
@@ -62,8 +64,12 @@ public class DownloadService extends Service {
         } catch (Exception ignored) {}
     }
     private static synchronized void persist(Context context) {
-        JSONArray saved = new JSONArray(); for (Job job : JOBS.values()) if (!"completed".equals(job.status)) saved.put(job.snapshot());
-        context.getSharedPreferences("cine_downloads", MODE_PRIVATE).edit().putString("jobs", saved.toString()).apply();
+        if(saveTask!=null)saveTask.cancel(false);
+        Context app=context.getApplicationContext();
+        saveTask=outbox.schedule(()->{
+            JSONArray saved=jobSnapshot();
+            app.getSharedPreferences("cine_downloads",MODE_PRIVATE).edit().putString("jobs",saved.toString()).apply();
+        },75,TimeUnit.MILLISECONDS);
     }
     static synchronized JSONArray jobs(Context context) {
         loadJobs(context);
@@ -82,7 +88,11 @@ public class DownloadService extends Service {
     private static synchronized JSONArray jobSnapshot() {
         JSONArray result = new JSONArray(); for (Job job : JOBS.values()) if (!"completed".equals(job.status)) result.put(job.snapshot()); return result;
     }
-    private static void publishJobs(Context context) { Events.send(context, "downloadJobs", Events.json("items", jobSnapshot())); }
+    private static synchronized void publishJobs(Context context) {
+        if(publishTask!=null)publishTask.cancel(false);
+        Context app=context.getApplicationContext();
+        publishTask=outbox.schedule(()->Events.send(app,"downloadJobs",Events.json("items",jobSnapshot())),100,TimeUnit.MILLISECONDS);
+    }
     private static void publishJob(Context context, Job job) {
         JSONObject state;
         synchronized (DownloadService.class) { if (JOBS.get(job.id) != job) return; state = job.snapshot(); }
@@ -191,14 +201,45 @@ public class DownloadService extends Service {
             if (closed || job.stopped) return;
             if (wifiOnly(this) && !isWifiConnected(this)) { cancel(this, job.id, true, "Connect to Wi-Fi and resume."); return; }
             String url = job.sourceUrl;
-            if (url.isEmpty()) url = StreamResolver.resolve(job.id, () -> closed || job.stopped, connection -> job.connection = connection);
+            if (url.isEmpty()) url = StreamResolver.resolve(job.id, job.track.optString("downloadQuality","auto"), () -> closed || job.stopped, connection -> job.connection = connection);
             if (closed || job.stopped) return;
             if (wifiOnly(this) && !isWifiConnected(this)) { cancel(this, job.id, true, "Connect to Wi-Fi and resume."); return; }
             if (!new URL(url).getHost().endsWith(".googlevideo.com")) throw new IOException("Unsupported audio address");
+            for(int attempt=0;;attempt++) {
+                try { transfer(job,vault,url);break; }
+                catch(AudioDownloadStream.HttpFailure rejected) {
+                    if(attempt>0||(rejected.status!=403&&rejected.status!=410)||closed||job.stopped)throw rejected;
+                    StreamResolver.invalidate(job.id);
+                    url=StreamResolver.resolve(job.id,job.track.optString("downloadQuality","auto"),()->closed||job.stopped,connection->job.connection=connection);
+                }
+            }
+            NotificationHub.downloaded(this, job.track);
+            Events.send(this, "downloads", Events.json("items", vault.list())); publishJob(this, job); publishJobs(this);
+        } catch (Exception error) {
+            synchronized (DownloadService.class) {
+                if (closed || job.stopped) return;
+                StreamResolver.invalidate(job.id);
+                job.status = "failed"; job.bytes = 0; job.progress = 0;
+                job.error = error.getMessage() == null ? "Download failed. Please retry." : error.getMessage(); persist(this);
+            }
+            publishJob(this, job); publishJobs(this); Events.send(this, "downloadError", Events.json("id", job.id, "message", job.error));
+        } finally {
+            if (job.connection != null) job.connection.disconnect(); job.connection = null;
+            handler.post(() -> { inFlight--; drainQueue(); });
+        }
+    }
+    /**
+     * When a transfer finishes (or the service is asked to start while another is in flight),
+     * Pick the oldest explicitly queued job. Paused/failed jobs require Resume/Retry.
+     * If nothing is pending, stop the service so it does not keep the device awake.
+     */
+    private void transfer(Job job,OfflineVault vault,String url)throws Exception {
             JSONObject track = new JSONObject(job.track.toString()); track.put("offline", true);
             long existingLength = 0;
             try (AudioDownloadStream input = new AudioDownloadStream(url, () -> closed || job.stopped, connection -> job.connection = connection)) {
                 long total = input.length();
+                long free=new StatFs(getNoBackupFilesDir().getAbsolutePath()).getAvailableBytes();
+                if(total>0&&free<total+16L*1024*1024)throw new IOException("Not enough free space. Remove some downloads or free device storage and retry.");
                 synchronized (DownloadService.class) {
                     if (job.stopped) return;
                     job.status = "downloading";
@@ -225,25 +266,7 @@ public class DownloadService extends Service {
                     job.status = "completed"; job.progress = 100; job.bytes = job.totalBytes = track.optLong("downloadBytes"); persist(this);
                 });
             }
-            Events.send(this, "downloads", Events.json("items", vault.list())); publishJob(this, job); publishJobs(this);
-        } catch (Exception error) {
-            synchronized (DownloadService.class) {
-                if (closed || job.stopped) return;
-                StreamResolver.invalidate(job.id);
-                job.status = "failed"; job.bytes = 0; job.progress = 0;
-                job.error = error.getMessage() == null ? "Download failed. Please retry." : error.getMessage(); persist(this);
-            }
-            publishJob(this, job); publishJobs(this); Events.send(this, "downloadError", Events.json("id", job.id, "message", job.error));
-        } finally {
-            if (job.connection != null) job.connection.disconnect(); job.connection = null;
-            handler.post(() -> { inFlight--; drainQueue(); });
-        }
     }
-    /**
-     * When a transfer finishes (or the service is asked to start while another is in flight),
-     * Pick the oldest explicitly queued job. Paused/failed jobs require Resume/Retry.
-     * If nothing is pending, stop the service so it does not keep the device awake.
-     */
     private void drainQueue() {
         final Job next;
         synchronized (DownloadService.class) {

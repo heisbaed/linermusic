@@ -11,7 +11,9 @@ function networkInfo(): NetworkInformationLike | undefined {
 }
 
 /** Android WebView can leave navigator.onLine stuck at false while the link is live. */
+let nativeAt=0,nativeOnline=false;
 export function isOnline(): boolean {
+  try {if(typeof window!=='undefined'&&window.CineAndroid?.isNetworkConnected){if(Date.now()-nativeAt>=1000){nativeOnline=window.CineAndroid.isNetworkConnected();nativeAt=Date.now();}return nativeOnline;}}catch{/* Older builds use browser connectivity. */}
   if (typeof navigator === 'undefined') return true;
   if (navigator.onLine) return true;
   const info = networkInfo();
@@ -23,6 +25,7 @@ export function isOnline(): boolean {
 }
 
 export function onConnectivityChange(handler: () => void): () => void {
+  const update=handler;handler=()=>{nativeAt=0;update();};
   const info = networkInfo();
   window.addEventListener('online', handler);
   window.addEventListener('offline', handler);

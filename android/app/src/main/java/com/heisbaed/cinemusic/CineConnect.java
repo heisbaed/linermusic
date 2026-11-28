@@ -47,6 +47,9 @@ final class CineConnect {
     private long lastCommandPoll;
     private JSONArray lastEventQueue;
     private boolean presentingRemote;
+    private final java.util.concurrent.atomic.AtomicBoolean seekQueued=new java.util.concurrent.atomic.AtomicBoolean();
+    private static final class SeekRequest { final double value; final String user; SeekRequest(double value,String user){this.value=value;this.user=user;} }
+    private volatile SeekRequest pendingSeek=new SeekRequest(0,"");
     private final SharedPreferences preferences;
     private final String deviceId;
     private final String deviceName;
@@ -127,30 +130,39 @@ final class CineConnect {
 
     boolean route(String action, double value) {
         if (!java.util.Arrays.asList("pause", "resume", "next", "previous", "seek").contains(action)) return false;
-        if (database.isEmpty() || AuthStore.read(context).optString("localId").isEmpty()) return false;
+        String requestUser=AuthStore.read(context).optString("localId");
+        if (database.isEmpty() || requestUser.isEmpty()) return false;
+        if("seek".equals(action)){pendingSeek=new SeekRequest(value,requestUser);if(!seekQueued.compareAndSet(false,true))return true;}
         worker.execute(() -> {
+            SeekRequest seek=pendingSeek;
+            double selected="seek".equals(action)?seek.value:value;
+            String selectedUser="seek".equals(action)?seek.user:requestUser;
             try {
                 refreshAccount();
+                if(!selectedUser.equals(uid))return;
                 if (!online()) {
-                    if (!tv) localCommand(action, value);
+                    if (!tv) localCommand(action, selected);
                     return;
                 }
                 refreshState();
-                if (alive(state)) sendCommand(state, action, Events.json("value", value));
+                if (alive(state)) sendCommand(state, action, Events.json("value", selected));
                 else if ("resume".equals(action)) {
                     JSONObject payload = localPayload();
                     if (payload.has("id")) begin(payload, deviceId);
-                } else localCommand(action, value);
+                } else localCommand(action, selected);
             } catch (Exception unavailable) { failure("Could not reach the selected playback device."); }
+            finally{if("seek".equals(action)){seekQueued.set(false);SeekRequest next=pendingSeek;if(next!=seek&&next.user.equals(AuthStore.read(context).optString("localId")))route("seek",next.value);}}
         });
         return true;
     }
 
     void play(String json) {
+        String requestUser=AuthStore.read(context).optString("localId");
         worker.execute(() -> {
             try {
                 JSONObject payload = new JSONObject(json);
                 refreshAccount();
+                if(!requestUser.equals(uid))return;
                 if (!online()) {
                     if (!tv) playLocal(payload, false);
                     else failure("Reconnect the TV to play music.");
@@ -169,10 +181,12 @@ final class CineConnect {
     }
 
     void queue(String json, boolean shuffle, String repeat) {
+        String requestUser=AuthStore.read(context).optString("localId");
         worker.execute(() -> {
             try {
                 JSONObject payload = Events.json("queue", new JSONArray(json), "shuffle", shuffle, "repeat", repeat);
                 refreshAccount();
+                if(!requestUser.equals(uid))return;
                 if (!online()) { if (!tv) localQueue(payload); return; }
                 refreshState();
                 if (alive(state)) sendCommand(state, "queue", payload);
@@ -183,9 +197,11 @@ final class CineConnect {
 
     void transfer(String target) {
         if (target == null || !target.matches("[A-Za-z0-9-]{1,80}")) return;
+        String requestUser=AuthStore.read(context).optString("localId");
         worker.execute(() -> {
             try {
                 refreshAccount();
+                if(!requestUser.equals(uid))return;
                 refreshState();
                 if (target.equals(state.optString("owner"))) return;
                 JSONObject destination = devices.optJSONObject(target);
@@ -280,6 +296,7 @@ final class CineConnect {
             if (!uid.equals(response.optString("user_id"))) throw new IllegalStateException("Account changed");
             JSONObject latest = AuthStore.read(context);
             if (!uid.equals(latest.optString("localId"))) throw new IllegalStateException("Account changed");
+            if(!saved.optString("refreshToken").equals(latest.optString("refreshToken"))||!saved.optString("idToken").equals(latest.optString("idToken"))){user=latest;return;}
             latest.put("idToken", response.getString("id_token"));
             latest.put("refreshToken", response.getString("refresh_token"));
             latest.put("expiresAt", System.currentTimeMillis() + response.getLong("expires_in") * 1000);
@@ -497,7 +514,7 @@ final class CineConnect {
                 copy.put("connectPaused", paused);
                 PlaybackService service = PlaybackService.instance;
                 if (service != null) service.playLocal(copy);
-                else context.startForegroundService(new Intent(context, PlaybackService.class).setAction("play")
+                else context.startForegroundService(PlaybackService.intent(context).setAction("play")
                     .putExtra("track", copy.toString()).putExtra("connectLocal", true));
             } catch (Exception unavailable) { Events.send(context, "playerError", Events.json("message", "Open Cine Music on the selected device to start playback.")); }
         });
@@ -533,7 +550,7 @@ final class CineConnect {
         viewJson = view.toString();
         if (PlaybackService.instance != null) PlaybackService.instance.present(view);
         else if (foreground && remote()) {
-            try { context.startForegroundService(new Intent(context, PlaybackService.class).setAction("remote")); } catch (Exception ignored) {}
+            try { context.startForegroundService(PlaybackService.intent(context).setAction("remote")); } catch (Exception ignored) {}
         }
         boolean remoteView=remote();
         if(remoteView||presentingRemote||lastEventQueue==null)emitPlayer(view);

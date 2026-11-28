@@ -56,7 +56,7 @@ export function DailyMix() {
       const lists = replies.flatMap(reply => reply.status === 'fulfilled' ? [relatedSongs(reply.value.items, chosen).map(songFrom)] : []);
       const interleaved = Array.from({ length: 60 }, (_, index) => lists.flatMap(list => list[index] ? [list[index]] : [])).flat();
       const skipped = loadSaved<string[]>('skipped:' + owner, []);
-      const candidates = personalizeSongs(interleaved.filter(song => genreCompatible(anchor, song)), chosen, [], app.smart.hidden, 'balanced', skipped).filter(song => !skipped.includes(song.id));
+      const candidates = personalizeSongs(interleaved.filter(song => genreCompatible(anchor, song)), chosen, [], app.smart.hidden, 'balanced', skipped,anchor).filter(song => !skipped.includes(song.id));
       const songs = rotateMixSongs(candidates, previous, rotation);
       save(rotationKey, { counter, seeds: [...chosen.map(song => song.id), ...priorSeeds].slice(0, 9), songs: [...songs, ...priorSongs].slice(0, 90) });
       if (!songs.length) { app.toast('No fresh recommendations were available. Your saved mixes are unchanged; try another song or refresh again.'); return; }

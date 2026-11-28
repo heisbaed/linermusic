@@ -39,7 +39,15 @@ final class OfflineVault {
     }
     private File audio(String id) throws Exception { return new File(directory, filename(id) + ".cine"); }
     private File metadata(String id) throws Exception { return new File(directory, filename(id) + ".json"); }
-    boolean contains(String id) { try { return audio(id).isFile() && metadata(id).isFile(); } catch (Exception error) { return false; } }
+    boolean contains(String id) {
+        try { return validEntry(id,new JSONObject(new String(java.nio.file.Files.readAllBytes(metadata(id).toPath()),StandardCharsets.UTF_8))); }
+        catch (Exception error) { return false; }
+    }
+    private boolean validEntry(String id,JSONObject record)throws Exception {
+        long size=record.optLong("downloadBytes",-1);
+        // Format v1: one IV-length byte, 12-byte IV, ciphertext and 16-byte GCM tag.
+        return id.equals(record.optString("id"))&&size>0&&size<=MAX_BYTES&&audio(id).isFile()&&audio(id).length()==size+29;
+    }
     interface Progress { void update(long read, long total) throws Exception; }
     void store(JSONObject track, InputStream input, long total, Progress progress) throws Exception {
         store(track, input, total, progress, this, () -> {});
@@ -85,17 +93,22 @@ final class OfflineVault {
     }
     byte[] open(String id) throws Exception {
         File file = audio(id);
-        if (file.length() > MAX_BYTES + 64) throw new IOException("Offline file is invalid");
+        if (!contains(id)) throw new IOException("This offline file is incomplete. Download the song again.");
         try (FileInputStream input = new FileInputStream(file)) {
             int ivSize = input.read(); if (ivSize != 12) throw new IOException("Offline file is invalid");
             byte[] iv = new byte[ivSize]; new DataInputStream(input).readFully(iv);
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE, key(), new GCMParameterSpec(128, iv));
             cipher.updateAAD(id.getBytes(StandardCharsets.UTF_8));
-            ByteArrayOutputStream encrypted = new ByteArrayOutputStream();
-            byte[] buffer = new byte[32 * 1024]; int count;
-            while ((count = input.read(buffer)) != -1) encrypted.write(buffer, 0, count);
-            return cipher.doFinal(encrypted.toByteArray());
+            byte[] clear = new byte[(int)file.length()-29],buffer = new byte[64 * 1024];
+            try {
+                int count,written=0;
+                while((count=input.read(buffer))!=-1)written+=cipher.update(buffer,0,count,clear,written);
+                written+=cipher.doFinal(clear,written);
+                if(written!=clear.length)throw new IOException("Offline file size is invalid");
+                return clear;
+            }catch(Exception error){java.util.Arrays.fill(clear,(byte)0);throw error;}
+            finally{java.util.Arrays.fill(buffer,(byte)0);}
         }
     }
     synchronized JSONArray list() {
@@ -103,7 +116,7 @@ final class OfflineVault {
         if (files != null) for (File file : files) {
             try {
                 JSONObject track = new JSONObject(new String(java.nio.file.Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8));
-                if (contains(track.getString("id"))) {
+                if (validEntry(track.getString("id"),track)) {
                     long audioSize = audio(track.getString("id")).length();
                     long metadataSize = file.length();
                     long storageBytes = audioSize + metadataSize;

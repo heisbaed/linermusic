@@ -19,6 +19,13 @@ final class AudioDownloadStream extends InputStream {
     private InputStream input;
     private long position, end, total = -1;
     private boolean closed;
+    private int retriesRemaining=8;
+    private String validator;
+    static final class HttpFailure extends IOException {
+        final int status;
+        HttpFailure(int status){super("Download failed (HTTP "+status+"). Try again.");this.status=status;}
+        boolean retryable(){return status==408||status==429||status>=500;}
+    }
 
     AudioDownloadStream(String url, BooleanSupplier cancelled, Consumer<HttpURLConnection> connected) throws Exception {
         this.url = url;
@@ -56,13 +63,15 @@ final class AudioDownloadStream extends InputStream {
             } catch (IOException error) {
                 check();
                 if (error instanceof InterruptedIOException && !(error instanceof SocketTimeoutException)) throw error;
+                if(error instanceof HttpFailure&&!((HttpFailure)error).retryable())throw error;
                 attempt++;
-                if (attempt >= MAX_RECONNECT_ATTEMPTS) {
+                if (attempt >= MAX_RECONNECT_ATTEMPTS || retriesRemaining--<=0) {
                     throw new IOException("Download connection failed after " + attempt + " attempts: " + error.getMessage(), error);
                 }
                 closeConnection();
                 try {
-                    Thread.sleep(Math.min(2000, 300L * (1 << attempt)));
+                    long delay=Math.min(2000,300L*(1<<attempt));
+                    Thread.sleep(java.util.concurrent.ThreadLocalRandom.current().nextLong(delay/2,delay+1));
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     throw new InterruptedIOException("Download interrupted during retry");
@@ -88,8 +97,13 @@ final class AudioDownloadStream extends InputStream {
 
             long requestEnd = total > 0 ? Math.min(total - 1, position + CHUNK - 1) : position + CHUNK - 1;
             connection.setRequestProperty("Range", "bytes=" + position + "-" + requestEnd);
+            if(position>0&&validator!=null)connection.setRequestProperty("If-Range",validator);
 
             int status = connection.getResponseCode();
+            if(status!=200&&status!=206)throw new HttpFailure(status);
+            String etag=connection.getHeaderField("ETag");
+            if(position==0&&etag!=null&&!etag.startsWith("W/"))validator=etag;
+            if(position>0&&validator!=null&&etag!=null&&!validator.equals(etag))throw new IOException("The audio source changed. Retry the download.");
             String type = connection.getContentType();
             if (type == null || !(type.startsWith("audio/") || type.startsWith("video/webm") || type.startsWith("application/octet-stream"))) {
                 throw new IOException("The server did not return audio");
@@ -157,16 +171,18 @@ final class AudioDownloadStream extends InputStream {
             } catch (IOException error) {
                 check();
                 if (error instanceof InterruptedIOException && !(error instanceof SocketTimeoutException)) throw error;
+                if(error instanceof HttpFailure&&!((HttpFailure)error).retryable())throw error;
 
                 retries++;
-                if (retries > MAX_RECONNECT_ATTEMPTS) {
+                if (retries > MAX_RECONNECT_ATTEMPTS || retriesRemaining--<=0) {
                     throw new IOException("Download interrupted: " + error.getMessage(), error);
                 }
 
                 // Seamlessly reconnect from the exact current position without losing data
                 closeConnection();
                 try {
-                    Thread.sleep(Math.min(2500, 350L * (1 << retries)));
+                    long delay=Math.min(2500,350L*(1<<retries));
+                    Thread.sleep(java.util.concurrent.ThreadLocalRandom.current().nextLong(delay/2,delay+1));
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     throw new InterruptedIOException("Download interrupted during reconnect");

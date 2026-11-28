@@ -27,6 +27,7 @@ let sessionId = '';
 let installId = '';
 let lastFlush = 0;
 let heartbeat: number | undefined;
+let flushing = false;
 
 function storage(): Storage | null {
   try {
@@ -40,7 +41,7 @@ function storage(): Storage | null {
 }
 
 function readList<T>(key: string): T[] {
-  try { return JSON.parse(storage()?.getItem(key) || '[]') as T[]; } catch { return []; }
+  try { const value = JSON.parse(storage()?.getItem(key) || '[]'); return Array.isArray(value) ? value as T[] : []; } catch { return []; }
 }
 
 function writeList<T>(key: string, value: T[]) {
@@ -54,9 +55,9 @@ function randomId(prefix: string): string {
 function loadConfig(): Promise<FirebaseConfig | null> {
   if (!configPromise) {
     configPromise = fetch('/firebase-config.json', { cache: 'no-store' })
-      .then(response => (response.ok ? response.json() as Promise<FirebaseConfig> : null))
-      .then(data => (data?.apiKey && data?.databaseURL ? data : null))
-      .catch(() => null);
+      .then(response => { if(!response.ok)throw new Error('Configuration unavailable'); return response.json() as Promise<FirebaseConfig>; })
+      .then(data => { if(!data?.apiKey || !data?.databaseURL)throw new Error('Configuration incomplete'); return data; })
+      .catch(() => { configPromise = null; return null; });
   }
   return configPromise;
 }
@@ -65,15 +66,13 @@ function endpoint(config: FirebaseConfig, id: string): string {
   return `${config.databaseURL}/analytics/${SURFACE}/events/${encodeURIComponent(id)}.json`;
 }
 
-function writeEvent(config: FirebaseConfig, event: AnalyticsEvent) {
-  void fetch(endpoint(config, event.id), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(event),
-    keepalive: true,
-  }).catch(() => {
-    writeList(PENDING_KEY, [...readList<AnalyticsEvent>(PENDING_KEY), event]);
-  });
+async function writeEvent(config: FirebaseConfig, event: AnalyticsEvent): Promise<boolean> {
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  try {
+    const response=await fetch(endpoint(config,event.id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(event),keepalive:true,signal:controller.signal});
+    // An existing ID is immutable. Permanent rejections should not retry forever.
+    return response.ok || (response.status >= 400 && response.status < 500 && response.status !== 408 && response.status !== 429);
+  } catch { return false; } finally { clearTimeout(timer); }
 }
 
 function queue(event: AnalyticsEvent, immediate = false) {
@@ -84,15 +83,18 @@ function queue(event: AnalyticsEvent, immediate = false) {
 }
 
 async function flush() {
-  if (!ready) return;
-  const config = await loadConfig();
-  if (!config) return;
-  lastFlush = Date.now();
-  const events = [...readList<AnalyticsEvent>(PENDING_KEY), ...readList<AnalyticsEvent>(EVENTS_KEY)].slice(-MAX_BUFFER);
-  if (!events.length) return;
-  writeList(EVENTS_KEY, []);
-  writeList(PENDING_KEY, []);
-  for (const event of events) writeEvent(config, event);
+  if (!ready || flushing) return;
+  flushing=true;
+  try {
+    const config=await loadConfig();if(!config)return;
+    lastFlush=Date.now();
+    const events=[...new Map([...readList<AnalyticsEvent>(PENDING_KEY),...readList<AnalyticsEvent>(EVENTS_KEY)].map(event=>[event.id,event])).values()].slice(0,8);
+    if(!events.length)return;
+    const sent=new Set<string>();
+    for(const event of events)if(await writeEvent(config,event))sent.add(event.id);
+    const remaining=[...new Map([...readList<AnalyticsEvent>(PENDING_KEY),...readList<AnalyticsEvent>(EVENTS_KEY)].map(event=>[event.id,event])).values()].filter(event=>!sent.has(event.id));
+    writeList(PENDING_KEY,remaining.slice(-MAX_BUFFER));writeList(EVENTS_KEY,[]);
+  } finally { flushing=false; }
 }
 
 export function trackLandingEvent(name: AnalyticsEventName, details: EventDetails = {}) {
@@ -141,16 +143,23 @@ export function initLandingAnalytics() {
   void loadConfig().then(config => { if (config) void flush(); });
 
   trackLandingEvent('app_open', { path: window.location.pathname, label: 'landing' });
-  trackLandingEvent('session_start', { path: window.location.pathname });
+  if(document.visibilityState === 'visible') trackLandingEvent('session_start', { path: window.location.pathname });
   window.setInterval(() => void flush(), FLUSH_INTERVAL);
-  heartbeat = window.setInterval(() => trackLandingEvent('session_heartbeat', { durationMs: 60_000 }), 60_000);
-  window.addEventListener('online', () => void flush());
-  window.addEventListener('pagehide', () => {
-    trackLandingEvent('session_end', { durationMs: 60_000 });
-    void flush();
-  });
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') void flush();
-  });
-  if (heartbeat) window.setTimeout(() => { if (heartbeat) window.clearInterval(heartbeat); }, 6 * 60 * 60 * 1000);
+  let active=document.visibilityState === 'visible',last=performance.now();
+  function finish() {
+    if(!active)return;
+    const now=performance.now();trackLandingEvent('session_end',{durationMs:Math.min(60000,Math.max(0,now-last))});last=now;active=false;
+  }
+  function resume() {
+    if(active || document.visibilityState !== 'visible')return;
+    sessionId=randomId('landing-session');active=true;last=performance.now();trackLandingEvent('session_start');
+  }
+  heartbeat=window.setInterval(()=>{
+    if(!active || document.visibilityState !== 'visible')return;
+    const now=performance.now();trackLandingEvent('session_heartbeat',{durationMs:Math.min(60000,Math.max(0,now-last))});last=now;
+  },30000);
+  window.addEventListener('online',()=>void flush());
+  window.addEventListener('pagehide',()=>{finish();void flush();});
+  window.addEventListener('pageshow',resume);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState === 'hidden')finish();else resume();void flush();});
 }

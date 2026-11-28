@@ -14,7 +14,7 @@ import org.json.JSONObject;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
 
-/** Installed device voices only. Never requests voice downloads or a cloud voice. */
+/** Uses installed speech engines; prefers local voices and never installs voice packs. */
 final class DjSpeech {
     private static DjSpeech instance;
     static synchronized DjSpeech get(Context context) { if(instance==null)instance=new DjSpeech(context.getApplicationContext());return instance; }
@@ -33,7 +33,7 @@ final class DjSpeech {
         focus=new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attributes).setOnAudioFocusChangeListener(change->{if(change<0)stop();},main).build();
         main.post(()->tts=new TextToSpeech(context,status->main.post(()->{
             if(status==TextToSpeech.SUCCESS){
-                if(tts.getVoices()!=null)for(Voice voice:tts.getVoices())if(!voice.isNetworkConnectionRequired()&&(voice.getFeatures()==null||!voice.getFeatures().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)))voices.add(voice);
+                refreshVoices();
                 ready=true;tts.setAudioAttributes(attributes);tts.setSpeechRate(.98f);
                 tts.setOnUtteranceProgressListener(new UtteranceProgressListener(){
                     public void onStart(String id){emit(id,"speaking","");}
@@ -45,16 +45,26 @@ final class DjSpeech {
             Events.send(context,"djVoices",info());
         })));
     }
+    private void refreshVoices(){
+        if(tts==null)return;
+        try{java.util.Set<Voice> available=tts.getVoices();if(available==null)return;
+            voices.clear();for(Voice voice:available)if(voice.getFeatures()==null||!voice.getFeatures().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED))voices.add(voice);
+        }catch(Exception unavailable){/* Keep the existing voice information on an engine error. */}
+    }
     synchronized JSONObject info(){
-        JSONArray languages=new JSONArray();
+        if(ready)refreshVoices();
+        JSONArray languages=new JSONArray(),offlineLanguages=new JSONArray();
         boolean english=false,swahili=false;
-        for(Voice voice:voices){if("en".equals(voice.getLocale().getLanguage()))english=true;if("sw".equals(voice.getLocale().getLanguage()))swahili=true;}
+        boolean offlineEnglish=false,offlineSwahili=false;
+        for(Voice voice:voices){if("en".equals(voice.getLocale().getLanguage())){english=true;if(!voice.isNetworkConnectionRequired())offlineEnglish=true;}if("sw".equals(voice.getLocale().getLanguage())){swahili=true;if(!voice.isNetworkConnectionRequired())offlineSwahili=true;}}
         if(english)languages.put("en");if(swahili)languages.put("sw");
-        return Events.json("ready",ready,"languages",languages);
+        if(offlineEnglish)offlineLanguages.put("en");if(offlineSwahili)offlineLanguages.put("sw");
+        return Events.json("ready",ready,"languages",languages,"offlineLanguages",offlineLanguages);
     }
     void speak(String id,String text,String language){main.post(()->{
         Voice selected=null;
-        for(Voice voice:voices)if(language.equals(voice.getLocale().getLanguage())){selected=voice;if("US".equals(voice.getLocale().getCountry())||"TZ".equals(voice.getLocale().getCountry()))break;}
+        refreshVoices();
+        for(Voice voice:voices)if(language.equals(voice.getLocale().getLanguage())&&(selected==null||selected.isNetworkConnectionRequired()&&!voice.isNetworkConnectionRequired()))selected=voice;
         if(!ready||selected==null){emit(id,"error","An installed voice is unavailable for this language.");return;}
         if(text==null||text.trim().isEmpty()||text.length()>500){emit(id,"error","The introduction could not be spoken.");return;}
         if(audio.requestAudioFocus(focus)!=AudioManager.AUDIOFOCUS_REQUEST_GRANTED){emit(id,"error","Audio output is busy. Try again.");return;}

@@ -140,7 +140,7 @@ export async function firebaseFetch(url: string, init?: RequestInit): Promise<Re
 
   try { return await fetch(url, { ...init, signal: controller.signal }); }
 
-  catch { throw new FirebaseError('NETWORK', 'Could not reach Firebase. Check your connection and try again. Your saved session and local changes are kept.'); }
+  catch { if(init?.signal?.aborted)throw new DOMException('Request cancelled','AbortError');throw new FirebaseError('NETWORK', 'Could not reach Firebase. Check your connection and try again. Your saved session and local changes are kept.'); }
 
   finally { window.clearTimeout(timer); init?.signal?.removeEventListener('abort', cancel); }
 

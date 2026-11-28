@@ -1,3 +1,4 @@
+import { consumeMusicSearch } from './searchNavigation';
 import { useEffect, useRef, useState } from 'react';
 import { openTvSearch, type TvLink } from '@/shared/tvSession';
 import type { SearchResult } from '@/shared/contracts';
@@ -41,6 +42,12 @@ export function TvSearchScreen({ active = true }: { active?: boolean }) {
   search.current = run;
 
   useEffect(() => () => request.current?.abort(), []);
+  useEffect(() => {
+    if (!active) return;
+    const receive = () => { const query = consumeMusicSearch(); if (query) void search.current(query); };
+    window.addEventListener('cine:pending-search', receive); receive();
+    return () => window.removeEventListener('cine:pending-search', receive);
+  }, [active]);
   useEffect(() => {
     if (!active) return;
     return subscribe(event => {

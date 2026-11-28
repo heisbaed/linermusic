@@ -84,6 +84,9 @@ export function Dashboard() {
   const [feedError, setFeedError] = useState('');
   const [lastUpdated, setLastUpdated] = useState(0);
   const [nonce, setNonce] = useState(0);
+  const [limited, setLimited] = useState(false);
+  const [clock, setClock] = useState(Date.now());
+  useEffect(() => { const timer = setInterval(() => setClock(Date.now()),15000); return () => clearInterval(timer); }, []);
 
   useEffect(() => {
     const stored = readAuth();
@@ -103,9 +106,13 @@ export function Dashboard() {
     if (!auth) return;
     let cancelled = false;
     const controller = new AbortController();
-    const since = periodStart(period);
+    const since = Math.min(periodStart(period),Date.now()-32*60000);
+    let running = false;
+    let highWater = 0, fullRefreshAt = 0;
 
     const load = async () => {
+      if (running) return;
+      running = true;
       setLoading(true);
       try {
         let active = auth;
@@ -115,9 +122,16 @@ export function Dashboard() {
           storeAuth(active);
           setAuth(active);
         }
-        const results = await Promise.all(SURFACES.map(item => fetchAnalyticsEvents(item, since, active, controller.signal)));
+        const results = await Promise.all(SURFACES.map(item => fetchAnalyticsEvents(item, highWater && Date.now()-fullRefreshAt < 300000 ? Math.max(since,highWater-90000) : since, active, controller.signal)));
         if (cancelled) return;
-        setData({ mobile: results[0], tv: results[1], landing: results[2] });
+        setData(previous => {
+          const merge = (key: AnalyticsSurface,index: number) => [...new Map([...previous[key],...results[index]].filter(event => event.timestamp >= since).map(event => [event.id,event])).values()].sort((a,b) => a.timestamp-b.timestamp).slice(-50000);
+          return {mobile:merge('mobile',0),tv:merge('tv',1),landing:merge('landing',2)};
+        });
+        setLimited(previous => previous || results.some(rows => rows.length >= 50000));
+        if(!highWater || Date.now()-fullRefreshAt >= 300000) fullRefreshAt = Date.now();
+        highWater = Date.now();
+        setLoadedOnce(true);
         setFeedError('');
         setLastUpdated(Date.now());
       } catch (error) {
@@ -130,7 +144,8 @@ export function Dashboard() {
           setFeedError(errorMessage(error));
         }
       } finally {
-        if (!cancelled) { setLoading(false); setLoadedOnce(true); }
+        running = false;
+        if (!cancelled) setLoading(false);
       }
     };
 
@@ -159,7 +174,7 @@ export function Dashboard() {
   const maxSurfaceSessions = Math.max(1, ...surfaceMetrics.map(item => item.metrics.sessions));
 
   const heartbeat = useMemo(() => {
-    const now = Date.now();
+    const now = clock;
     const sessionKey = (event: AnalyticsEvent) => `${event.surface}:${event.sessionId}`;
     const presence = allEvents
       .filter(event => (surface === 'all' || event.surface === surface)
@@ -182,9 +197,10 @@ export function Dashboard() {
       values.push(activeAt(time));
       times.push(time);
     }
-    const peak = Math.max(1, ...values);
+    const peak = Math.max(0, ...values);
+    const scale = Math.max(1,peak);
     const x = (index: number) => 44 + (index / 29) * 650;
-    const y = (value: number) => 154 - (value / peak) * 124;
+    const y = (value: number) => 154 - (value / scale) * 124;
     const line = values.map((value, index) => `${index ? 'L' : 'M'}${x(index)},${y(value)}`).join(' ');
     const area = `${line} L${x(29)},154 L${x(0)},154 Z`;
     return {
@@ -197,7 +213,7 @@ export function Dashboard() {
       activeNow: activeAt(now),
       latest: presence.length ? presence[presence.length - 1].timestamp : 0,
     };
-  }, [allEvents, surface, lastUpdated]);
+  }, [allEvents, surface, lastUpdated, clock]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -221,6 +237,7 @@ export function Dashboard() {
     setAuth(null);
     setData(EMPTY_EVENTS);
     setLoadedOnce(false);
+    setLastUpdated(0); setLimited(false); setFeedError('');
     setEmail('');
     setPassword('');
   }
@@ -262,7 +279,7 @@ export function Dashboard() {
         <div>
           <div className="dash-eyebrow"><Signal size={14} /> Signalroom</div>
           <h1>Cine music analytics</h1>
-          <p>{auth.email} · private first-party signals · no search text or song titles are stored</p>
+          <p>{auth.email} · first-party activity · no search text or song titles are stored</p>
         </div>
         <div className="dash-header-actions">
           <button className="dash-ghost" type="button" onClick={() => setNonce(value => value + 1)} disabled={loading}>
@@ -293,27 +310,29 @@ export function Dashboard() {
         </div>
       </div>
 
-      <section className="dash-kpis">
-        <Kpi icon={<Users size={16} />} label="Sessions" value={formatCount(metrics.sessions)} hint={`${formatCount(metrics.totalEvents)} events`} />
-        <Kpi icon={<Activity size={16} />} label="Active time" value={formatDuration(metrics.activeMs)} hint="Foreground heartbeats" />
-        <Kpi icon={<Music2 size={16} />} label="Plays" value={formatCount(metrics.plays)} hint={`${formatCount(metrics.resumes)} resumes`} />
-        <Kpi icon={<CheckCircle2 size={16} />} label="Completion" value={`${completionRate}%`} hint={`${formatCount(metrics.completes)} completed`} />
-        <Kpi icon={<Search size={16} />} label="Searches" value={formatCount(metrics.searches)} hint="Counts only" />
-        <Kpi icon={<SkipForward size={16} />} label="Skips" value={formatCount(metrics.skips)} hint="User-initiated" />
-        <Kpi icon={<Download size={16} />} label="Downloads" value={formatCount(metrics.downloadCompletes)} hint={`${formatCount(metrics.downloadStarts)} started · ${downloadRate}% finished`} />
-        <Kpi icon={<Eye size={16} />} label="Page views" value={formatCount(metrics.views)} hint={`${formatCount(metrics.lyricsViews)} lyrics opens`} />
+      {(!loadedOnce || feedError || limited) && <p className="dash-alert" role="status">{!loadedOnce ? (feedError || 'Loading the analytics feed. Figures are unavailable until it connects.') : feedError ? 'Connection interrupted. Showing the last received data; live activity is unavailable.' : 'This view reached the 50,000-event limit for a surface. Totals may be incomplete; choose a shorter period.'}</p>}
+      <p className="dash-metric-note">Counts describe received events, not unique people. Rates compare events in this period, not matched listening cohorts. Older queued activity is included on Refresh or the five-minute full refresh.</p>
+      <section className="dash-kpis" data-unavailable={!loadedOnce}>
+        <Kpi unavailable={!loadedOnce} icon={<Users size={16} />} label="Sessions" value={formatCount(metrics.sessions)} hint={`${formatCount(metrics.totalEvents)} events`} />
+        <Kpi unavailable={!loadedOnce} icon={<Activity size={16} />} label="Active time" value={formatDuration(metrics.activeMs)} hint="Observed foreground time" />
+        <Kpi unavailable={!loadedOnce} icon={<Music2 size={16} />} label="Plays" value={formatCount(metrics.plays)} hint={`${formatCount(metrics.resumes)} resumes`} />
+        <Kpi unavailable={!loadedOnce} icon={<CheckCircle2 size={16} />} label="Completions / starts" value={`${completionRate}%`} hint={`${formatCount(metrics.completes)} completed`} />
+        <Kpi unavailable={!loadedOnce} icon={<Search size={16} />} label="Searches" value={formatCount(metrics.searches)} hint="Counts only" />
+        <Kpi unavailable={!loadedOnce} icon={<SkipForward size={16} />} label="Skips" value={formatCount(metrics.skips)} hint="User-initiated" />
+        <Kpi unavailable={!loadedOnce} icon={<Download size={16} />} label="Downloads finished" value={formatCount(metrics.downloadCompletes)} hint={`${formatCount(metrics.downloadStarts)} starts · ${downloadRate}% ratio`} />
+        <Kpi unavailable={!loadedOnce} icon={<Eye size={16} />} label="Page views" value={formatCount(metrics.views)} hint={`${formatCount(metrics.lyricsViews)} lyrics opens`} />
       </section>
 
       <section className="dash-panel dash-heartbeat">
         <div className="dash-panel-head">
-          <div><h2>Live heartbeatometer</h2><p>Active sessions over the last 30 minutes · 90-second presence window</p></div>
+          <div><h2>Live heartbeatometer</h2><p>Active sessions over the last 30 minutes · 90-second presence window; sessions, not people</p></div>
           <div className="dash-heartbeat-live" data-live={heartbeat.activeNow > 0}>
-            <span />{heartbeat.activeNow > 0 ? 'Live' : 'Waiting'}
+            <span />{feedError ? 'Disconnected' : heartbeat.activeNow > 0 ? 'Live' : 'Waiting'}
           </div>
         </div>
         <div className="dash-heartbeat-body">
           <div className="dash-heartbeat-readout">
-            <div><span>Active now</span><strong>{loadedOnce ? formatCount(heartbeat.activeNow) : '—'}</strong></div>
+            <div><span>Active now</span><strong>{loadedOnce && !feedError ? formatCount(heartbeat.activeNow) : '—'}</strong></div>
             <div><span>30-minute peak</span><strong>{loadedOnce ? formatCount(heartbeat.peak) : '—'}</strong></div>
             <div><span>Latest signal</span><strong>{heartbeat.latest ? formatRelative(heartbeat.latest) : '—'}</strong></div>
           </div>
@@ -364,7 +383,7 @@ export function Dashboard() {
 
         <article className="dash-panel">
           <div className="dash-panel-head">
-            <div><h2>Engagement</h2><p>Listening and retention signals</p></div>
+            <div><h2>Engagement</h2><p>Observed activity in this period</p></div>
             <Activity size={16} />
           </div>
           <dl className="dash-facts">
@@ -395,7 +414,7 @@ export function Dashboard() {
 
         <article className="dash-panel">
           <div className="dash-panel-head">
-            <div><h2>Versions</h2><p>Unique installs by release</p></div>
+            <div><h2>Versions</h2><p>Latest observed version per installation in this period</p></div>
             <Smartphone size={16} />
           </div>
           {metrics.versions.length ? (
@@ -443,11 +462,11 @@ export function Dashboard() {
   );
 }
 
-function Kpi({ icon, label, value, hint }: { icon: React.ReactNode; label: string; value: string; hint: string }) {
+function Kpi({ icon, label, value, hint, unavailable }: { icon: React.ReactNode; label: string; value: string; hint: string; unavailable?: boolean }) {
   return (
     <article className="dash-kpi">
       <div className="dash-kpi-top">{icon}<span>{label}</span></div>
-      <strong>{value}</strong>
+      <strong>{unavailable ? '—' : value}</strong>
       <small>{hint}</small>
     </article>
   );

@@ -22,6 +22,7 @@ final class StreamResolver {
         {"ANDROID_VR", "1.65.10", "28", "https://www.youtube.com", "com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"}
     };
     private static volatile VisitorSession session;
+    private static volatile String[] preferredProfile;
     private static final Map<String, CachedStream> streams = new LinkedHashMap<>(8, .75f, true);
     private static final class CachedStream {
         final String url;
@@ -127,7 +128,9 @@ final class StreamResolver {
         String visitor = visitorData(request, false);
         List<String> failures = new ArrayList<>();
         boolean refreshed = false;
-        for (String[] profile : PROFILES) {
+        List<String[]> profiles=new ArrayList<>(Arrays.asList(PROFILES));
+        String[] preferred=preferredProfile;if(preferred!=null){profiles.remove(preferred);profiles.add(0,preferred);}
+        for (String[] profile : profiles) {
             for (int attempt = 0; attempt < 2; attempt++) {
                 request.check();
                 try {
@@ -170,6 +173,7 @@ final class StreamResolver {
                             String url = candidate.getString("url");
                             probe(url, request);
                             request.check();
+                            preferredProfile=profile;
                             cacheStream(videoId, resolvedQuality, url);
                             return url;
                         } catch (Exception error) { request.check(); rejected.add("itag " + candidate.optInt("itag") + ": " + safe(error.getMessage())); }

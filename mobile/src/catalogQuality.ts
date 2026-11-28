@@ -13,6 +13,12 @@ export function displaySongTitle(title: string, artist = ''): string {
     const remainder = clean.slice(prefix.length);
     if (/^\s*[-–—|]\s*\S/.test(remainder)) clean = remainder.replace(/^\s*[-–—|]\s*/, '');
   }
+  const divider = clean.search(/\s+[-–—|]\s+/);
+  if (divider > 0 && prefix) {
+    const names = searchText(prefix).split(' ').filter(word => !['x','and','the'].includes(word));
+    const lead = searchText(clean.slice(0,divider)).split(' ');
+    if (names.length > 1 && names.every(word => lead.includes(word))) clean = clean.slice(divider).replace(/^\s*[-–—|]\s*/, '');
+  }
   return clean.replace(/\s+/g, ' ').replace(/\s*[-–—|]\s*$/, '').trim() || title;
 }
 
@@ -26,6 +32,7 @@ export function isCatalogAudio(track: Track, fromSongs = false): boolean {
   // a real song title. Artwork shape and artist-channel IDs are not guarantees.
   if (fromSongs) return true;
   if (track.musicVideoType && ['MUSIC_VIDEO_TYPE_ATV','MUSIC_VIDEO_TYPE_OMV','MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC'].includes(track.musicVideoType)) return true;
+  if (track.artists.length && track.artists.every(artist => artist.kind === 'uploader')) return false;
   return !isEditedUpload(track.title) && track.durationMs > 0 && track.artists.some(artist => artist.name && artist.name !== 'Unknown Artist');
 }
 
@@ -42,52 +49,90 @@ export function tokenMatch(token: string, word: string): number {
   return row[word.length]<=1 ? 3 : 0;
 }
 
-export function cleanSongResults(items: SearchResult[], query = '', songIds: ReadonlySet<string> = new Set()): SearchResult[] {
-  // Keep every available result. Prefer matching catalog recordings over labelled
-  // alternate uploads, while retaining source order for equally strong matches.
-  const seen = new Set<string>();
-  const unique = items.filter(item => {
-    const key = `${item.type}:${item.id}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+type SearchTrack = Extract<SearchResult,{type:'track'}>;
+function coreSearchTitle(track: SearchTrack): string {
+  return searchText(displaySongTitle(track.title,track.artists[0]?.name||'')
+    .replace(/\([^)]*\)|\[[^\]]*\]/g,' ').replace(/\b(?:feat\.?|ft\.?|featuring)\s+.*$/i,''));
+}
+export function focusedSongQuery(items: SearchResult[], query: string): string {
+  const wanted=' '+searchText(query)+' ';
+  return items.flatMap(item => {
+    if(item.type!=='track')return [];
+    const title=coreSearchTitle(item);
+    return title.length>=3 && title.split(' ').length<=6 && wanted.includes(' '+title+' ') ? [title] : [];
+  }).sort((a,b)=>b.length-a.length)[0] || '';
+}
+export function hasOfficialMatch(items: SearchResult[], query: string, requestedArtists: ReadonlySet<string> = new Set()): boolean {
+  const focus=focusedSongQuery(items,query),wanted=searchText(query);
+  return !!focus && items.some(item=>item.type==='track' && coreSearchTitle(item)===focus
+    && (item.artists.some(artist=>artist.verifiedArtist) || ['MUSIC_VIDEO_TYPE_ATV','MUSIC_VIDEO_TYPE_OMV','MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC'].includes(item.musicVideoType||''))
+    && (wanted===focus || item.artists.some(artist=> {
+      const name=searchText(artist.name.replace(/\s*-\s*Topic$/i,''));
+      return artist.kind!=='uploader' && name.length>2 && (requestedArtists.has(name)||(' '+wanted+' ').includes(' '+name+' '));
+    })));
+}
+export function cleanSongResults(items: SearchResult[], query = '', songIds: ReadonlySet<string> = new Set(), requestedArtists:ReadonlySet<string>=new Set()): SearchResult[] {
+  // Merge evidence for one source ID; a sparse Top Result must not erase the
+  // recording classification or original title from a richer source response.
+  const positions=new Map<string,number>(),unique:SearchResult[]=[];
+  for(const item of items){
+    const key=`${item.type}:${item.id}`,at=positions.get(key);
+    if(at===undefined){positions.set(key,unique.length);unique.push(item);continue;}
+    const first=unique[at];
+    if(first.type==='track'&&item.type==='track'){
+      const ownerTitle=item.source==='youtube'&&item.artists.some(artist=>artist.verifiedArtist);
+      unique[at]={...first,title:ownerTitle?item.title:first.title,artists:ownerTitle||first.artists.every(artist=>!artist.id||artist.id==='unknown')?item.artists:first.artists,
+        durationMs:first.durationMs||item.durationMs,cover:first.cover||item.cover,album:first.album||item.album,
+        musicVideoType:first.musicVideoType&&first.musicVideoType!=='MUSIC_VIDEO_TYPE_UGC'?first.musicVideoType:item.musicVideoType,
+        source:ownerTitle?'youtube':first.source||item.source};
+    }
+  }
   const wanted=searchText(query),words=wanted.split(' ').filter(Boolean);
   if(!words.length)return unique;
   const requestedVersion=/\b(cover|karaoke|instrumental|remix|live|acoustic|slowed|sped|reverb|tribute)\b/i.test(wanted);
   const tracks=unique.filter((item):item is Extract<SearchResult,{type:'track'}>=>item.type==='track');
   const artistTerms=new Set(tracks.flatMap(track=>track.artists.flatMap(artist=>{
     const name=searchText(artist.name.replace(/\s*-\s*Topic$/i,''));
-    return name.length>2&&wanted.includes(name)?[name]:[];
+    return artist.kind!=='uploader'&&name.length>2&&(requestedArtists.has(name)||(' '+wanted+' ').includes(' '+name+' '))?[name]:[];
   })));
   const requestedTitle=[...artistTerms].reduce((text,name)=>text.replace(name,' '),wanted).replace(/\bby\b/g,' ').replace(/\s+/g,' ').trim()||wanted;
+  const focus=focusedSongQuery(unique,query);
   const score=(track:Extract<SearchResult,{type:'track'}>)=>{
     const title=searchText(displaySongTitle(track.title,track.artists[0]?.name||''));
-    const base=searchText(track.title.replace(/\([^)]*\)|\[[^\]]*\]/g,' ').replace(/\b(official|audio|video|lyrics?)\b/gi,' '));
-    const artist=track.artists.map(item=>searchText(item.name.replace(/\s*-\s*Topic$/i,'')));
+    const base=coreSearchTitle(track);
+    const artist=track.artists.filter(item=>item.kind!=='uploader').map(item=>searchText(item.name.replace(/\s*-\s*Topic$/i,'')));
     const matchedArtist=!!artistTerms.size&&artist.some(name=>artistTerms.has(name));
-    const titleMatch=title===wanted||title===requestedTitle||base===requestedTitle;
-    const relevant=titleMatch||matchedArtist||words.every(word=>searchText(title+' '+artist.join(' ')).split(' ').includes(word));
-    let rank=titleMatch?50:relevant?20:0;
-    if(artistTerms.size)rank+=matchedArtist?35:-30;
-    if(relevant){
-      if(track.musicVideoType==='MUSIC_VIDEO_TYPE_ATV'||track.musicVideoType==='MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC')rank+=16;
-      else if(track.musicVideoType==='MUSIC_VIDEO_TYPE_OMV')rank+=12;
+    const titleMatch=title===wanted||title===requestedTitle||base===requestedTitle||!!focus&&base===focus;
+    const combined=searchText(title+' '+artist.join(' ')).split(' ');
+    const coverage=words.reduce((total,word)=>total+Math.max(0,...combined.map(term=>tokenMatch(word,term)))/8,0)/words.length;
+    // An exact recording comes before unrelated songs by the same artist.
+    let rank=(titleMatch?220:0)+coverage*30+(matchedArtist?35:0);
+    const officialOwner=track.artists.some(artist=>artist.verifiedArtist);
+    const officialRecording=['MUSIC_VIDEO_TYPE_ATV','MUSIC_VIDEO_TYPE_OMV','MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC'].includes(track.musicVideoType||'');
+    if(titleMatch||coverage>=.7){
+      rank+=officialOwner?80:officialRecording?50:0;
       if(songIds.has(track.id))rank+=8;
     }
-    if(!requestedVersion&&/\b(cover|karaoke|instrumental|tribute|originally performed|made famous|slowed|sped[ -]?up|reverb)\b/i.test(track.title))rank-=45;
+    if(!requestedVersion&&isEditedUpload(track.title))rank-=(officialOwner||officialRecording&&matchedArtist)?12:90;
+    if(/\b(reaction|reacting|tutorial|choreography|dance practice|interview|compilation)\b/i.test(track.title)&&!requestedVersion)rank-=110;
     return rank;
   };
   const ranked=tracks.map((track,index)=>({track,index,score:score(track)})).sort((a,b)=>b.score-a.score||a.index-b.index);
   let at=0;
-  return unique.map(item=>item.type==='track'?ranked[at++].track:item);
+  const ordered=unique.map(item=>item.type==='track'?ranked[at++].track:item);
+  const exactArtist=unique.find(item=>item.type==='artist'&&searchText(item.name)===wanted);
+  if(exactArtist)return [exactArtist,...ordered.filter(item=>item.type!=='artist'||item.id!==exactArtist.id)];
+  if(ranked[0]?.score>=220&&ordered[0]?.id!==ranked[0].track.id)return [ranked[0].track,...ordered.filter(item=>item.type!=='track'||item.id!==ranked[0].track.id)];
+  return ordered;
 }
-export function relatedSongs(tracks: Track[], previous: Pick<Song,'id'|'title'>[]): Track[] {
+export function relatedSongs(tracks: Track[], previous: (Pick<Song,'id'|'title'>&Partial<Pick<Song,'artist'>>)[]): Track[] {
   const ids = new Set(previous.map(s=>s.id));
-  const titles = new Set(previous.map(s=>recordingTitle(s.title)));
+  const identity=(title:string,artist:string)=>recordingTitle(displaySongTitle(title,artist))+':'+searchText(artist.replace(/\s*-\s*Topic$/i,'').split(/,|\s+(?:feat\.?|ft\.?)\s+/i)[0]);
+  const titles = new Set(previous.filter(song=>song.artist).map(song=>identity(song.title,song.artist!)));
   return tracks.filter(track=>{
-    const title=recordingTitle(track.title);
-    if(!isCatalogAudio(track)||isEditedUpload(track.title)||ids.has(track.id)||titles.has(title))return false;
+    const title=identity(track.title,track.artists[0]?.name||'');
+    const official=['MUSIC_VIDEO_TYPE_ATV','MUSIC_VIDEO_TYPE_OMV','MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC'].includes(track.musicVideoType||'');
+    if(!isCatalogAudio(track)||!official&&isEditedUpload(track.title)||ids.has(track.id)||titles.has(title))return false;
     ids.add(track.id);titles.add(title);return true;
   });
 }

@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, type SetStateAction } from 'react';
 import type { AccountState, LibraryData, Profile } from './AppContext';
 import type { Playlist, Song } from './types';
 import { isOnline } from './network';
-import { FirebaseError, firebaseFetch, freshCineUser, getFirebaseDatabaseUrl, loadCineUser, storeCineUser, updateCineDisplayName, type CineUser } from './FirebaseAuth';
+import { FirebaseError, firebaseFetch, freshCineUser, refreshCineUser, getFirebaseDatabaseUrl, loadCineUser, storeCineUser, updateCineDisplayName, type CineUser } from './FirebaseAuth';
 import { loadSaved, save } from './library';
 import { normalizeTaste } from './musicPreferences';
 import { figmaArtwork } from './figmaAssets';
+import { mergeCloudPlaylist } from './cloudPlaylistMerge';
 
 type Wire = Record<string, unknown>;
 type Patch = Record<string, unknown>;
@@ -21,7 +22,7 @@ const bundledArtwork = new Set<string>(Object.values(figmaArtwork));
 function image(value: unknown): string | undefined { return typeof value === 'string' && value.length < 180_000 && (bundledArtwork.has(value) || /^https:\/\//.test(value) || /^data:image\/(jpeg|png|webp);base64,/.test(value)) ? value : undefined; }
 function text(value: unknown, max = 500): string { return typeof value === 'string' ? value.slice(0, max) : ''; }
 function song(value: unknown): value is Song { return record(value) && typeof value.id === 'string' && value.id.length < 256 && typeof value.title === 'string' && typeof value.artist === 'string' && Number.isFinite(value.durationMs) && Number(value.durationMs) >= 0; }
-function cleanSong(value: Song): Song { return { likedAt: Number.isFinite(value.likedAt) && Number(value.likedAt) > 0 ? value.likedAt : undefined, addedAt: Number.isFinite(value.addedAt) && Number(value.addedAt) > 0 ? value.addedAt : undefined, genres: Array.isArray(value.genres) ? [...new Set(value.genres.filter(item => typeof item === 'string' && item.length <= 60))].slice(0, 20) : undefined, id: value.id, title: value.title.slice(0, 500), artist: value.artist.slice(0, 500), durationMs: value.durationMs, cover: image(value.cover), artistId: typeof value.artistId === 'string' ? value.artistId : undefined, albumId: typeof value.albumId === 'string' ? value.albumId : undefined }; }
+function cleanSong(value: Song): Song { return { likedAt: Number.isFinite(value.likedAt) && Number(value.likedAt) > 0 ? value.likedAt : undefined, addedAt: Number.isFinite(value.addedAt) && Number(value.addedAt) > 0 ? value.addedAt : undefined, genreSource: value.genreSource === 'recording' || value.genreSource === 'artist' ? value.genreSource : undefined, genres: Array.isArray(value.genres) ? [...new Set(value.genres.filter(item => typeof item === 'string' && item.length <= 60))].slice(0, 20) : undefined, id: value.id, title: value.title.slice(0, 500), artist: value.artist.slice(0, 500), durationMs: value.durationMs, cover: image(value.cover), artistId: typeof value.artistId === 'string' ? value.artistId : undefined, albumId: typeof value.albumId === 'string' ? value.albumId : undefined }; }
 function unique<T extends { id: string }>(items: T[]): T[] { return [...new Map(items.map(item => [item.id, item])).values()]; }
 
 export function validateLibrary(value: unknown): LibraryData {
@@ -106,6 +107,7 @@ export function useAccount(): AccountState {
   const [retry, setRetry] = useState(0);
   const current = useRef(session); current.current = session;
   const pending = useRef<Patch>(loadSaved('library-pending-v3:' + session.owner, {}));
+  const playlistBases = useRef<Patch>(loadSaved('library-playlist-bases-v1:' + session.owner, {}));
   const server = useRef<Wire>({});
   const flush = useRef<() => void>(() => {});
   const debounce = useRef<ReturnType<typeof setTimeout> | undefined>();
@@ -128,8 +130,11 @@ export function useAccount(): AccountState {
       return { ...list, songs: list.songs.map((song,index) => ({ ...song, addedAt: previous.has(song.id) ? previous.get(song.id)?.addedAt : now-index })) };
     });
     if (old.user) {
-      pending.current = { ...pending.current, ...libraryPatch(old.library, library) };
+      const delta=libraryPatch(old.library,library),before=toWire(old.library).playlists as Wire;
+      for(const path of Object.keys(delta))if(path.startsWith('playlists/')&&!Object.hasOwn(pending.current,path))playlistBases.current[path]=before[path.slice(10)]??null;
+      pending.current = { ...pending.current, ...delta };
       save('library-pending-v3:' + old.owner, pending.current);
+      save('library-playlist-bases-v1:' + old.owner, playlistBases.current);
     }
     save('library-v3:' + old.owner, library);
     current.current = { ...old, library }; setSession(current.current);
@@ -143,6 +148,7 @@ export function useAccount(): AccountState {
         clearTimeout(debounce.current);
         suspended.current = false;
         pending.current = loadSaved('library-pending-v3:' + owner, {}); server.current = {};
+        playlistBases.current=loadSaved('library-playlist-bases-v1:'+owner,{});
         current.current = initialSession(user); setSession(current.current);
         setSyncStatus(user ? 'Opening your account library...' : 'Saved on this device');
       } else { current.current = { ...previous, user }; setSession(current.current); }
@@ -159,14 +165,21 @@ export function useAccount(): AccountState {
     const drains = new Set<() => void>();
     function idle() { if (!writing && !reading) { drains.forEach(resolve => resolve()); drains.clear(); } }
     settleSync.current = async () => {
-      source?.close(); source = null; clearTimeout(expiry);
+      source?.close(); source = null; clearTimeout(expiry);clearTimeout(reconnect);
       const hadWrite = writing;
       if (writing || reading) await new Promise<void>(resolve => drains.add(resolve));
       if (!valid()) throw new Error('The active account changed. Nothing was deleted.');
       if (hadWrite && writeFailed) throw new Error('Cloud sync could not finish safely. Nothing was deleted. Retry when connected.');
     };
     let expiry: ReturnType<typeof setTimeout> | undefined;
+    let reconnect: ReturnType<typeof setTimeout> | undefined,reconnectAttempt=0;
     const valid = () => mounted && current.current.owner === owner;
+    function scheduleReconnect(error?:unknown){
+      if(error instanceof FirebaseError&&(error.invalidSession||['CLOUD_DENIED','CONFIG'].includes(error.code)))return;
+      if(!valid()||suspended.current||!isOnline()||document.visibilityState==='hidden')return;
+      clearTimeout(reconnect);
+      reconnect=setTimeout(()=>{if(reading||writing)scheduleReconnect();else void connect();},Math.min(30000,1000*2**Math.min(5,reconnectAttempt++))+Math.random()*500);
+    }
     function status(message: string) { if (valid()) setSyncStatus(message); }
     function failure(error: unknown, failedSession?: CineUser) {
       if (!valid() || controller.signal.aborted) return;
@@ -206,15 +219,39 @@ export function useAccount(): AccountState {
         const url = await databaseUrl();
         if (suspended.current) return;
         dispatched = true;
-        const response = await firebaseFetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch), signal: controller.signal });
-        if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? 'Firebase denied library sync. Check account verification and owner-only database rules. Your changes remain on this device.' : 'Cloud sync failed. Your library is saved on this device; retry when connected.');
+        const remaining={...patch};
+        for(const [path,local]of Object.entries(patch))if(/^playlists\/[^/]+$/.test(path)){
+          const endpoint=new URL(url);endpoint.pathname=endpoint.pathname.replace(/\.json$/,'/'+path.split('/').map(encodeURIComponent).join('/')+'.json');
+          let committed=false;
+          for(let attempt=0;attempt<3;attempt++){
+            const current=await firebaseFetch(endpoint.toString(),{headers:{'X-Firebase-ETag':'true'},signal:controller.signal});
+            if(!current.ok)throw new FirebaseError(current.status===401||current.status===403?'CLOUD_DENIED':'NETWORK','Could not read the latest playlist. Your edits are saved on this device.');
+            const remote=await current.json(),etag=current.headers.get('ETag');
+            if(!etag)throw new Error('The server could not protect this playlist update. Your edits are kept; retry sync.');
+            const merged=mergeCloudPlaylist(playlistBases.current[path]??remote,local,remote);
+            const response=await firebaseFetch(endpoint.toString(),{method:'PUT',headers:{'Content-Type':'application/json','If-Match':etag},body:JSON.stringify(merged),signal:controller.signal});
+            if(response.status===412)continue;
+            if(!response.ok)throw new FirebaseError(response.status===401||response.status===403?'CLOUD_DENIED':'NETWORK','The playlist could not sync. Your edits remain on this device.');
+            if(!valid())return;
+            pending.current=acknowledgePatch(pending.current,{[path]:local});
+            if(Object.hasOwn(pending.current,path))playlistBases.current[path]=local;else delete playlistBases.current[path];
+            server.current=applyCloudPatch(server.current,{[path]:merged});
+            save('library-pending-v3:'+owner,pending.current);save('library-playlist-bases-v1:'+owner,playlistBases.current);
+            delete remaining[path];committed=true;break;
+          }
+          if(!committed)throw new Error('This playlist is changing on another device. Your edits are saved; retry sync shortly.');
+        }
+        if(Object.keys(remaining).length){
+          const response = await firebaseFetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(remaining), signal: controller.signal });
+          if (!response.ok) throw new FirebaseError(response.status === 401 || response.status === 403?'CLOUD_DENIED':'NETWORK',response.status === 401 || response.status === 403 ? 'Firebase denied library sync. Check account verification and owner-only database rules. Your changes remain on this device.' : 'Cloud sync failed. Your library is saved on this device; retry when connected.');
+        }
         if (!valid()) return;
         pending.current = acknowledgePatch(pending.current, patch);
-        receive(acknowledgedServer(server.current, patch, revision !== remoteRevision));
+        receive(acknowledgedServer(server.current, remaining, revision !== remoteRevision));
         save('library-pending-v3:' + owner, pending.current);
         succeeded = true;
         status(Object.keys(pending.current).length ? 'Saving remaining changes...' : source ? 'Synced with your account' : 'Saved to your account');
-      } catch (error) { writeFailed = dispatched; failure(error); }
+      } catch (error) { writeFailed = dispatched; failure(error);scheduleReconnect(error); }
       finally { writing = false; idle(); }
       if (succeeded && !suspended.current && valid() && Object.keys(pending.current).length) void write();
     }
@@ -228,11 +265,11 @@ export function useAccount(): AccountState {
       try {
         const url = await databaseUrl();
         const response = await firebaseFetch(url, { signal: controller.signal });
-        if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? 'Cloud library access was denied. Enable Realtime Database and deploy owner-only rules.' : 'The cloud library could not be opened. Your local library is kept.');
+        if (!response.ok) throw new FirebaseError(response.status === 401 || response.status === 403?'CLOUD_DENIED':'NETWORK',response.status === 401 || response.status === 403 ? 'Cloud library access was denied. Enable Realtime Database and deploy owner-only rules.' : 'The cloud library could not be opened. Your local library is kept.');
         const data: unknown = await response.json();
         if (!valid() || suspended.current || generation !== connection) return;
         receive(record(data) ? data : {});
-        reading = false; initialized = true;
+        reading = false; initialized = true;clearTimeout(reconnect);
         status('Library synced'); await write();
         // EventSource streams only library deltas, not polling or media downloads.
         if (typeof EventSource !== 'undefined' && valid() && !suspended.current) {
@@ -247,24 +284,24 @@ export function useAccount(): AccountState {
               else if (message.type === 'patch' && record(data.data)) receive(applyCloudPatch(server.current, Object.fromEntries(Object.entries(data.data).map(([key, value]) => [[path, key].filter(Boolean).join('/'), value]))));
               else receive(applyCloudPatch(server.current, { [path]: data.data }));
               status(Object.keys(pending.current).length ? 'Local changes waiting to sync' : 'Live library sync');
-            } catch { source?.close(); source = null; status('Live updates paused. Reopen this screen or retry sync.'); }
+            } catch { source?.close(); source = null; status('Live updates paused. Reconnecting…');scheduleReconnect(); }
           };
           source.addEventListener('put', event as EventListener); source.addEventListener('patch', event as EventListener);
           source.addEventListener('cancel', () => { source?.close(); source = null; status('Live library access was denied. Check Firebase database rules.'); });
-          source.addEventListener('auth_revoked', () => { source?.close(); source = null; status('Cloud authorization expired. Retry sync to refresh your session.'); });
-          source.onopen = () => status('Live library sync');
-          source.onerror = () => { source?.close(); source = null; status('Live updates paused. Changes stay saved on this device; retry sync.'); };
+          source.addEventListener('auth_revoked', () => { source?.close(); source = null; status('Refreshing cloud authorization…');void refreshCineUser(current.current.user||user!).then(scheduleReconnect).catch(error=>failure(error,current.current.user||user!)); });
+          source.onopen = () => {reconnectAttempt=0;status('Live library sync');};
+          source.onerror = () => { source?.close(); source = null; status('Live updates paused. Your changes stay saved; reconnecting…');scheduleReconnect(); };
         }
         const latest = current.current.user;
         if (latest?.expiresAt && !suspended.current) expiry = setTimeout(() => { void freshCineUser(latest).then(() => { if (valid() && !suspended.current) setRetry(value => value + 1); }).catch(error => failure(error, latest)); }, Math.max(30_000, latest.expiresAt - Date.now() - 100_000));
-      } catch (error) { failure(error); }
+      } catch (error) { failure(error);scheduleReconnect(error); }
       finally { reading = false; idle(); }
     }
     function resume() { if (document.visibilityState === 'visible') void connect(); }
-    function offline() { source?.close(); source = null; status('Offline. Changes are saved on this device.'); }
+    function offline() { clearTimeout(reconnect);source?.close(); source = null; status('Offline. Changes are saved on this device.'); }
     void connect();
     window.addEventListener('online', resume); window.addEventListener('offline', offline); window.addEventListener('focus', resume); document.addEventListener('visibilitychange', resume);
-    return () => { mounted = false; controller.abort(); source?.close(); clearTimeout(expiry); drains.forEach(resolve => resolve()); drains.clear(); window.removeEventListener('online', resume); window.removeEventListener('offline', offline); window.removeEventListener('focus', resume); document.removeEventListener('visibilitychange', resume); };
+    return () => { mounted = false; controller.abort(); source?.close(); clearTimeout(expiry);clearTimeout(reconnect); drains.forEach(resolve => resolve()); drains.clear(); window.removeEventListener('online', resume); window.removeEventListener('offline', offline); window.removeEventListener('focus', resume); document.removeEventListener('visibilitychange', resume); };
   }, [session.owner, session.user?.emailVerified, retry]);
 
   async function updateProfile(profile: Profile) {

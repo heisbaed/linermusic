@@ -91,7 +91,7 @@ export function useDownloads(prefs: Preferences, toast: (message: string) => voi
     if (current.current.prefs.wifiOnly && !window.CineAndroid?.isWifiConnected()) { toast('Downloads are set to Wi-Fi only.'); return; }
     const next: DownloadJob[] = [...current.current.jobs.filter(item => item.id !== song.id), { id: song.id, song, status: 'queued', progress: 0 }];
     current.current.jobs = next; setJobs(next);
-    try { window.CineAndroid!.download(JSON.stringify(song)); trackEvent('download_start', { path: 'downloads', label: 'single' }); }
+    try { window.CineAndroid!.download(JSON.stringify({...song,downloadQuality:current.current.prefs.audioQuality})); trackEvent('download_start', { path: 'downloads', label: 'single' }); }
     catch (error) { trackEvent('download_failed', { path: 'downloads', label: 'queue' }); refreshDownloads(); toast(error instanceof Error ? error.message : 'Download could not start.'); }
   }
   function removeDownload(id: string) {
@@ -114,8 +114,9 @@ export function useDownloads(prefs: Preferences, toast: (message: string) => voi
       setJobs(current.current.jobs);
       await new Promise(resolve => setTimeout(resolve, 16));
       try {
-        if (native.downloadMany) native.downloadMany(JSON.stringify(batch));
-        else for (const song of batch) native.download(JSON.stringify(song));
+        const requests=batch.map(song=>({...song,downloadQuality:current.current.prefs.audioQuality}));
+        if (native.downloadMany) native.downloadMany(JSON.stringify(requests));
+        else for (const song of requests) native.download(JSON.stringify(song));
       } catch { refreshDownloads(); toast('Some songs could not be queued. Retry from Downloads.'); return; }
     }
     if (pending.length) { trackEvent('download_start', { path: 'downloads', label: `batch ${pending.length}` }); toast(`${pending.length} songs submitted to the download queue.`); }

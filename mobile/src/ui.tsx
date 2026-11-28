@@ -6,6 +6,7 @@ import { formatTime } from './library';
 import { isTvEnvironment } from './spatialNav';
 import { useTvArtwork } from './tvArtwork';
 import { themeIcons } from './themeIcons';
+import { displaySongTitle } from './catalogQuality';
 import type { Song } from './types';
 import { createPortal } from 'react-dom';
 import albumDark from '../../Cine_Music_Android_Asset_Pack/source_svg/cine_placeholder_album_dark.svg';
@@ -66,6 +67,7 @@ export function Action({ icon, label, onClick, active = false, disabled = false,
 }) {
   return <button type="button" data-control={icon} className={`icon-action ${active ? 'active' : ''} ${className}`} aria-label={label} title={label} aria-pressed={['heart', 'shuffle', 'sparkles', 'repeat', 'repeat_one'].includes(icon) ? active : undefined} disabled={disabled} onClick={onClick}>
     <Icon name={icon} filled={icon === 'heart' && active} />
+    {icon==='repeat_one'&&<span className="control-mode-badge" aria-hidden="true">1</span>}
   </button>;
 }
 
@@ -112,8 +114,8 @@ export function SongRows({ songs, context = 'Music', editablePlaylistId, showHea
     const current = app.playback.player.track?.id === song.id;
     const saved = app.isFavorite(song.id), downloaded = app.downloads.some(item => item.id === song.id);
     return <div className={`song-row ${current ? 'is-current' : ''} ${editablePlaylistId ? 'editable-song' : ''}`} key={song.id}>
-      <button className="song-main" onClick={() => { onPlay?.(song); void app.playback.play(song, singleTrack ? [song] : queueSongs || songs, context); }} aria-label={`Play ${song.title} by ${song.artist}`}>
-        <Cover song={song} /><span className="row-copy"><strong>{song.title}</strong><small>{downloaded && <Icon name="download" size={12} />}{song.artist}</small></span>
+      <button type="button" className="song-main" onClick={() => { onPlay?.(song); void app.playback.play(song, singleTrack ? [song] : queueSongs || songs, context); }} aria-label={`Play ${displaySongTitle(song.title,song.artist)} by ${song.artist}`}>
+        <Cover song={song} /><span className="row-copy"><strong>{displaySongTitle(song.title,song.artist)}</strong><small>{downloaded && <Icon name="download" size={12} />}{song.artist}</small></span>
       </button>
       {showHearts ? <Action icon="heart" label={`${saved ? 'Remove' : 'Save'} ${song.title} ${saved ? 'from' : 'to'} Favorites`} active={saved} onClick={() => app.toggleFavorite(song)} /> : <span className="song-duration">{formatTime(song.durationMs)}</span>}
       <Action icon="more" label={`Options for ${song.title}`} onClick={() => app.openMenu(song)} />

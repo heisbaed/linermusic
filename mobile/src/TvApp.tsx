@@ -20,6 +20,7 @@ import { trackEvent, trackPageView } from './analytics';
 import './tv.css';
 import './tv-browse-polish.css';
 import './tv-refinement.css';
+import './interaction-system.css';
 
 const noop = () => {};
 const defaults: Preferences = { autoplay: true, wifiOnly: true, reducedMotion: 'system', haptics: false,
@@ -29,6 +30,11 @@ export type TvOverlay = 'player' | 'lyrics' | 'queue';
 
 export default function TvApp() {
   const account = useAccount();
+  const followedArtistNames = account.library.artists.map(artist => artist.name).join('\n');
+  useEffect(() => {
+    if (!account.ready || !account.user?.emailVerified) return;
+    window.CineAndroid?.notificationArtists?.(JSON.stringify(account.library.artists.map(artist => artist.name)));
+  }, [account.ready,account.user?.localId,account.user?.emailVerified,followedArtistNames]);
   const [theme, setTheme] = useState<Theme>(() => tvThemeId(loadSaved('cine-tv-theme-v2', 'default')));
   const [prefs, setPrefs] = useState<Preferences>(() => ({ ...defaults, ...loadSaved('tv-preferences', {}) }));
   const [tab, setTab] = useState<Tab>('home');
@@ -155,7 +161,7 @@ export default function TvApp() {
     setAddToPlaylist: noop, addToPlaylist: null, checkForUpdates: noop,
   };
 
-  return <AppContext.Provider value={app}><div className="tv-app" data-theme={theme}>
+  return <AppContext.Provider value={app}><div className="tv-app" data-theme={theme} data-reduced-motion={prefs.reducedMotion==='on'||prefs.reducedMotion==='system'&&matchMedia('(prefers-reduced-motion: reduce)').matches}>
     {!verified ? <TvAuth onSuccess={account.signIn} /> : !account.ready ? <main className="tv-wait">
       <Brand /><h1>Opening your library</h1><p role="status">{account.syncStatus}</p>
       <div className="tv-actions"><button className="tv-button" onClick={account.retrySync}>Retry sync</button><button className="tv-button" onClick={account.signOut}>Sign out</button></div>

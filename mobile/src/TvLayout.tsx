@@ -82,7 +82,7 @@ export function TvShell({ page, main, settings, overlay, onQueue, children }: {
         <button type="button" className="tv-icon-button" onClick={app.playback.previous} aria-label="Previous"><Icon name="previous" size={23} /></button>
         <button type="button" className="tv-icon-button tv-mini-play" onClick={app.playback.toggle} aria-label={playing ? 'Pause' : 'Play'}><Icon name={playing ? 'pause' : 'play'} size={23} /></button>
         <button type="button" className="tv-icon-button" onClick={app.playback.next} aria-label="Next"><Icon name="next" size={23} /></button>
-        <button type="button" className="tv-icon-button" aria-label={`Repeat ${app.playback.repeat}`} aria-pressed={app.playback.repeat !== 'off'} onClick={() => app.playback.setRepeat(app.playback.repeat === 'off' ? 'all' : app.playback.repeat === 'all' ? 'one' : 'off')}><Icon name={app.playback.repeat === 'one' ? 'repeat_one' : 'repeat'} size={20} /></button>
+        <button type="button" className="tv-icon-button" aria-label={`Repeat ${app.playback.repeat}`} aria-pressed={app.playback.repeat !== 'off'} onClick={() => app.playback.setRepeat(app.playback.repeat === 'off' ? 'all' : app.playback.repeat === 'all' ? 'one' : 'off')}><Icon name={app.playback.repeat === 'one' ? 'repeat_one' : 'repeat'} size={20} />{app.playback.repeat==='one'&&<span className="control-mode-badge" aria-hidden="true">1</span>}</button>
         <button type="button" className="tv-icon-button" onClick={onQueue} aria-label="Open queue"><Icon name="queue" size={22} /></button>
       </div>
       <div className="tv-mini-progress" aria-hidden="true"><span style={{ width: Math.max(0, Math.min(100, positionMs / (durationMs || track.durationMs || 1) * 100)) + '%' }} /></div>

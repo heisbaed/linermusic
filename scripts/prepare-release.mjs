@@ -6,7 +6,7 @@ const manifests={}, sums=[];
 for(const platform of ['mobile','tv']){
  const name=`Cine-Music-${platform==='tv'?'TV':'Mobile'}-${version}.apk`;
  const apk=await fs.readFile('releases/'+name), sha256=crypto.createHash('sha256').update(apk).digest('hex');
- const manifest={version,versionCode,platform,downloadUrl:`https://github.com/heisbaed/linermusic/releases/download/v${version}/${name}`,fileSize:apk.length,sha256,releaseNotes:'Refreshed TV Home, readable theme-matched focus and a single-composition animated splash; simplified Dj Cine with native app verification and restricted configuration; lighter lyrics and player updates, faster Connect command delivery, improved original-recording search ranking, and TV system media integration. Native APK upgrade required; availability of AI and TV launcher media surfaces depends on device/service support.'};
+ const manifest={version,versionCode,platform,downloadUrl:`https://github.com/heisbaed/linermusic/releases/download/v${version}/${name}`,fileSize:apk.length,sha256,releaseNotes:'Improved multi-source search and original-recording ranking, artist aliases and query intent; more focused Smart Shuffle/radio and lyrics caching; protected offline-download integrity and bounded recovery; playlist conflict merging and Connect seek delivery; native Dj Cine verification and installed voices; TV system media/screensaver support, readable controls and truthful analytics. Native APK upgrade required. Runtime checks are left to the owner.'};
  manifests[platform]=manifest;sums.push(`${sha256}  ${name}`);
  await fs.writeFile(`landing page web/public/ota/${platform==='tv'?'tv-manifest.json':'manifest.json'}`,JSON.stringify(manifest,null,2)+'\n');
 }

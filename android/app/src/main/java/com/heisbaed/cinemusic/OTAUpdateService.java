@@ -40,6 +40,7 @@ public class OTAUpdateService extends Service {
             try {
                 if(!UpdateActivity.trustedUrl(url)||sha==null||!sha.matches("[a-fA-F0-9]{64}")||size<=0||size>200_000_000)throw new IOException("Invalid update metadata");
                 partial.getParentFile().mkdirs();
+                if(new StatFs(getCacheDir().getAbsolutePath()).getAvailableBytes()<size+16L*1024*1024)throw new IOException("Not enough free space for this update. Free device storage and retry.");
                 connection=(HttpURLConnection)new URL(url).openConnection();connection.setConnectTimeout(15000);connection.setReadTimeout(30000);
                 if(connection.getResponseCode()!=200||!"https".equals(connection.getURL().getProtocol()))throw new IOException("Update download failed");
                 MessageDigest digest=MessageDigest.getInstance("SHA-256");long total=0,lastUpdate=0;int last=-1;

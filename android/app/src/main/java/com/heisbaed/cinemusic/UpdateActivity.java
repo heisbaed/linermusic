@@ -31,10 +31,8 @@ public class UpdateActivity extends Activity {
         PackageInfo incoming=pm.getPackageArchiveInfo(file.getAbsolutePath(),flags);
         PackageInfo current=pm.getPackageInfo(c.getPackageName(),flags);
         if(incoming==null||!c.getPackageName().equals(incoming.packageName)||(Build.VERSION.SDK_INT>=28?incoming.getLongVersionCode()<=current.getLongVersionCode():incoming.versionCode<=current.versionCode))throw new IOException("This is not a newer Cine music APK");
-        if (incoming.applicationInfo != null && incoming.applicationInfo.metaData != null) {
-            String platform = incoming.applicationInfo.metaData.getString("com.heisbaed.cinemusic.PLATFORM", "");
-            if (!platform.isEmpty() && !BuildConfig.CINE_PLATFORM.equals(platform)) throw new IOException("This update is for a different Cine music app");
-        }
+        String platform=incoming.applicationInfo==null||incoming.applicationInfo.metaData==null?"":incoming.applicationInfo.metaData.getString("com.heisbaed.cinemusic.PLATFORM", "");
+        if (!BuildConfig.CINE_PLATFORM.equals(platform)) throw new IOException("This update is for a different Cine music app");
         Signature[] existing=Build.VERSION.SDK_INT>=28&&current.signingInfo!=null?current.signingInfo.getApkContentsSigners():current.signatures;
         Signature[] candidate=Build.VERSION.SDK_INT>=28&&incoming.signingInfo!=null?incoming.signingInfo.getApkContentsSigners():incoming.signatures;
         if(existing==null||candidate==null)throw new IOException("Could not verify update signer");
@@ -68,7 +66,7 @@ public class UpdateActivity extends Activity {
             ByteArrayOutputStream bytes=new ByteArrayOutputStream();try(InputStream in=connection.getInputStream()){byte[]buf=new byte[4096];int n;while((n=in.read(buf))!=-1){if(bytes.size()+n>65536)throw new IOException("Invalid manifest");bytes.write(buf,0,n);}}
             JSONObject manifest = new JSONObject(bytes.toString("UTF-8"));
             String platform = manifest.optString("platform");
-            if (!platform.isEmpty() && !BuildConfig.CINE_PLATFORM.equals(platform)) throw new IOException("Update channel does not match this app");
+            if (!BuildConfig.CINE_PLATFORM.equals(platform)) throw new IOException("Update channel does not match this app");
             return manifest;
         }finally{if(connection!=null)connection.disconnect();}
     }

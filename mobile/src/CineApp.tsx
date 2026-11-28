@@ -59,6 +59,7 @@ import './cine.css';
 import './design.css';
 import './liquid.css';
 import './layout-density.css';
+import './interaction-system.css';
 
 function initialPreferences(): Preferences {
 
@@ -103,6 +104,11 @@ function PlayerLyricsSync() {
 export default function CineApp() {
 
   const account = useAccount();
+  const followedArtistNames = account.library.artists.map(artist => artist.name).join('\n');
+  useEffect(() => {
+    if (!account.ready || !account.user?.emailVerified) return;
+    window.CineAndroid?.notificationArtists?.(JSON.stringify(account.library.artists.map(artist => artist.name)));
+  }, [account.ready,account.user?.localId,account.user?.emailVerified,followedArtistNames]);
 
   const [tvLink, setTvLink] = useState<TvLink | null>(consumePhoneTvLink);
   const [theme, setThemeState] = useState<Theme>(() => {
@@ -158,6 +164,11 @@ export default function CineApp() {
   const currentRoute = routes.at(-1)?.route;
 
   const accountRoute = currentRoute?.kind === 'account';
+  useEffect(() => {
+    if (!canAccess) return;
+    const open = () => { if(!window.CineAndroid?.consumeNotificationOpen?.())return; setPlayerOpen(false);setLyricsOpen(false);setSheet(null);setRoutes([{key:crypto.randomUUID(),route:{kind:'account',page:'notifications'}}]); };
+    open(); return subscribe(event => { if(event.type==='openNotifications') open(); });
+  }, [canAccess]);
 
   const focusedForm = currentRoute?.kind === 'playlist-form' || currentRoute?.kind === 'playlist-import' || (accountRoute && ['auth', 'music-preferences', 'edit-profile', 'change-email', 'change-password', 'delete-account'].includes(currentRoute.page));
 

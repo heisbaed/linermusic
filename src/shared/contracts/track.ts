@@ -3,6 +3,8 @@ import type { Cover } from './cover';
 export interface TrackArtist {
   id: string;
   name: string;
+  kind?: 'artist' | 'uploader';
+  verifiedArtist?: boolean;
 }
 
 export interface TrackAlbum {
@@ -19,6 +21,7 @@ export interface Track {
   cover?: Cover;
   explicit?: boolean;
   musicVideoType?: string;
+  source?: 'youtube' | 'youtube-music';
 }
 
 export interface ApiTrack extends Track {

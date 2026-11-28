@@ -32,7 +32,7 @@ function canonical(name: string): string {
   return text.split(' ').map(word => word[0]?.toUpperCase()+word.slice(1)).join(' ');
 }
 function labels(entity: Entity) { return [...new Set((entity.genres || []).filter(tag => (tag.count ?? 1) > 0 && tag.name).map(tag => canonical(tag.name!)))]; }
-async function metadata(path: string, signal: AbortSignal): Promise<Record<string, unknown>> {
+export async function musicBrainzMetadata(path: string, signal: AbortSignal): Promise<Record<string, unknown>> {
   const operation = queue.catch(() => {}).then(async () => {
     if (signal.aborted) throw new DOMException('Cancelled', 'AbortError');
     const delay = Math.max(0, 1150 - (Date.now() - lastRequest));
@@ -55,6 +55,7 @@ async function metadata(path: string, signal: AbortSignal): Promise<Record<strin
   queue = operation;
   return operation;
 }
+const metadata=musicBrainzMetadata;
 function quoted(text: string) { return '"' + text.replace(/["\\]/g, ' ').slice(0,180) + '"'; }
 async function artistGenres(song: Song, signal: AbortSignal): Promise<Entry> {
   const name = artistName(song.artist), key = 'artist:' + normalize(name);
@@ -68,10 +69,17 @@ async function artistGenres(song: Song, signal: AbortSignal): Promise<Entry> {
 export function cachedSongGenres(song: Song): string[] {
   return song.genres?.length ? song.genres.map(canonical) : cache[keyOf(song)]?.genres.length ? cache[keyOf(song)].genres : cache['artist:' + normalize(artistName(song.artist))]?.genres || [];
 }
+export function genreEvidence(song:Song):{genres:string[];source:'recording'|'artist'|'unknown'}{
+  if(song.genres?.length)return {genres:song.genres.map(canonical),source:song.genreSource || 'unknown'};
+  const track=cache[keyOf(song)];if(track?.genres.length)return {genres:track.genres,source:track.source};
+  const artist=cache['artist:'+normalize(artistName(song.artist))];
+  return artist?.genres.length?{genres:artist.genres,source:'artist'}:{genres:[],source:'unknown'};
+}
 export function genreCompatible(seed: Song, song: Song): boolean {
-  const anchor = cachedSongGenres(seed), other = cachedSongGenres(song);
-  if (!anchor.length || !other.length) return true;
-  return anchor.some(genre => other.includes(genre));
+  const anchor=genreEvidence(seed),other=genreEvidence(song);
+  // Artist-wide tags are weak evidence for an individual recording's style.
+  if(anchor.source!=='recording'||other.source!=='recording')return true;
+  return !anchor.genres.length||!other.genres.length||anchor.genres.some(genre=>other.genres.includes(genre));
 }
 async function storeGenre(song: Song, signal: AbortSignal): Promise<string[]> {
   const delay = Math.max(0, 3100-(Date.now()-appleRequest));
@@ -92,7 +100,7 @@ async function storeGenre(song: Song, signal: AbortSignal): Promise<string[]> {
 }
 export async function resolveSongGenres(song: Song, signal: AbortSignal): Promise<Entry> {
   const key = keyOf(song);
-  if (song.genres?.length) return { genres: song.genres, at: Date.now(), source: 'recording' };
+  if (song.genres?.length && song.genreSource) return { genres: song.genres, at: Date.now(), source: song.genreSource };
   if (fresh(cache[key])) return cache[key];
   if (inFlight.has(key)) return inFlight.get(key)!;
   const work = (async () => {

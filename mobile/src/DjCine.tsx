@@ -19,23 +19,25 @@ export function DjCine({ seed }: { seed?: Song }) {
   const [request,setRequest]=useState(''),[mode,setMode]=useState<RadioMode>('balanced');
   const [language,setLanguage]=useState<'en'|'sw'>(()=>loadSaved('dj-language:'+owner,'en'));
   const [ai,setAi]=useState(true),[voice,setVoice]=useState(()=>loadSaved('dj-voice:'+owner,false));
-  const [voices,setVoices]=useState<{ready:boolean;languages:string[]}>({ready:false,languages:[]});
+  const [voices,setVoices]=useState<{ready:boolean;languages:string[];offlineLanguages?:string[]}>({ready:false,languages:[]});
   const [listening,setListening]=useState(false),[busy,setBusy]=useState(false),[stage,setStage]=useState(''),[error,setError]=useState('');
   const [starting,setStarting]=useState(false),[saved,setSaved]=useState('');
   const [optionsOpen,setOptionsOpen]=useState(false);
   const [set,setSet]=useState<DjSet|null>(()=>{const last=loadSaved<DjSet|null>('dj-set:'+owner,null);return last&&Array.isArray(last.songs)&&last.songs.every(song=>song&&typeof song.id==='string'&&typeof song.title==='string'&&typeof song.artist==='string')?last:null;});
   const task=useRef<AbortController|null>(null),mounted=useRef(true),startBusy=useRef(false),skipIntro=useRef(false),savedRef=useRef('');
-  const canSpeak=voices.ready&&voices.languages.includes(language)&&!app.playback.player.remoteDeviceId;
+  const onlineVoice=!!voices.offlineLanguages&&!voices.offlineLanguages.includes(language);
+  const canSpeak=voices.ready&&voices.languages.includes(language)&&(!onlineVoice||app.online)&&!app.playback.player.remoteDeviceId;
   const canListen=!!window.CineAndroid?.hasDjVoiceInput?.();
   useEffect(()=>{
     mounted.current=true;
     const stop=subscribe(event=>{
-      if(event.type==='djVoices')setVoices({ready:!!event.data.ready,languages:Array.isArray(event.data.languages)?event.data.languages as string[]:[]});
+      if(event.type==='djVoices')setVoices({ready:!!event.data.ready,languages:Array.isArray(event.data.languages)?event.data.languages as string[]:[],offlineLanguages:Array.isArray(event.data.offlineLanguages)?event.data.offlineLanguages as string[]:undefined});
       if(event.type==='djVoiceResult'){setRequest(String(event.data.text||'').slice(0,240));setListening(false);}
       if(event.type==='djVoiceCancelled')setListening(false);
     });
-    try{if(window.CineAndroid?.djVoiceInfo)setVoices(JSON.parse(window.CineAndroid.djVoiceInfo()));}catch{/* Music controls remain available without an installed voice. */}
-    return()=>{mounted.current=false;task.current?.abort();if(startBusy.current)window.CineAndroid?.stopDjVoice?.();stop();};
+    const refresh=()=>{try{if(window.CineAndroid?.djVoiceInfo)setVoices(JSON.parse(window.CineAndroid.djVoiceInfo()));}catch{/* Music remains available without a voice. */}};
+    refresh();window.addEventListener('focus',refresh);
+    return()=>{window.removeEventListener('focus',refresh);mounted.current=false;task.current?.abort();if(startBusy.current)window.CineAndroid?.stopDjVoice?.();stop();};
   },[owner]);
   async function generate(useAI=ai, anchor=seed, text=request){
     if(task.current)return;
@@ -91,6 +93,7 @@ export function DjCine({ seed }: { seed?: Song }) {
         <div className="dj-options" role="group" aria-label="Language">{(['en','sw'] as const).map(value=><button key={value} aria-pressed={language===value} onClick={()=>{setLanguage(value);save('dj-language:'+owner,value);}}>{value==='en'?'English':'Kiswahili'}</button>)}</div>
         <div className="dj-options"><button role="switch" aria-checked={ai} onClick={()=>setAi(!ai)}>AI requests · {ai?'On':'Off'}</button><button role="switch" aria-checked={voice&&canSpeak} disabled={!canSpeak} onClick={()=>{setVoice(!voice);save('dj-voice:'+owner,!voice);}}>Spoken intro · {voice&&canSpeak?'On':'Off'}</button></div>
         {!canSpeak&&<small className="dj-note">An installed voice is unavailable for this language or playback device.</small>}
+        {canSpeak&&onlineVoice&&<small className="dj-note">Your device’s voice uses an internet connection.</small>}
         <small className="dj-note">Online requests use your selected music context. Private listening excludes recent listening history.</small>
       </div>}
     </section><section className="dj-tv-selection" aria-label="Your DJ mix">
@@ -108,6 +111,7 @@ export function DjCine({ seed }: { seed?: Song }) {
         <div className="dj-options" role="group" aria-label="Familiarity">{(['familiar','balanced','discover'] as const).map(value=><button type="button" key={value} aria-pressed={mode===value} onClick={()=>setMode(value)}>{value==='familiar'?'Familiar':value==='balanced'?'Balanced':'Discover'}</button>)}</div>
         <div className="dj-preferences"><div className="dj-options" role="group" aria-label="DJ language">{(['en','sw'] as const).map(value=><button type="button" key={value} aria-pressed={language===value} onClick={()=>{setLanguage(value);save('dj-language:'+owner,value);}}>{value==='en'?'English':'Kiswahili'}</button>)}</div><label><input type="checkbox" checked={ai} onChange={event=>setAi(event.target.checked)}/>AI requests</label><label><input type="checkbox" checked={voice&&canSpeak} disabled={!canSpeak} onChange={event=>{setVoice(event.target.checked);save('dj-voice:'+owner,event.target.checked);}}/>Spoken introduction</label></div>
         {!canSpeak&&<small className="dj-note">{app.playback.player.remoteDeviceId?'Spoken introductions are available on the device playing music.':'Spoken introductions need an installed device voice for this language.'}</small>}
+        {canSpeak&&onlineVoice&&<small className="dj-note">Your device’s voice uses an internet connection.</small>}
         <div className="dj-actions"><button className="primary-button" disabled={busy||(!request.trim()&&!seed)} type="submit">{busy?'Preparing your set…':'Ask Dj Cine'}</button>{canListen&&<button className="secondary-button" disabled={listening||busy} type="button" onClick={()=>{setListening(true);window.CineAndroid?.listenDj?.(language);}}><Icon name="lyrics" size={20}/>{listening?'Listening…':'Speak request'}</button>}{busy&&<button type="button" className="text-button" onClick={()=>{task.current?.abort();task.current=null;setBusy(false);setStage('');}}>Cancel</button>}</div>
       </form>
       {busy&&<p role="status" className="dj-note">{stage}</p>}

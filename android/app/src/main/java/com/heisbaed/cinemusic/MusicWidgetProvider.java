@@ -73,6 +73,6 @@ public class MusicWidgetProvider extends AppWidgetProvider {
         return views;
     }
     static PendingIntent command(Context context, String action) {
-        return PendingIntent.getService(context, action.hashCode(), new Intent(context, PlaybackService.class).setAction(action), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        return PendingIntent.getService(context, action.hashCode(), PlaybackService.intent(context).setAction(action), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }

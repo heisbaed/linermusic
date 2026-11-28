@@ -4,16 +4,14 @@ import android.content.Context;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.appcheck.FirebaseAppCheck;
-import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory;
-import java.io.InputStream;
-import org.json.JSONObject;
+import com.google.firebase.appcheck.recaptcha.RecaptchaAppCheckProviderFactory;
 
 /** Native attestation for the installed application; never uses public debug secrets. */
 final class DjAttestation {
     private static FirebaseAppCheck checker;
     private static synchronized FirebaseAppCheck get(Context context) throws Exception {
         if (checker != null) return checker;
-        if(BuildConfig.CINE_DJ_API_KEY.isEmpty())throw new IllegalStateException("DJ service is not configured in this build");
+        if(BuildConfig.CINE_DJ_API_KEY.isEmpty()||BuildConfig.CINE_DJ_RECAPTCHA_KEY.isEmpty())throw new IllegalStateException("DJ service is not configured in this build");
         FirebaseOptions options = new FirebaseOptions.Builder().setApiKey(BuildConfig.CINE_DJ_API_KEY)
             .setApplicationId(BuildConfig.CINE_DJ_APP_ID).setProjectId(BuildConfig.CINE_DJ_PROJECT_ID).build();
         FirebaseApp app;
@@ -21,7 +19,7 @@ final class DjAttestation {
         catch (IllegalStateException missing) { app = FirebaseApp.initializeApp(context, options, "cine-dj-native"); }
         app.setDataCollectionDefaultEnabled(false);
         checker = FirebaseAppCheck.getInstance(app);
-        checker.installAppCheckProviderFactory(PlayIntegrityAppCheckProviderFactory.getInstance(),false);
+        checker.installAppCheckProviderFactory(RecaptchaAppCheckProviderFactory.getInstance(BuildConfig.CINE_DJ_RECAPTCHA_KEY),false);
         return checker;
     }
     static void request(Context context, String id) {
@@ -34,6 +32,7 @@ final class DjAttestation {
     private static void failure(Context context,String id,Exception error) {
         String detail = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
         detail = detail.replaceAll("https?://[^\\s]+","[service]").replaceAll("AIza[\\w-]+","[key]");
+        android.util.Log.w("CineDj", "App verification failed: "+error.getClass().getSimpleName()+": "+detail.substring(0,Math.min(280,detail.length())));
         Events.send(context,"djAttestation",Events.json("id",id,"error","DJ_VERIFY: "+detail.substring(0,Math.min(280,detail.length()))));
     }
     static void attachAndroidHeaders(Context context, java.net.HttpURLConnection connection) throws Exception {
