@@ -1,9 +1,9 @@
 {
-  "version": "0.1.18",
-  "versionCode": 21,
+  "version": "0.1.19",
+  "versionCode": 22,
   "platform": "mobile",
-  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.18/Cine-Music-Mobile-0.1.18.apk",
-  "fileSize": 14682320,
-  "sha256": "3aec273d385c2baa3cfa315142b68c0095acbcbec56eb82bbf31354b88fe615a",
+  "downloadUrl": "https://github.com/heisbaed/linermusic/releases/download/v0.1.19/Cine-Music-Mobile-0.1.19.apk",
+  "fileSize": 14619827,
+  "sha256": "41f280f127b24cf54c6c28dd5447395a10b8172721d6e4c156b9af0d9a50036d",
   "releaseNotes": "Improved multi-source search and original-recording ranking, artist aliases and query intent; more focused Smart Shuffle/radio and lyrics caching; protected offline-download integrity and bounded recovery; playlist conflict merging and Connect seek delivery; native Dj Cine verification and installed voices; TV system media/screensaver support, readable controls and truthful analytics. Native APK upgrade required. Runtime checks are left to the owner."
 }

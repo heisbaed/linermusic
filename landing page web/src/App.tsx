@@ -63,12 +63,12 @@ type Page = "home" | "experience" | "download" | "song" | "pair" | "dashboard";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-const APK_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.18/Cine-Music-Mobile-0.1.18.apk";
+const APK_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.19/Cine-Music-Mobile-0.1.19.apk";
 
-const APK_TV_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.18/Cine-Music-TV-0.1.18.apk";
-const APK_TV_SHA256 = "bb36993df1d02d18a2c02d4884f97155e8d43e52496d0bce970bb0f2f7cd1e19";
+const APK_TV_URL = "https://github.com/heisbaed/linermusic/releases/download/v0.1.19/Cine-Music-TV-0.1.19.apk";
+const APK_TV_SHA256 = "d52cd1b90dffe1db2c308ed507e6370318b170dfbaa7f177fae422b65c457e26";
 const APK_TV_SIZE = "14.62 MB";
-const APK_SHA256 = "3aec273d385c2baa3cfa315142b68c0095acbcbec56eb82bbf31354b88fe615a";
+const APK_SHA256 = "41f280f127b24cf54c6c28dd5447395a10b8172721d6e4c156b9af0d9a50036d";
 function usePerformanceMode() {
 
   const [liteMode, setLiteMode] = useState(false);
@@ -1337,7 +1337,7 @@ function HomePage({ navigate }: { navigate: (page: Page, section?: string) => vo
 
           >
 
-            <span /> Android APK v0.1.18 · Available now
+            <span /> Android APK v0.1.19 · Available now
 
           </motion.div>
 
@@ -1911,11 +1911,11 @@ const faqs = [
 
     "Can I download Cine music right now?",
 
-    "Yes. Cine music v0.1.18 is available from the official GitHub release linked on this page. The current file is a debug-signed testing build.",
+    "Yes. Cine music v0.1.19 is available from the official GitHub release linked on this page. The current file is a debug-signed testing build.",
 
   ],
 
-  ["Which Android versions will be supported?", "Cine music v0.1.18 requires Android 8.0 or newer."],
+  ["Which Android versions will be supported?", "Cine music v0.1.19 requires Android 8.0 or newer."],
 
   [
 
@@ -2088,7 +2088,7 @@ function DownloadPage() {
 
             <p>
 
-              Cine music v0.1.18 brings streaming, background playback, offline downloads, search,
+              Cine music v0.1.19 brings streaming, background playback, offline downloads, search,
 
               playlists, synced lyrics, four themes and cloud sync to Android 8.0 and newer.
 
@@ -2100,7 +2100,7 @@ function DownloadPage() {
 
             </a>
 
-            <span className="availability">v0.1.18 · 14.68 MB · Android 8.0+</span>
+            <span className="availability">v0.1.19 · 14.62 MB · Android 8.0+</span>
 
           </div>
 
@@ -2120,7 +2120,7 @@ function DownloadPage() {
 
                 <dt>Version</dt>
 
-                <dd>0.1.18</dd>
+                <dd>0.1.19</dd>
 
               </div>
 
@@ -2128,7 +2128,7 @@ function DownloadPage() {
 
                 <dt>File size</dt>
 
-                <dd>14.68 MB</dd>
+                <dd>14.62 MB</dd>
 
               </div>
 
@@ -2184,7 +2184,7 @@ function DownloadPage() {
 
         </motion.div>
 
-      <article className="package-card tv-download-card" id="tv-download"><div className="package-main"><div className="package-title"><img src="/assets/cine-music-logo.png" alt="" /><div><small>ANDROID TV APPLICATION</small><h2>Cine music TV</h2></div><span className="status-pill">Available now</span></div><p>Made for the TV remote, with artwork, lyrics, queues and shared playback control from your phone.</p><a className="button primary download-ready" href={APK_TV_URL} onClick={() => trackApkDownload("tv")}><Download /> Download TV app</a><span className="availability">v0.1.18 · {APK_TV_SIZE} · Android TV 8.0+</span></div><div className="package-info"><h3>TV package information</h3><dl><div><dt>Version</dt><dd>0.1.18</dd></div><div><dt>Platform</dt><dd>Android TV</dd></div><div><dt>SHA-256</dt><dd className="checksum">{APK_TV_SHA256}</dd></div></dl><p>TV listening uses streaming and shared playback. Music downloads are available in the mobile app.</p></div></article>
+      <article className="package-card tv-download-card" id="tv-download"><div className="package-main"><div className="package-title"><img src="/assets/cine-music-logo.png" alt="" /><div><small>ANDROID TV APPLICATION</small><h2>Cine music TV</h2></div><span className="status-pill">Available now</span></div><p>Made for the TV remote, with artwork, lyrics, queues and shared playback control from your phone.</p><a className="button primary download-ready" href={APK_TV_URL} onClick={() => trackApkDownload("tv")}><Download /> Download TV app</a><span className="availability">v0.1.19 · {APK_TV_SIZE} · Android TV 8.0+</span></div><div className="package-info"><h3>TV package information</h3><dl><div><dt>Version</dt><dd>0.1.19</dd></div><div><dt>Platform</dt><dd>Android TV</dd></div><div><dt>SHA-256</dt><dd className="checksum">{APK_TV_SHA256}</dd></div></dl><p>TV listening uses streaming and shared playback. Music downloads are available in the mobile app.</p></div></article>
 </section>
 
 
@@ -2193,7 +2193,7 @@ function DownloadPage() {
 
         <motion.div {...reveal} className="section-heading">
 
-          <span className="kicker">WHAT’S IN V0.1.18</span>
+          <span className="kicker">WHAT’S IN V0.1.19</span>
 
           <h2>
 
@@ -2435,7 +2435,7 @@ function Footer({ navigate }: { navigate: (page: Page, section?: string) => void
 
         <span>Developed by Osborne's Digital Solutions · <a href="mailto:osbornesecards@gmail.com">osbornesecards@gmail.com</a></span>
 
-        <span>Android APK v0.1.18 · Available now</span>
+        <span>Android APK v0.1.19 · Available now</span>
 
       </div>
 
@@ -2461,7 +2461,7 @@ function MobileAction() {
 
           <strong>Cine music for Android</strong>
 
-          <small>v0.1.18 · 14.68 MB</small>
+          <small>v0.1.19 · 14.62 MB</small>
 
         </p>
 

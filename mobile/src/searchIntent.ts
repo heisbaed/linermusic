@@ -10,6 +10,6 @@ export function musicQuery(input:string):MusicQuery{
     return {title,artist,album,kind:title?'recording':album?'album':artist?'artist':'general',catalogQuery:[title,artist,album,rest].filter(Boolean).join(' ')};
   }
   const by=value.match(/^(.+?)\s+by\s+(.+)$/i);
-  if(by)return {title:by[1].replace(/^"|"$/g,''),artist:by[2],kind:'recording',catalogQuery:by[1].replace(/^"|"$/g,'')+' '+by[2]};
+  if(by)return {title:by[1].replace(/^"|"$/g,''),artist:by[2],kind:'recording',catalogQuery:value};
   return {kind:'general',catalogQuery:value};
 }

@@ -1,3 +1,10 @@
+# 28 November 2026 — final query-preservation update 0.1.19
+
+- Source review caught a literal-query edge case: natural-language title/artist interpretation must not strip “by” from the upstream query (for example, a title containing that word). The original text is now retained; explicit structured fields still build their requested catalog query.
+- Version 0.1.19/code22 carries this correction on top of the complete 0.1.18 service/algorithm work. Both interfaces and native APKs compiled successfully; the website and version-code-22 feeds are prepared. Public publication is the remaining step. No device installation or runtime/automated checks are authorized.
+
+---
+
 # 28 November 2026 — 0.1.18 service/algorithm delivery
 
 - Owner requested deeper algorithm/service research, UI/button improvements, dashboard work and public updates. Do not install on devices. No automated or runtime verification is authorized; leave manual acceptance to the owner.
@@ -5,7 +12,7 @@
 - Search retrieval/intent/aliases/ranking, recommendation context and genre provenance, lyric request/parsing overhead, Connect seek coalescing, protected download recovery, cloud playlist conflict handling and telemetry integrity are addressed.
 - Native reCAPTCHA App Check is configured for the sideloaded app; paid billing was not enabled. Restricted DJ key remains ignored native build input. No live AI/speech success is claimed.
 - Added trusted TV media-browser integration and optional user-selected Cine music playback screensaver; Mobile has actual notification preferences/history. Shared selected/focus/input/button states improved.
-- Both interface bundles, Java/native APK packaging, dashboard TypeScript compilation and the website production build succeeded. Separate APKs, SHA-256 checksums and version-code-21 update feeds are prepared. Source/release/hosting publication is the remaining delivery step.
+- Both interface bundles, Java/native APK packaging, dashboard TypeScript compilation and the website production build succeeded. Separate APKs, SHA-256 checksums and version-code-21 update feeds are prepared. Source commit 9ff49f00 was pushed; GitHub published v0.1.18 with separate APKs/checksums/report, and Firebase Hosting reported successful publication of the website and both update feeds.
 - No app launches, device installs, playback/offline/AI checks, screenshots, benchmarks or automated tests were run. Small read-only reported-title metadata lookups and configuration operations are documented separately from runtime verification.
 
 ---
